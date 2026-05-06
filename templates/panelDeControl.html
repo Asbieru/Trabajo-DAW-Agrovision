@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Panel de Control</h1>
+        <p>Bienvenido al sistema de gestión · AgroVisión Corp.</p>
+    </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-num" style="color: var(--verde)">3,000</div>
+        <div class="stat-label">Hectáreas monitoreadas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num" style="color: var(--azul)">40</div>
+        <div class="stat-label">Sistemas en producción</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num" style="color: var(--acento)">12</div>
+        <div class="stat-label">Tickets abiertos</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num" style="color: var(--verde)">98%</div>
+        <div class="stat-label">Uptime de servicios</div>
+    </div>
+</div>
+
+<!-- ACCESOS RÁPIDOS -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+
+    <div class="card">
+        <div class="card-header">🌱 Evaluaciones de campo</div>
+        <div class="card-body">
+            <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
+                Registra inspecciones de plagas sin papel. La información queda disponible en tiempo real.
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a class="btn btn-verde btn-sm" href="{{ url_for('form_evaluacion') }}">+ Nueva evaluación</a>
+                <a class="btn btn-outline btn-sm" href="{{ url_for('listar_evaluaciones') }}">Ver registros</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">🎫 Mesa de ayuda</div>
+        <div class="card-body">
+            <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
+                Registra incidencias y peticiones. Centraliza el soporte reemplazando correos y WhatsApp.
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a class="btn btn-verde btn-sm" href="{{ url_for('form_ticket') }}">+ Nuevo ticket</a>
+                <a class="btn btn-outline btn-sm" href="{{ url_for('listar_tickets') }}">Ver tickets</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">🚀 Proyectos de software</div>
+        <div class="card-body">
+            <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
+                Gestiona proyectos con metodología ágil. Reemplaza el proceso BBP de 150 páginas.
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a class="btn btn-verde btn-sm" href="{{ url_for('form_proyecto') }}">+ Nuevo proyecto</a>
+                <a class="btn btn-outline btn-sm" href="{{ url_for('listar_proyectos') }}">Ver proyectos</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

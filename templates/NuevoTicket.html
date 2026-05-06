@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Ticket de Soporte{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>🎫 Nuevo ticket de soporte</h1>
+        <p>Mesa de ayuda · ITIL – Incidencias y peticiones</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Ver tickets</a>
+</div>
+
+<div class="alerta alerta-info">
+    💡 <strong>Recuerda:</strong> Los tickets se atienden en orden de prioridad. Recibirás una notificación cuando el agente actualice el estado.
+</div>
+
+<div class="card">
+    <div class="card-header">Datos del ticket</div>
+    <div class="card-body">
+        <form action="{{ url_for('guardar_ticket') }}" method="POST">
+
+            <!-- Título -->
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="titulo">Título del problema *</label>
+                <input type="text" id="titulo" name="titulo"
+                       placeholder="Ej. Error al guardar registro de cosecha" required>
+                <span class="form-hint">Resume el problema en una línea clara</span>
+            </div>
+
+            <!-- Tipo, Prioridad, Aplicación -->
+            <div class="form-grid tres" style="margin-bottom:16px;">
+                <div class="form-group">
+                    <label for="tipo">Tipo de solicitud *</label>
+                    <select id="tipo" name="tipo" required>
+                        <option value="incidencia">🔴 Incidencia (error / falla)</option>
+                        <option value="peticion">🔵 Petición (acceso / cuenta)</option>
+                        <option value="consulta">🟡 Consulta</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="prioridad">Prioridad *</label>
+                    <select id="prioridad" name="prioridad" required>
+                        <option value="critica">🚨 Crítica – sistema caído</option>
+                        <option value="alta">🔴 Alta – afecta producción</option>
+                        <option value="media" selected>🟡 Media</option>
+                        <option value="baja">🟢 Baja</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="aplicacion">Aplicación afectada *</label>
+                    <select id="aplicacion" name="aplicacion" required>
+                        <option value="">— Selecciona —</option>
+                        <option value="Sistema Empaque">Sistema de Empaque</option>
+                        <option value="App Móvil Campo">App Móvil Campo</option>
+                        <option value="API Ventas">API de Ventas</option>
+                        <option value="Portal RRHH">Portal RR.HH.</option>
+                        <option value="Dashboard BI">Dashboard BI / Power BI</option>
+                        <option value="Otro">Otro sistema</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Solicitante y SLA -->
+            <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                    <label for="id_solicitante">Solicitante *</label>
+                    <select id="id_solicitante" name="id_solicitante" required>
+                        <option value="">— Selecciona tu nombre —</option>
+                        {% for u in usuarios %}
+                        <option value="{{ u.id_usuario }}">{{ u.nombre_completo }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-hint">Selecciona tu nombre de la lista</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="sla_horas">SLA esperado (horas)</label>
+                    <select id="sla_horas" name="sla_horas">
+                        <option value="4">4 horas (crítico)</option>
+                        <option value="8">8 horas (alto)</option>
+                        <option value="24" selected>24 horas (estándar)</option>
+                        <option value="48">48 horas (bajo)</option>
+                        <option value="72">72 horas (consulta)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="descripcion">Descripción detallada *</label>
+                <textarea id="descripcion" name="descripcion" rows="4"
+                          placeholder="Describe el problema con detalle: qué pasó, cuándo, qué pasos realizaste, qué mensaje de error aparece..." required></textarea>
+            </div>
+
+            <!-- ACCIONES -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">📨 Enviar ticket</button>
+                <a href="{{ url_for('index') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}
+    {% if tickets is defined %}Tickets de Soporte
+    {% elif evaluaciones is defined %}Evaluaciones de Campo
+    {% else %}Proyectos de Software
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- ── TICKETS ──────────────────────────────────────────── -->
+{% if tickets is defined %}
+<div class="page-header">
+    <div>
+        <h1>📨 Mesa de ayuda</h1>
+        <p>Gestión de incidencias y peticiones · ITIL</p>
+    </div>
+    <a class="btn btn-verde" href="{{ url_for('form_ticket') }}">+ Nuevo ticket</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Tickets registrados</div>
+    <div style="overflow-x:auto;">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Tipo</th>
+                    <th>Prioridad</th>
+                    <th>Aplicación</th>
+                    <th>Estado</th>
+                    <th>Solicitante</th>
+                    <th>Apertura</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if tickets %}
+                    {% for t in tickets %}
+                    <tr>
+                        <td style="color:var(--azul); font-weight:600; font-size:0.8rem;">
+                            SD-{{ t.id_ticket }}
+                        </td>
+                        <td><strong>{{ t.titulo }}</strong></td>
+                        <td>
+                            {% if t.tipo == 'incidencia' %}
+                                <span class="badge badge-rojo">Incidencia</span>
+                            {% elif t.tipo == 'peticion' %}
+                                <span class="badge badge-azul">Petición</span>
+                            {% else %}
+                                <span class="badge badge-gris">Consulta</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.prioridad == 'critica' %}
+                                <span class="badge badge-rojo">🚨 Crítica</span>
+                            {% elif t.prioridad == 'alta' %}
+                                <span class="badge badge-rojo">Alta</span>
+                            {% elif t.prioridad == 'media' %}
+                                <span class="badge badge-acento">Media</span>
+                            {% else %}
+                                <span class="badge badge-verde">Baja</span>
+                            {% endif %}
+                        </td>
+                        <td style="color:var(--gris-texto); font-size:0.84rem;">{{ t.aplicacion }}</td>
+                        <td>
+                            {% if t.estado == 'abierto' %}
+                                <span class="badge badge-rojo">Abierto</span>
+                            {% elif t.estado == 'en_progreso' %}
+                                <span class="badge badge-acento">En progreso</span>
+                            {% elif t.estado == 'resuelto' %}
+                                <span class="badge badge-verde">Resuelto</span>
+                            {% else %}
+                                <span class="badge badge-gris">Cerrado</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.nombre_solicitante }}</td>
+                        <td style="font-size:0.8rem; color:var(--gris-texto);">
+                            {{ t.fecha_apertura.strftime('%d/%m/%Y %H:%M') if t.fecha_apertura else '—' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="tabla-empty">
+                            No hay tickets registrados.
+                            <a href="{{ url_for('form_ticket') }}" style="color:var(--verde);">
+                                Crea el primer ticket →
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── EVALUACIONES ─────────────────────────────────────── -->
+{% elif evaluaciones is defined %}
+<div class="page-header">
+    <div>
+        <h1>📋 Evaluaciones de campo</h1>
+        <p>Historial de inspecciones de plagas registradas</p>
+    </div>
+    <a class="btn btn-verde" href="{{ url_for('form_evaluacion') }}">+ Nueva evaluación</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Registros de campo</div>
+    <div style="overflow-x:auto;">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Lote</th>
+                    <th>Plaga</th>
+                    <th>Inspector</th>
+                    <th>Evaluadas</th>
+                    <th>Afectadas</th>
+                    <th>Nivel</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if evaluaciones %}
+                    {% for e in evaluaciones %}
+                    <tr>
+                        <td style="color:var(--verde); font-weight:600; font-size:0.8rem;">
+                            EC-{{ e.id_evaluacion }}
+                        </td>
+                        <td style="font-size:0.84rem;">
+                            {{ e.fecha_evaluacion.strftime('%d/%m/%Y') if e.fecha_evaluacion else '—' }}
+                        </td>
+                        <td>
+                            <strong>{{ e.codigo_lote }}</strong>
+                            <br><span style="font-size:0.78rem; color:var(--gris-texto);">{{ e.nombre_fundo }}</span>
+                        </td>
+                        <td>{{ e.nombre_plaga }}</td>
+                        <td style="font-size:0.84rem;">{{ e.nombre_inspector }}</td>
+                        <td style="text-align:center;">{{ e.plantas_evaluadas }}</td>
+                        <td style="text-align:center;">{{ e.plantas_afectadas }}</td>
+                        <td>
+                            {% if e.nivel_incidencia == 'alto' %}
+                                <span class="badge badge-rojo">🔴 Alto</span>
+                            {% elif e.nivel_incidencia == 'medio' %}
+                                <span class="badge badge-acento">🟡 Medio</span>
+                            {% else %}
+                                <span class="badge badge-verde">🟢 Bajo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="tabla-empty">
+                            No hay evaluaciones registradas.
+                            <a href="{{ url_for('form_evaluacion') }}" style="color:var(--verde);">
+                                Registra la primera →
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── PROYECTOS ─────────────────────────────────────────── -->
+{% else %}
+<div class="page-header">
+    <div>
+        <h1>📁 Proyectos de software</h1>
+        <p>Gestión ágil de proyectos en curso</p>
+    </div>
+    <a class="btn btn-verde" href="{{ url_for('form_proyecto') }}">+ Nuevo proyecto</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Proyectos registrados</div>
+    <div style="overflow-x:auto;">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Responsable</th>
+                    <th>Estado</th>
+                    <th>Inicio</th>
+                    <th>Fin planificado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if proyectos %}
+                    {% for p in proyectos %}
+                    <tr>
+                        <td style="color:var(--azul); font-weight:600; font-size:0.8rem;">
+                            PR-{{ p.id_proyecto }}
+                        </td>
+                        <td><strong>{{ p.nombre }}</strong></td>
+                        <td>{{ p.nombre_responsable }}</td>
+                        <td>
+                            {% if p.estado == 'completado' %}
+                                <span class="badge badge-verde">✅ Completado</span>
+                            {% elif p.estado == 'en_desarrollo' %}
+                                <span class="badge badge-azul">⚙️ En desarrollo</span>
+                            {% elif p.estado == 'qa' %}
+                                <span class="badge badge-acento">🧪 QA</span>
+                            {% elif p.estado == 'pausado' %}
+                                <span class="badge badge-gris">⏸️ Pausado</span>
+                            {% else %}
+                                <span class="badge badge-gris">📝 Planificado</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:0.84rem;">
+                            {{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}
+                        </td>
+                        <td style="font-size:0.84rem;">
+                            {{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="tabla-empty">
+                            No hay proyectos registrados.
+                            <a href="{{ url_for('form_proyecto') }}" style="color:var(--verde);">
+                                Crea el primero →
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

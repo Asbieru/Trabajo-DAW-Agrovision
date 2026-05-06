@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Proyecto de Software{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>🚀 Nuevo proyecto de software</h1>
+        <p>Registro ágil de proyectos · Reemplaza el documento BBP de 150 páginas</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Ver proyectos</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Datos del proyecto</div>
+    <div class="card-body">
+        <form action="{{ url_for('guardar_proyecto') }}" method="POST">
+
+            <!-- Nombre del proyecto -->
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="nombre">Nombre del proyecto *</label>
+                <input type="text" id="nombre" name="nombre"
+                       placeholder="Ej. App Móvil de Registro de Plagas" required>
+            </div>
+
+            <!-- Responsable y Estado -->
+            <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                    <label for="id_responsable">Responsable del proyecto *</label>
+                    <select id="id_responsable" name="id_responsable" required>
+                        <option value="">— Selecciona responsable —</option>
+                        {% for r in responsables %}
+                        <option value="{{ r.id_usuario }}">{{ r.nombre_completo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="estado">Estado inicial *</label>
+                    <select id="estado" name="estado" required>
+                        <option value="planificado" selected>📝 Planificado</option>
+                        <option value="en_desarrollo">⚙️ En desarrollo</option>
+                        <option value="qa">🧪 QA / Pruebas</option>
+                        <option value="completado">✅ Completado</option>
+                        <option value="pausado">⏸️ Pausado</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Fechas -->
+            <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                    <label for="fecha_inicio">Fecha de inicio *</label>
+                    <input type="date" id="fecha_inicio" name="fecha_inicio" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="fecha_fin_plan">Fecha de fin planificada *</label>
+                    <input type="date" id="fecha_fin_plan" name="fecha_fin_plan" required>
+                    <span class="form-hint">Fecha objetivo de entrega en producción</span>
+                </div>
+            </div>
+
+            <!-- Descripción / Alcance -->
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="descripcion">Descripción y alcance *</label>
+                <textarea id="descripcion" name="descripcion" rows="5"
+                          placeholder="Describe el objetivo del proyecto, los módulos principales a desarrollar, el área usuaria involucrada y el problema que resuelve..." required></textarea>
+                <span class="form-hint">En lugar del BBP, describe el alcance en pocas líneas con enfoque ágil</span>
+            </div>
+
+            <!-- ACCIONES -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">🚀 Crear proyecto</button>
+                <a href="{{ url_for('index') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}
