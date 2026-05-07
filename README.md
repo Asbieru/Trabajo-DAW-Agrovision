@@ -9,3 +9,4 @@
 # pip install Flask
 # flask --app main run --debug
 #    Crea la base de datos y las tablas o si no, no corre 
+#
