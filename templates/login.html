@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar sesión · AgroVisión Sistemas</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --verde:        #1a7a4a;
+            --verde-oscuro: #0f4f2e;
+            --verde-claro:  #d4edda;
+            --acento:       #f0a500;
+            --rojo:         #c0392b;
+            --rojo-claro:   #fdecea;
+            --gris-bg:      #f5f6f8;
+            --gris-borde:   #e2e6ea;
+            --gris-texto:   #6c757d;
+            --blanco:       #ffffff;
+            --negro:        #1a1e24;
+            --fuente:       system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            font-family: var(--fuente);
+            background: var(--gris-bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* TOPBAR igual al base.html */
+        .topbar {
+            height: 60px;
+            background: var(--verde-oscuro);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+        .topbar-logo {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--blanco);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .topbar-logo em { color: var(--acento); font-style: normal; }
+        .topbar-badge {
+            font-size: 0.62rem;
+            background: var(--acento);
+            color: var(--negro);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        /* CONTENEDOR PRINCIPAL */
+        .auth-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+
+        .auth-box {
+            background: var(--blanco);
+            border: 1px solid var(--gris-borde);
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.09);
+            width: 100%;
+            max-width: 420px;
+            overflow: hidden;
+        }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--gris-borde);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 16px;
+            background: none;
+            border: none;
+            font-family: var(--fuente);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--gris-texto);
+            cursor: pointer;
+            transition: color 0.15s, border-bottom 0.15s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab-btn.activo {
+            color: var(--verde);
+            border-bottom-color: var(--verde);
+        }
+        .tab-btn:hover:not(.activo) { color: var(--negro); }
+
+        /* PANELES */
+        .tab-panel { display: none; padding: 28px; }
+        .tab-panel.activo { display: block; }
+
+        .auth-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--negro);
+            margin-bottom: 6px;
+        }
+        .auth-sub {
+            font-size: 0.82rem;
+            color: var(--gris-texto);
+            margin-bottom: 22px;
+            line-height: 1.5;
+        }
+        .auth-sub strong { color: var(--verde); }
+
+        /* FORMULARIO */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #444;
+        }
+        .form-group input {
+            padding: 10px 13px;
+            border: 1.5px solid var(--gris-borde);
+            border-radius: 8px;
+            font-family: var(--fuente);
+            font-size: 0.9rem;
+            color: var(--negro);
+            transition: border-color 0.15s, box-shadow 0.15s;
+            width: 100%;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--verde);
+            box-shadow: 0 0 0 3px rgba(26,122,74,0.12);
+        }
+        .form-hint {
+            font-size: 0.73rem;
+            color: var(--gris-texto);
+        }
+
+        /* BOTÓN */
+        .btn-full {
+            display: block;
+            width: 100%;
+            padding: 11px;
+            background: var(--verde);
+            color: var(--blanco);
+            border: none;
+            border-radius: 8px;
+            font-family: var(--fuente);
+            font-size: 0.93rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .btn-full:hover {
+            background: var(--verde-oscuro);
+            transform: translateY(-1px);
+        }
+        .btn-full:active { transform: translateY(0); }
+
+        /* ALERTAS FLASH */
+        .alerta {
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            line-height: 1.4;
+        }
+        .alerta-verde {
+            background: var(--verde-claro);
+            color: var(--verde-oscuro);
+            border: 1px solid #a8d5b5;
+        }
+        .alerta-rojo {
+            background: var(--rojo-claro);
+            color: var(--rojo);
+            border: 1px solid #f5c6cb;
+        }
+
+        /* INFO BLOQUE INFERIOR */
+        .auth-footer {
+            background: #f9fbf9;
+            border-top: 1px solid var(--gris-borde);
+            padding: 14px 28px;
+            font-size: 0.77rem;
+            color: var(--gris-texto);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        @media (max-width: 480px) {
+            .auth-box { border-radius: 0; }
+            .tab-panel { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <span class="topbar-logo">
+        🌿 Agro<em>visión</em>
+        <span class="topbar-badge">Sistemas</span>
+    </span>
+</header>
+
+<!-- CAJA DE AUTH -->
+<div class="auth-wrap">
+    <div class="auth-box">
+
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="tab-btn activo" onclick="mostrarTab('login', this)">
+                🔐 Iniciar sesión
+            </button>
+            <button class="tab-btn" onclick="mostrarTab('registro', this)">
+                ✉️ Registrarse
+            </button>
+        </div>
+
+        <!-- MENSAJES FLASH (Flask los inyecta aquí) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div style="padding: 16px 28px 0;">
+                    {% for category, message in messages %}
+                        <div class="alerta {{ 'alerta-verde' if category == 'exito' else 'alerta-rojo' }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- ── PANEL: LOGIN ── -->
+        <div id="panel-login" class="tab-panel activo">
+            <p class="auth-title">Bienvenido al sistema</p>
+            <p class="auth-sub">
+                Acceso exclusivo para personal de <strong>soporte de AgroVisión</strong>.
+            </p>
+
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="correo-login">Correo corporativo</label>
+                    <input
+                        type="email"
+                        id="correo-login"
+                        name="correo"
+                        placeholder="usuario@agrovisioncorp.com"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="password-login">Contraseña</label>
+                    <input
+                        type="password"
+                        id="password-login"
+                        name="password"
+                        placeholder="••••••••"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+                <button type="submit" class="btn-full">Ingresar al sistema</button>
+            </form>
+        </div>
+
+        <!-- ── PANEL: REGISTRO ── -->
+        <div id="panel-registro" class="tab-panel">
+            <p class="auth-title">Crear cuenta de soporte</p>
+            <p class="auth-sub">
+                Solo se aceptan correos con dominio
+                <strong>@agrovisioncorp.com</strong>
+            </p>
+
+            <form method="POST" action="{{ url_for('registro') }}">
+                <div class="form-group">
+                    <label for="nombre-reg">Nombre completo</label>
+                    <input
+                        type="text"
+                        id="nombre-reg"
+                        name="nombre_completo"
+                        placeholder="Ej. Renzo Carranza Hoyos"
+                        required
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="correo-reg">Correo corporativo</label>
+                    <input
+                        type="email"
+                        id="correo-reg"
+                        name="correo"
+                        placeholder="usuario@agrovisioncorp.com"
+                        required
+                    >
+                    <span class="form-hint">Debe terminar en @agrovisioncorp.com</span>
+                </div>
+                <div class="form-group">
+                    <label for="password-reg">Contraseña</label>
+                    <input
+                        type="password"
+                        id="password-reg"
+                        name="password"
+                        placeholder="Mínimo 6 caracteres"
+                        required
+                        minlength="6"
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="password2-reg">Confirmar contraseña</label>
+                    <input
+                        type="password"
+                        id="password2-reg"
+                        name="password2"
+                        placeholder="Repite tu contraseña"
+                        required
+                        minlength="6"
+                    >
+                </div>
+                <button type="submit" class="btn-full">Crear cuenta</button>
+            </form>
+        </div>
+
+        <!-- PIE -->
+        <div class="auth-footer">
+            🔒 Acceso restringido · Solo personal autorizado de Sistemas
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function mostrarTab(tab, btn) {
+        // Ocultar todos los paneles
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('activo'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
+        // Mostrar el seleccionado
+        document.getElementById('panel-' + tab).classList.add('activo');
+        btn.classList.add('activo');
+    }
+
+    // Si Flask redirigió con ?tab=registro, abrir ese panel
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'registro') {
+        document.querySelectorAll('.tab-btn')[1].click();
+    }
+</script>
+
+</body>
+</html>

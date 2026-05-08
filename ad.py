@@ -290,3 +290,109 @@ def insertarProyecto(obj: Proyecto) -> bool:
     except Exception as e:
         print(f"[ERROR insertarProyecto] {e}")
     return False
+
+
+"""
+AGREGA ESTAS FUNCIONES AL FINAL DE tu ad.py
+──────────────────────────────────────────────
+Requiere: pip install werkzeug  (ya viene con Flask)
+"""
+
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
+# ──────────────────────────────────────────────────────────────
+#  AUTH: REGISTRO
+# ──────────────────────────────────────────────────────────────
+
+def registrarUsuarioSoporte(nombre_completo, correo, password):
+    """
+    Registra un nuevo usuario con rol 'soporte'.
+    Valida que el correo sea @agrovisioncorp.com y que no exista ya.
+    Retorna (True, '') si OK, o (False, 'mensaje de error') si falla.
+    """
+    # 1. Validar dominio
+    if not correo.lower().endswith('@agrovisioncorp.com'):
+        return False, 'El correo debe pertenecer al dominio @agrovisioncorp.com'
+
+    try:
+        conn = obtenerconexion()
+        if not conn:
+            return False, 'No se pudo conectar a la base de datos.'
+
+        with conn:
+            with conn.cursor() as cursor:
+                # 2. Verificar que el correo no este registrado
+                cursor.execute(
+                    "SELECT id_usuario FROM usuarios WHERE correo = %s",
+                    (correo.lower(),)
+                )
+                if cursor.fetchone():
+                    return False, 'Ya existe una cuenta con ese correo.'
+
+                # 3. Insertar con contrasena hasheada y rol soporte
+                password_hash = generate_password_hash(password)
+                cursor.execute(
+                    """INSERT INTO usuarios (nombre_completo, correo, rol, password_hash)
+                       VALUES (%s, %s, 'soporte', %s)""",
+                    (nombre_completo.strip(), correo.lower(), password_hash)
+                )
+            conn.commit()
+        return True, 'Cuenta creada. Ya puedes iniciar sesion.'
+
+    except Exception as e:
+        print(f"[ERROR registrarUsuarioSoporte] {e}")
+        return False, f'Error al registrar: {e}'
+
+
+# ──────────────────────────────────────────────────────────────
+#  AUTH: LOGIN
+# ──────────────────────────────────────────────────────────────
+
+def autenticarUsuario(correo, password):
+    """
+    Verifica correo + contrasena y que el rol sea 'soporte'.
+    Retorna:
+      (True,  '',         dict_usuario)  exito
+      (False, 'mensaje',  None)          fallo
+    """
+    try:
+        conn = obtenerconexion()
+        if not conn:
+            return False, 'No se pudo conectar a la base de datos.', None
+
+        with conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """SELECT id_usuario, nombre_completo, correo, rol,
+                              password_hash, activo
+                       FROM usuarios
+                       WHERE correo = %s""",
+                    (correo.lower(),)
+                )
+                usuario = cursor.fetchone()
+
+        if not usuario:
+            return False, 'Correo o contrasena incorrectos.', None
+
+        if not usuario['activo']:
+            return False, 'Tu cuenta esta desactivada. Contacta al administrador.', None
+
+        if usuario['rol'] != 'soporte':
+            return False, 'Solo el personal de soporte puede acceder a este sistema.', None
+
+        if not check_password_hash(usuario['password_hash'], password):
+            return False, 'Correo o contrasena incorrectos.', None
+
+        # Devolvemos solo lo necesario para la sesion (sin el hash)
+        datos_sesion = {
+            'id_usuario':      usuario['id_usuario'],
+            'nombre_completo': usuario['nombre_completo'],
+            'correo':          usuario['correo'],
+            'rol':             usuario['rol'],
+        }
+        return True, '', datos_sesion
+
+    except Exception as e:
+        print(f"[ERROR autenticarUsuario] {e}")
+        return False, f'Error al autenticar: {e}', None

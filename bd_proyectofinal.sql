@@ -9,12 +9,13 @@ USE bd_proyectofinal;
 
 -- ── 1. USUARIOS ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS usuarios (
-    id_usuario     INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario      INT AUTO_INCREMENT PRIMARY KEY,
     nombre_completo VARCHAR(120) NOT NULL,
-    correo         VARCHAR(120) NOT NULL UNIQUE,
-    rol            ENUM('inspector','analista','admin','soporte') NOT NULL DEFAULT 'inspector',
-    activo         TINYINT(1) NOT NULL DEFAULT 1,
-    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    correo          VARCHAR(120) NOT NULL UNIQUE,
+    password_hash   VARCHAR(255) NULL,                          -- ← AGREGADO
+    rol             ENUM('inspector','analista','admin','soporte') NOT NULL DEFAULT 'inspector',
+    activo          TINYINT(1) NOT NULL DEFAULT 1,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- Datos de ejemplo
