@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Indicadores de Soporte{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>📊 Indicadores de Soporte</h1>
+        <p>Panel de KPIs para el Jefe TI · Área de Sistemas AgroVisión</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">🎫 Ver tickets</a>
+</div>
+
+<!-- FILA 1: KPIs -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;">
+
+    <div class="card" style="padding:20px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--gris-texto);"></div>
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gris-texto);margin-bottom:6px;">Total tickets</div>
+        <div style="font-size:2.2rem;font-weight:800;line-height:1;color:var(--negro);">{{ resumen.total or 0 }}</div>
+        <div style="font-size:1.4rem;position:absolute;top:18px;right:18px;opacity:0.12;">🎫</div>
+    </div>
+
+    <div class="card" style="padding:20px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--rojo);"></div>
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gris-texto);margin-bottom:6px;">Pendientes</div>
+        <div style="font-size:2.2rem;font-weight:800;line-height:1;color:var(--rojo);">{{ (resumen.abiertos or 0) + (resumen.en_progreso or 0) }}</div>
+        <div style="font-size:1.4rem;position:absolute;top:18px;right:18px;opacity:0.12;">🔴</div>
+    </div>
+
+    <div class="card" style="padding:20px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--verde);"></div>
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gris-texto);margin-bottom:6px;">Resueltos / Cerrados</div>
+        <div style="font-size:2.2rem;font-weight:800;line-height:1;color:var(--verde-oscuro);">{{ (resumen.resueltos or 0) + (resumen.cerrados or 0) }}</div>
+        <div style="font-size:1.4rem;position:absolute;top:18px;right:18px;opacity:0.12;">✅</div>
+    </div>
+
+    <div class="card" style="padding:20px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--azul);"></div>
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gris-texto);margin-bottom:6px;">Tiempo prom. resolución</div>
+        <div style="font-size:2.2rem;font-weight:800;line-height:1;color:var(--azul);">
+            {{ resumen.promedio_horas_resolucion or '—' }}{% if resumen.promedio_horas_resolucion %}<span style="font-size:1rem;font-weight:500;">h</span>{% endif %}
+        </div>
+        <div style="font-size:1.4rem;position:absolute;top:18px;right:18px;opacity:0.12;">⏱</div>
+    </div>
+
+    <div class="card" style="padding:20px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--verde);"></div>
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gris-texto);margin-bottom:10px;">SLA cumplido</div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="width:68px;height:68px;border-radius:50%;border:6px solid var(--verde);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:var(--verde-oscuro);">
+                {{ resumen.pct_sla or 0 }}%
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- FILA 2: Por aplicación + Por prioridad -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;">
+
+    <div class="card">
+        <div class="card-header">🖥 Tickets por aplicación</div>
+        <div class="card-body">
+            {% if por_app %}
+                {% set max_total = por_app | map(attribute='total') | max %}
+                {% for a in por_app %}
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:0.83rem;">
+                    <span style="min-width:150px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ a.aplicacion }}">{{ a.aplicacion }}</span>
+                    <div style="flex:1;background:var(--gris-borde);border-radius:20px;height:10px;overflow:hidden;">
+                        <div class="barra-w" data-pct="{{ (a.total / max_total * 100) | int }}"></div>
+                    </div>
+                    <span style="min-width:50px;text-align:right;font-weight:700;font-size:0.8rem;">{{ a.total }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center;padding:30px;color:var(--gris-texto);">Sin datos aún</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">🚨 Distribución por prioridad</div>
+        <div class="card-body">
+            {% if por_prioridad %}
+                {% set total_p = por_prioridad | sum(attribute='total') %}
+                {% for p in por_prioridad %}
+                {% set pct = ((p.total / total_p) * 100) | int if total_p else 0 %}
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:0.83rem;">
+                    <span style="min-width:150px;">{{ p.prioridad | capitalize }}</span>
+                    <div style="flex:1;background:var(--gris-borde);border-radius:20px;height:10px;overflow:hidden;">
+                        <div class="barra-w" data-pct="{{ pct }}"></div>
+                    </div>
+                    <span style="min-width:30px;text-align:right;font-weight:700;font-size:0.8rem;">{{ p.total }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center;padding:30px;color:var(--gris-texto);">Sin datos aún</div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- FILA 3: Por agente + Sprints -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;">
+
+    <div class="card">
+        <div class="card-header">👨‍💻 Carga por programador</div>
+        <div class="card-body">
+            {% if por_agente %}
+                {% for a in por_agente %}
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gris-borde);">
+                    <div style="width:36px;height:36px;border-radius:50%;background:var(--verde-claro);color:var(--verde-oscuro);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">
+                        {{ a.agente.split()[0][0] }}{{ a.agente.split()[-1][0] if a.agente.split()|length > 1 else '' }}
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:0.87rem;">{{ a.agente }}</div>
+                        <div style="font-size:0.75rem;color:var(--gris-texto);">
+                            {{ a.resueltos }} resueltos · {% if a.promedio_horas %}promedio {{ a.promedio_horas }}h{% else %}sin datos{% endif %}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:1.1rem;font-weight:800;color:var(--verde-oscuro);">{{ a.total_atendidos }}</div>
+                        <div style="font-size:0.68rem;color:var(--gris-texto);">tickets</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center;padding:30px;color:var(--gris-texto);">Sin agentes asignados aún.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">⚡ Avance de sprints activos</div>
+        <div class="card-body">
+            {% if sprint_activo %}
+                {% for s in sprint_activo %}
+                {% set pct_sp = ((s.pts_completados / s.capacidad_pts) * 100) | int if s.capacidad_pts else 0 %}
+                <div style="display:flex;flex-direction:column;gap:6px;padding:14px 0;border-bottom:1px solid var(--gris-borde);">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                        <span style="font-weight:600;font-size:0.9rem;">{{ s.sprint }}</span>
+                        <span style="font-size:0.75rem;color:var(--gris-texto);">{{ s.proyecto }}</span>
+                    </div>
+                    <div style="background:var(--gris-borde);border-radius:20px;height:12px;overflow:hidden;">
+                        <div class="barra-w" data-pct="{{ pct_sp if pct_sp <= 100 else 100 }}"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--gris-texto);">
+                        <span>{{ s.pts_completados }} / {{ s.capacidad_pts }} pts ({{ pct_sp }}%)</span>
+                        <span>
+                            {% if s.dias_restantes is not none %}
+                                {% if s.dias_restantes > 0 %}{{ s.dias_restantes }} día{{ 's' if s.dias_restantes != 1 }} restantes
+                                {% elif s.dias_restantes == 0 %}⚠️ Termina hoy
+                                {% else %}🔴 Vencido hace {{ s.dias_restantes|abs }} día{{ 's' if s.dias_restantes|abs != 1 }}
+                                {% endif %}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if s.pts_en_progreso > 0 %}
+                    <div style="font-size:0.73rem;color:var(--azul);">🔄 {{ s.pts_en_progreso }} pts en progreso</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center;padding:30px;color:var(--gris-texto);">No hay sprints activos.</div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- FILA 4: Tendencia mensual -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-header">📈 Tendencia de tickets — últimos 6 meses</div>
+    <div class="card-body">
+        {% if por_mes %}
+            {% set max_mes = por_mes | map(attribute='total') | max %}
+            <div style="display:flex;align-items:flex-end;gap:8px;height:80px;margin-bottom:8px;">
+                {% for m in por_mes %}
+                {% set h_t = ((m.total / max_mes) * 70) | int if max_mes else 0 %}
+                {% set h_r = ((m.resueltos / max_mes) * 70) | int if max_mes else 0 %}
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;">
+                    <span style="font-size:0.65rem;color:var(--gris-texto);margin-bottom:2px;">{{ m.total }}</span>
+                    <div style="width:100%;display:flex;gap:2px;align-items:flex-end;justify-content:center;">
+                        <div class="barra-h" data-h="{{ h_t }}" style="flex:1;background:var(--azul);border-radius:3px 3px 0 0;opacity:0.7;min-height:3px;"></div>
+                        <div class="barra-h" data-h="{{ h_r }}" style="flex:1;background:var(--verde);border-radius:3px 3px 0 0;min-height:3px;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="display:flex;gap:8px;">
+                {% for m in por_mes %}
+                <div style="flex:1;text-align:center;font-size:0.68rem;color:var(--gris-texto);">{{ m.mes_label }}</div>
+                {% endfor %}
+            </div>
+            <div style="display:flex;gap:16px;margin-top:12px;font-size:0.78rem;">
+                <span><span style="display:inline-block;width:12px;height:12px;background:var(--azul);opacity:0.7;border-radius:2px;margin-right:4px;"></span>Apertura</span>
+                <span><span style="display:inline-block;width:12px;height:12px;background:var(--verde);border-radius:2px;margin-right:4px;"></span>Resueltos</span>
+            </div>
+        {% else %}
+            <div style="text-align:center;padding:30px;color:var(--gris-texto);">Sin datos de tendencia aún.</div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.barra-w').forEach(function(el) {
+    el.style.height = '100%';
+    el.style.borderRadius = '20px';
+    el.style.background = 'var(--azul)';
+    el.style.width = el.getAttribute('data-pct') + '%';
+});
+document.querySelectorAll('.barra-h').forEach(function(el) {
+    el.style.height = el.getAttribute('data-h') + 'px';
+});
+</script>
+
+{% endblock %}

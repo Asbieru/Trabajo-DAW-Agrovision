@@ -12,6 +12,9 @@ from ad import (
     listarEvaluaciones, listarTickets, listarProyectos,
     # Inserciones
     insertarEvaluacion, insertarTicket, insertarProyecto,
+    # KPIs Indicadores
+    kpiResumenTickets, kpiTicketsPorAplicacion, kpiTicketsPorPrioridad,
+    kpiTicketsPorAgente, kpiTicketsPorMes,kpiAvanceSprintActual,
     # Auth
     registrarUsuario, autenticarUsuario,
     # Resolución de tickets
@@ -278,6 +281,29 @@ def guardar_proyecto():
 def listar_proyectos():
     proyectos = listarProyectos()
     return render_template('GestionIncidencia.html', proyectos=proyectos)
+
+
+
+# ══════════════════════════════════════════════════════════════
+#  INDICADORES DE SOPORTE
+# ══════════════════════════════════════════════════════════════
+
+@app.route('/indicadores')
+@login_requerido
+def indicadores_soporte():
+    resumen       = kpiResumenTickets()
+    por_app       = kpiTicketsPorAplicacion()
+    por_prioridad = kpiTicketsPorPrioridad()
+    por_agente    = kpiTicketsPorAgente()
+    por_mes       = kpiTicketsPorMes()
+    sprint_activo = kpiAvanceSprintActual()
+    return render_template('indicadores.html',
+                           resumen=resumen,
+                           por_app=por_app,
+                           por_prioridad=por_prioridad,
+                           por_agente=por_agente,
+                           por_mes=por_mes,
+                           sprint_activo=sprint_activo)
 
 
 # ──────────────────────────────────────────────────────────────
