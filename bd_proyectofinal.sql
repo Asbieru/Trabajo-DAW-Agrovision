@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 
 -- Datos de ejemplo
 INSERT INTO usuarios (nombre_completo, correo, password_hash, rol) VALUES
-    ('Renzo Carranza',   'renzo@agrovision.pe', '1',   'admin'),
+    ('Renzo Carranza',   'renzo@agrovision.pe', '654321',   'admin'),
     ('María Quispe',     'maria@agrovision.pe', '123456',  'inspector'),
     ('Luis Flores',      'luis@agrovision.pe', '123456',    'inspector'),
     ('Ana Torres',       'ana@agrovision.pe', '123456',    'analista'),
