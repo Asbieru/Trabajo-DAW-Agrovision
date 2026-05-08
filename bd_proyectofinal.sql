@@ -19,12 +19,12 @@ CREATE TABLE IF NOT EXISTS usuarios (
 ) ENGINE=InnoDB;
 
 -- Datos de ejemplo
-INSERT INTO usuarios (nombre_completo, correo, rol) VALUES
-    ('Renzo Carranza',   'renzo@agrovision.pe',   'admin'),
-    ('María Quispe',     'maria@agrovision.pe',   'inspector'),
-    ('Luis Flores',      'luis@agrovision.pe',    'inspector'),
-    ('Ana Torres',       'ana@agrovision.pe',     'analista'),
-    ('Carlos Mendoza',   'carlos@agrovision.pe',  'soporte');
+INSERT INTO usuarios (nombre_completo, correo, password_hash, rol) VALUES
+    ('Renzo Carranza',   'renzo@agrovision.pe', '1',   'admin'),
+    ('María Quispe',     'maria@agrovision.pe', '123456',  'inspector'),
+    ('Luis Flores',      'luis@agrovision.pe', '123456',    'inspector'),
+    ('Ana Torres',       'ana@agrovision.pe', '123456',    'analista'),
+    ('Carlos Mendoza',   'carlos@agrovision.pe','123456',   'soporte');
 
 -- ── 2. LOTES ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS lotes (

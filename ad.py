@@ -305,7 +305,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 #  AUTH: REGISTRO
 # ──────────────────────────────────────────────────────────────
 
-def registrarUsuarioSoporte(nombre_completo, correo, password):
+def registrarUsuario(nombre_completo, correo, password):
     """
     Registra un nuevo usuario con rol 'soporte'.
     Valida que el correo sea @agrovisioncorp.com y que no exista ya.
@@ -333,8 +333,8 @@ def registrarUsuarioSoporte(nombre_completo, correo, password):
                 # 3. Insertar con contrasena hasheada y rol soporte
                 password_hash = generate_password_hash(password)
                 cursor.execute(
-                    """INSERT INTO usuarios (nombre_completo, correo, rol, password_hash)
-                       VALUES (%s, %s, 'soporte', %s)""",
+                    """INSERT INTO usuarios (nombre_completo, correo, rol='soporte', password_hash)
+                       VALUES (%s, %s, %s, %s)""",
                     (nombre_completo.strip(), correo.lower(), password_hash)
                 )
             conn.commit()
@@ -378,10 +378,9 @@ def autenticarUsuario(correo, password):
         if not usuario['activo']:
             return False, 'Tu cuenta esta desactivada. Contacta al administrador.', None
 
-        if usuario['rol'] != 'soporte':
-            return False, 'Solo el personal de soporte puede acceder a este sistema.', None
-
-        if not check_password_hash(usuario['password_hash'], password):
+        if not check_password_hash(usuario['password_hash'], password) \
+                if usuario['password_hash'].startswith(('pbkdf2:', 'scrypt:', 'argon2')) \
+                else usuario['password_hash'] != password:
             return False, 'Correo o contrasena incorrectos.', None
 
         # Devolvemos solo lo necesario para la sesion (sin el hash)

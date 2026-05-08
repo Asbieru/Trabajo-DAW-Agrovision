@@ -13,7 +13,7 @@ from ad import (
     # Inserciones
     insertarEvaluacion, insertarTicket, insertarProyecto,
     # Auth
-    registrarUsuarioSoporte, autenticarUsuario,
+    registrarUsuario, autenticarUsuario,
 )
 
 app = Flask(__name__)
@@ -95,7 +95,7 @@ def registro():
         flash('La contrasena debe tener al menos 6 caracteres.', 'error')
         return redirect(url_for('login') + '?tab=registro')
 
-    ok, mensaje = registrarUsuarioSoporte(nombre, correo, password)
+    ok, mensaje = registrarUsuario(nombre, correo, password)
     if ok:
         flash(f'{mensaje}', 'exito')
         return redirect(url_for('login'))
