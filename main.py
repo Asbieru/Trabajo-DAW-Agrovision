@@ -2,8 +2,7 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, session
 from ad import (
     # DTOs
     EvaluacionCampo, Ticket, Proyecto,
@@ -24,21 +23,6 @@ from ad import (
 app = Flask(__name__)
 app.secret_key = 'agrovision_secret_2024'
 app.config['SESSION_PERMANENT'] = False
-
-
-# ──────────────────────────────────────────────────────────────
-#  DECORADOR: protege rutas, redirige al login si no hay sesion
-# ──────────────────────────────────────────────────────────────
-
-def login_requerido(f):
-    @wraps(f)
-    def decorado(*args, **kwargs):
-        if 'usuario' not in session:
-            flash('Debes iniciar sesion para acceder.', 'error')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorado
-
 
 # ──────────────────────────────────────────────────────────────
 #  RUTA RAIZ: redirige siempre al login o al dashboard
@@ -69,10 +53,7 @@ def login():
         ok, mensaje, datos = autenticarUsuario(correo, password)
         if ok:
             session['usuario'] = datos
-            flash(f"Bienvenido, {datos['nombre_completo']}!", 'exito')
             return redirect(url_for('index'))
-        else:
-            flash(f'{mensaje}', 'error')
 
     return render_template('login.html')
 
@@ -89,23 +70,18 @@ def registro():
     password2 = request.form.get('password2', '')
 
     if not nombre:
-        flash('El nombre no puede estar vacio.', 'error')
         return redirect(url_for('login') + '?tab=registro')
 
     if password != password2:
-        flash('Las contrasenas no coinciden.', 'error')
         return redirect(url_for('login') + '?tab=registro')
 
     if len(password) < 6:
-        flash('La contrasena debe tener al menos 6 caracteres.', 'error')
         return redirect(url_for('login') + '?tab=registro')
 
     ok, mensaje = registrarUsuario(nombre, correo, password)
     if ok:
-        flash(f'{mensaje}', 'exito')
         return redirect(url_for('login'))
     else:
-        flash(f'{mensaje}', 'error')
         return redirect(url_for('login') + '?tab=registro')
 
 
@@ -116,7 +92,6 @@ def registro():
 @app.route('/logout')
 def logout():
     session.pop('usuario', None)
-    flash('Sesion cerrada correctamente.', 'exito')
     return redirect(url_for('login'))
 
 
@@ -125,7 +100,6 @@ def logout():
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/dashboard')
-@login_requerido
 def index():
     return render_template('panelDeControl.html')
 
@@ -135,7 +109,6 @@ def index():
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/evaluacion/nueva')
-@login_requerido
 def form_evaluacion():
     lotes       = obtenerLotes()
     plagas      = obtenerPlagas()
@@ -147,7 +120,6 @@ def form_evaluacion():
 
 
 @app.route('/evaluacion/guardar', methods=['POST'])
-@login_requerido
 def guardar_evaluacion():
     try:
         obj = EvaluacionCampo(
@@ -162,18 +134,14 @@ def guardar_evaluacion():
             foto_url          = request.form.get('foto_url', ''),
             observaciones     = request.form.get('observaciones', ''),
         )
-        if insertarEvaluacion(obj):
-            flash('Evaluacion registrada correctamente.', 'exito')
-        else:
-            flash('No se pudo guardar la evaluacion. Revisa los datos.', 'error')
+        insertarEvaluacion(obj)
     except Exception as e:
-        flash(f'Error al procesar el formulario: {e}', 'error')
+        print(f'Error al procesar el formulario: {e}')
 
     return redirect(url_for('form_evaluacion'))
 
 
 @app.route('/evaluaciones')
-@login_requerido
 def listar_evaluaciones():
     registros = listarEvaluaciones()
     return render_template('GestionIncidencia.html', evaluaciones=registros)
@@ -184,14 +152,12 @@ def listar_evaluaciones():
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/ticket/nuevo')
-@login_requerido
 def form_ticket():
     usuarios = obtenerUsuarios()
     return render_template('NuevoTicket.html', usuarios=usuarios)
 
 
 @app.route('/ticket/guardar', methods=['POST'])
-@login_requerido
 def guardar_ticket():
     try:
         obj = Ticket(
@@ -203,43 +169,35 @@ def guardar_ticket():
             sla_horas      = request.form['sla_horas'],
             descripcion    = request.form['descripcion'],
         )
-        if insertarTicket(obj):
-            flash('Ticket enviado correctamente.', 'exito')
-        else:
-            flash('No se pudo registrar el ticket. Intenta de nuevo.', 'error')
+        insertarTicket(obj)
     except Exception as e:
-        flash(f'Error al procesar el formulario: {e}', 'error')
+        print(f'Error al procesar el formulario: {e}')
 
     return redirect(url_for('form_ticket'))
 
 
 @app.route('/tickets')
-@login_requerido
 def listar_tickets():
     tickets = listarTickets()
     return render_template('GestionIncidencia.html', tickets=tickets)
 
 
 @app.route('/ticket/<int:id_ticket>/resolver')
-@login_requerido
 def form_resolver_ticket(id_ticket):
     ticket   = obtenerTicket(id_ticket)
     if not ticket:
-        flash('Ticket no encontrado.', 'error')
         return redirect(url_for('listar_tickets'))
     usuarios = obtenerUsuarios()
     return render_template('resolverTicket.html', ticket=ticket, usuarios=usuarios)
 
 
 @app.route('/ticket/<int:id_ticket>/resolver', methods=['POST'])
-@login_requerido
 def guardar_resolucion(id_ticket):
     id_agente = request.form.get('id_agente')
     estado    = request.form.get('estado')
     notas     = request.form.get('notas_resolucion', '').strip()
 
-    ok, mensaje = resolverTicket(id_ticket, id_agente, estado, notas)
-    flash(mensaje, 'exito' if ok else 'error')
+    resolverTicket(id_ticket, id_agente, estado, notas)
     return redirect(url_for('listar_tickets'))
 
 
@@ -248,14 +206,12 @@ def guardar_resolucion(id_ticket):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/proyecto/nuevo')
-@login_requerido
 def form_proyecto():
     responsables = obtenerUsuarios()
     return render_template('nuevoProyecto.html', responsables=responsables)
 
 
 @app.route('/proyecto/guardar', methods=['POST'])
-@login_requerido
 def guardar_proyecto():
     try:
         obj = Proyecto(
@@ -266,18 +222,14 @@ def guardar_proyecto():
             fecha_fin_plan = request.form['fecha_fin_plan'],
             descripcion    = request.form['descripcion'],
         )
-        if insertarProyecto(obj):
-            flash('Proyecto creado exitosamente.', 'exito')
-        else:
-            flash('No se pudo crear el proyecto. Verifica los datos.', 'error')
+        insertarProyecto(obj)
     except Exception as e:
-        flash(f'Error al procesar el formulario: {e}', 'error')
+        print(f'Error al procesar el formulario: {e}')
 
     return redirect(url_for('form_proyecto'))
 
 
 @app.route('/proyectos')
-@login_requerido
 def listar_proyectos():
     proyectos = listarProyectos()
     return render_template('GestionIncidencia.html', proyectos=proyectos)
@@ -289,7 +241,6 @@ def listar_proyectos():
 # ══════════════════════════════════════════════════════════════
 
 @app.route('/indicadores')
-@login_requerido
 def indicadores_soporte():
     resumen       = kpiResumenTickets()
     por_app       = kpiTicketsPorAplicacion()

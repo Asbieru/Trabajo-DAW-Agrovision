@@ -484,16 +484,6 @@
 
     <!-- CONTENIDO -->
     <main class="main">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alerta {{ 'alerta-verde' if category == 'exito' else 'alerta-rojo' }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
         {% block content %}{% endblock %}
     </main>
 </div>

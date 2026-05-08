@@ -46,7 +46,7 @@
     </div>
 
     <div class="card">
-        <div class="card-header">🎫 Mesa de ayuda</div>
+        <div class="card-header">🎫 Soporte</div>
         <div class="card-body">
             <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
                 Registra incidencias y peticiones. Centraliza el soporte reemplazando correos y WhatsApp.
@@ -71,5 +71,29 @@
         </div>
     </div>
 
+    <div class="card">
+        <div class="card-header">📊 Reportes e Indicadores</div>
+        <div class="card-body">
+            <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
+                Visualiza el cumplimiento de objetivos y métricas clave de soporte y proyectos en tiempo real.
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a class="btn btn-verde btn-sm" href="{{ url_for('indicadores_soporte') }}">Ver indicadores</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- INFORMACIÓN ADICIONAL -->
+<div style="margin-top: 24px; display: grid; grid-template-columns: 1fr; gap: 16px;">
+    <div class="card">
+        <div class="card-header">📢 Avisos del Sistema</div>
+        <div class="card-body">
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem;">
+                <span class="badge badge-verde">INFO</span>
+                <span style="color: var(--gris-texto);">Mantenimiento programado: Domingo 02:00 AM.</span>
+        </div>
+    </div>
 </div>
 {% endblock %}

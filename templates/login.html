@@ -241,19 +241,6 @@
             </button>
         </div>
 
-        <!-- MENSAJES FLASH (Flask los inyecta aquí) -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div style="padding: 16px 28px 0;">
-                    {% for category, message in messages %}
-                        <div class="alerta {{ 'alerta-verde' if category == 'exito' else 'alerta-rojo' }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
         <!-- ── PANEL: LOGIN ── -->
         <div id="panel-login" class="tab-panel activo">
             <p class="auth-title">Bienvenido al sistema</p>
