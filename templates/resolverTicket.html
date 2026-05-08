@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Resolver Ticket SD-{{ ticket.id_ticket }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>🔧 Resolver ticket <span style="color:var(--azul);">SD-{{ ticket.id_ticket }}</span></h1>
+        <p>Mesa de ayuda · Actualizar estado y registrar resolución</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
+</div>
+
+<!-- RESUMEN DEL TICKET -->
+<div class="card" style="margin-bottom: 20px;">
+    <div class="card-header">📋 Detalle del ticket</div>
+    <div class="card-body">
+        <div class="form-grid" style="margin-bottom: 14px;">
+            <div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Título</div>
+                <div style="font-weight:600; font-size:0.95rem;">{{ ticket.titulo }}</div>
+            </div>
+            <div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Solicitante</div>
+                <div>{{ ticket.nombre_solicitante }}</div>
+            </div>
+        </div>
+
+        <div class="form-grid tres" style="margin-bottom: 14px;">
+            <div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Tipo</div>
+                {% if ticket.tipo == 'incidencia' %}
+                    <span class="badge badge-rojo">Incidencia</span>
+                {% elif ticket.tipo == 'peticion' %}
+                    <span class="badge badge-azul">Petición</span>
+                {% else %}
+                    <span class="badge badge-gris">Consulta</span>
+                {% endif %}
+            </div>
+            <div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Prioridad</div>
+                {% if ticket.prioridad == 'critica' %}
+                    <span class="badge badge-rojo">🚨 Crítica</span>
+                {% elif ticket.prioridad == 'alta' %}
+                    <span class="badge badge-rojo">Alta</span>
+                {% elif ticket.prioridad == 'media' %}
+                    <span class="badge badge-acento">Media</span>
+                {% else %}
+                    <span class="badge badge-verde">Baja</span>
+                {% endif %}
+            </div>
+            <div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Estado actual</div>
+                {% if ticket.estado == 'abierto' %}
+                    <span class="badge badge-rojo">Abierto</span>
+                {% elif ticket.estado == 'en_progreso' %}
+                    <span class="badge badge-acento">En progreso</span>
+                {% elif ticket.estado == 'resuelto' %}
+                    <span class="badge badge-verde">Resuelto</span>
+                {% else %}
+                    <span class="badge badge-gris">Cerrado</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px;">Descripción del problema</div>
+            <div style="background:var(--gris-bg); border:1px solid var(--gris-borde); border-radius:8px; padding:12px 14px; font-size:0.88rem; line-height:1.6; white-space:pre-wrap;">{{ ticket.descripcion }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- FORMULARIO DE RESOLUCIÓN -->
+<div class="card">
+    <div class="card-header">✅ Registrar resolución</div>
+    <div class="card-body">
+        <form action="{{ url_for('guardar_resolucion', id_ticket=ticket.id_ticket) }}" method="POST">
+
+            <!-- Agente y nuevo estado -->
+            <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                    <label for="id_agente">Agente que resuelve *</label>
+                    <select id="id_agente" name="id_agente" required>
+                        <option value="">— Selecciona el agente —</option>
+                        {% for u in usuarios %}
+                        <option value="{{ u.id_usuario }}"
+                            {{ 'selected' if session['usuario']['id_usuario'] == u.id_usuario }}>
+                            {{ u.nombre_completo }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-hint">Por defecto queda preseleccionado tu usuario</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="estado">Nuevo estado *</label>
+                    <select id="estado" name="estado" required>
+                        <option value="en_progreso" {{ 'selected' if ticket.estado == 'en_progreso' }}>⚙️ En progreso</option>
+                        <option value="resuelto"    {{ 'selected' if ticket.estado in ('abierto','en_progreso') }}>✅ Resuelto</option>
+                        <option value="cerrado"     {{ 'selected' if ticket.estado == 'resuelto' }}>🔒 Cerrado</option>
+                    </select>
+                    <span class="form-hint">«Resuelto» registra la fecha de cierre automáticamente</span>
+                </div>
+            </div>
+
+            <!-- Notas de resolución -->
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="notas_resolucion">Notas de resolución *</label>
+                <textarea id="notas_resolucion" name="notas_resolucion" rows="5"
+                          placeholder="Describe qué se hizo para resolver el problema: pasos ejecutados, causa raíz, solución aplicada, pruebas realizadas..."
+                          required>{{ ticket.notas_resolucion or '' }}</textarea>
+            </div>
+
+            <!-- ACCIONES -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">💾 Guardar resolución</button>
+                <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}

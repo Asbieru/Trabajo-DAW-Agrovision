@@ -90,8 +90,15 @@ CREATE TABLE IF NOT EXISTS tickets (
     estado             ENUM('abierto','en_progreso','resuelto','cerrado') NOT NULL DEFAULT 'abierto',
     fecha_apertura     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_resolucion   DATETIME,
-    CONSTRAINT fk_ticket_solic  FOREIGN KEY (id_solicitante) REFERENCES usuarios(id_usuario)
+    id_agente          INT         NULL,
+    notas_resolucion   TEXT        NULL,
+    CONSTRAINT fk_ticket_solic  FOREIGN KEY (id_solicitante) REFERENCES usuarios(id_usuario),
+    CONSTRAINT fk_ticket_agente FOREIGN KEY (id_agente)      REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
+
+-- Si la tabla ya existe en tu BD, ejecuta esto en lugar del CREATE:
+-- ALTER TABLE tickets ADD COLUMN id_agente INT NULL, ADD COLUMN notas_resolucion TEXT NULL;
+-- ALTER TABLE tickets ADD CONSTRAINT fk_ticket_agente FOREIGN KEY (id_agente) REFERENCES usuarios(id_usuario);
 
 -- ── 6. PROYECTOS DE SOFTWARE ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS proyectos (

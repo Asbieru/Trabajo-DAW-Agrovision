@@ -165,7 +165,7 @@ def listarEvaluaciones():
 
 
 def listarTickets():
-    """Retorna tickets con nombre del solicitante."""
+    """Retorna tickets con nombre del solicitante y agente asignado."""
     try:
         conn = obtenerconexion()
         if conn:
@@ -174,9 +174,12 @@ def listarTickets():
                     sql = """
                         SELECT t.id_ticket, t.titulo, t.tipo, t.prioridad,
                                t.aplicacion, t.estado, t.fecha_apertura, t.sla_horas,
-                               u.nombre_completo AS nombre_solicitante
+                               t.notas_resolucion, t.fecha_resolucion,
+                               u.nombre_completo AS nombre_solicitante,
+                               a.nombre_completo AS nombre_agente
                         FROM tickets t
                         JOIN usuarios u ON t.id_solicitante = u.id_usuario
+                        LEFT JOIN usuarios a ON t.id_agente = a.id_usuario
                         ORDER BY
                             FIELD(t.prioridad,'critica','alta','media','baja'),
                             t.fecha_apertura DESC
@@ -186,6 +189,57 @@ def listarTickets():
     except Exception as e:
         print(f"[ERROR listarTickets] {e}")
     return []
+
+
+def obtenerTicket(id_ticket):
+    """Retorna un ticket por su ID con datos del solicitante."""
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT t.*, u.nombre_completo AS nombre_solicitante
+                        FROM tickets t
+                        JOIN usuarios u ON t.id_solicitante = u.id_usuario
+                        WHERE t.id_ticket = %s
+                    """, (id_ticket,))
+                    return cursor.fetchone()
+    except Exception as e:
+        print(f"[ERROR obtenerTicket] {e}")
+    return None
+
+
+def resolverTicket(id_ticket, id_agente, estado, notas):
+    """
+    Actualiza el estado de un ticket y registra la resolución.
+    Retorna (True, '') si OK, o (False, 'mensaje') si falla.
+    """
+    try:
+        conn = obtenerconexion()
+        if not conn:
+            return False, 'No se pudo conectar a la base de datos.'
+
+        fecha_res = None
+        if estado in ('resuelto', 'cerrado'):
+            from datetime import datetime
+            fecha_res = datetime.now()
+
+        with conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE tickets
+                       SET estado            = %s,
+                           id_agente         = %s,
+                           notas_resolucion  = %s,
+                           fecha_resolucion  = %s
+                     WHERE id_ticket = %s
+                """, (estado, id_agente, notas, fecha_res, id_ticket))
+            conn.commit()
+        return True, 'Ticket actualizado correctamente.'
+    except Exception as e:
+        print(f"[ERROR resolverTicket] {e}")
+        return False, f'Error al actualizar: {e}'
 
 
 def listarProyectos():
@@ -305,9 +359,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 #  AUTH: REGISTRO
 # ──────────────────────────────────────────────────────────────
 
-def registrarUsuario(nombre_completo, correo, password):
+def registrarUsuario(nombre_completo, correo, password, rol='soporte'):
     """
-    Registra un nuevo usuario con rol 'soporte'.
+    Registra un nuevo usuario con el rol indicado (por defecto 'soporte').
     Valida que el correo sea @agrovisioncorp.com y que no exista ya.
     Retorna (True, '') si OK, o (False, 'mensaje de error') si falla.
     """
@@ -330,18 +384,18 @@ def registrarUsuario(nombre_completo, correo, password):
                 if cursor.fetchone():
                     return False, 'Ya existe una cuenta con ese correo.'
 
-                # 3. Insertar con contrasena hasheada y rol soporte
+                # 3. Insertar con contrasena hasheada y el rol indicado
                 password_hash = generate_password_hash(password)
                 cursor.execute(
-                    """INSERT INTO usuarios (nombre_completo, correo, rol='soporte', password_hash)
+                    """INSERT INTO usuarios (nombre_completo, correo, rol, password_hash)
                        VALUES (%s, %s, %s, %s)""",
-                    (nombre_completo.strip(), correo.lower(), password_hash)
+                    (nombre_completo.strip(), correo.lower(), rol, password_hash)
                 )
             conn.commit()
         return True, 'Cuenta creada. Ya puedes iniciar sesion.'
 
     except Exception as e:
-        print(f"[ERROR registrarUsuarioSoporte] {e}")
+        print(f"[ERROR registrarUsuario] {e}")
         return False, f'Error al registrar: {e}'
 
 
@@ -351,7 +405,7 @@ def registrarUsuario(nombre_completo, correo, password):
 
 def autenticarUsuario(correo, password):
     """
-    Verifica correo + contrasena y que el rol sea 'soporte'.
+    Verifica correo + contrasena.
     Retorna:
       (True,  '',         dict_usuario)  exito
       (False, 'mensaje',  None)          fallo

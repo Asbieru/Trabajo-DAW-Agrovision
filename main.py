@@ -14,6 +14,8 @@ from ad import (
     insertarEvaluacion, insertarTicket, insertarProyecto,
     # Auth
     registrarUsuario, autenticarUsuario,
+    # Resolución de tickets
+    obtenerTicket, resolverTicket,
 )
 
 app = Flask(__name__)
@@ -213,6 +215,29 @@ def guardar_ticket():
 def listar_tickets():
     tickets = listarTickets()
     return render_template('GestionIncidencia.html', tickets=tickets)
+
+
+@app.route('/ticket/<int:id_ticket>/resolver')
+@login_requerido
+def form_resolver_ticket(id_ticket):
+    ticket   = obtenerTicket(id_ticket)
+    if not ticket:
+        flash('Ticket no encontrado.', 'error')
+        return redirect(url_for('listar_tickets'))
+    usuarios = obtenerUsuarios()
+    return render_template('resolverTicket.html', ticket=ticket, usuarios=usuarios)
+
+
+@app.route('/ticket/<int:id_ticket>/resolver', methods=['POST'])
+@login_requerido
+def guardar_resolucion(id_ticket):
+    id_agente = request.form.get('id_agente')
+    estado    = request.form.get('estado')
+    notas     = request.form.get('notas_resolucion', '').strip()
+
+    ok, mensaje = resolverTicket(id_ticket, id_agente, estado, notas)
+    flash(mensaje, 'exito' if ok else 'error')
+    return redirect(url_for('listar_tickets'))
 
 
 # ──────────────────────────────────────────────────────────────
