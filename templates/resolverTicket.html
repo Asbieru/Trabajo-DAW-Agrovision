@@ -4,30 +4,30 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <h1>🔧 Resolver ticket <span style="color:var(--azul);">SD-{{ ticket.id_ticket }}</span></h1>
+        <h1>🔧 Resolver ticket <span class="ticket-id-header">SD-{{ ticket.id_ticket }}</span></h1>
         <p>Mesa de ayuda · Actualizar estado y registrar resolución</p>
     </div>
     <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
 </div>
 
 <!-- RESUMEN DEL TICKET -->
-<div class="card" style="margin-bottom: 20px;">
+<div class="card ticket-summary-card">
     <div class="card-header">📋 Detalle del ticket</div>
     <div class="card-body">
-        <div class="form-grid" style="margin-bottom: 14px;">
+        <div class="form-grid ticket-summary-grid">
             <div>
-                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Título</div>
-                <div style="font-weight:600; font-size:0.95rem;">{{ ticket.titulo }}</div>
+                <div class="ticket-summary-label">Título</div>
+                <div class="ticket-summary-value">{{ ticket.titulo }}</div>
             </div>
             <div>
-                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Solicitante</div>
+                <div class="ticket-summary-label">Solicitante</div>
                 <div>{{ ticket.nombre_solicitante }}</div>
             </div>
         </div>
 
-        <div class="form-grid tres" style="margin-bottom: 14px;">
+        <div class="form-grid tres ticket-summary-grid">
             <div>
-                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Tipo</div>
+                <div class="ticket-summary-label">Tipo</div>
                 {% if ticket.tipo == 'incidencia' %}
                     <span class="badge badge-rojo">Incidencia</span>
                 {% elif ticket.tipo == 'peticion' %}
@@ -37,7 +37,7 @@
                 {% endif %}
             </div>
             <div>
-                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Prioridad</div>
+                <div class="ticket-summary-label">Prioridad</div>
                 {% if ticket.prioridad == 'critica' %}
                     <span class="badge badge-rojo">🚨 Crítica</span>
                 {% elif ticket.prioridad == 'alta' %}
@@ -49,7 +49,7 @@
                 {% endif %}
             </div>
             <div>
-                <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px;">Estado actual</div>
+                <div class="ticket-summary-label">Estado actual</div>
                 {% if ticket.estado == 'abierto' %}
                     <span class="badge badge-rojo">Abierto</span>
                 {% elif ticket.estado == 'en_progreso' %}
@@ -62,9 +62,9 @@
             </div>
         </div>
 
-        <div>
-            <div style="font-size:0.75rem; font-weight:700; color:var(--gris-texto); text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px;">Descripción del problema</div>
-            <div style="background:var(--gris-bg); border:1px solid var(--gris-borde); border-radius:8px; padding:12px 14px; font-size:0.88rem; line-height:1.6; white-space:pre-wrap;">{{ ticket.descripcion }}</div>
+        <div class="ticket-description-container">
+            <div class="ticket-description-label">Descripción del problema</div>
+            <div class="ticket-description-text">{{ ticket.descripcion }}</div>
         </div>
     </div>
 </div>
@@ -76,7 +76,7 @@
         <form action="{{ url_for('guardar_resolucion', id_ticket=ticket.id_ticket) }}" method="POST">
 
             <!-- Agente y nuevo estado -->
-            <div class="form-grid" style="margin-bottom:16px;">
+            <div class="form-grid ticket-resolution-form-grid">
                 <div class="form-group">
                     <label for="id_agente">Agente que resuelve *</label>
                     <select id="id_agente" name="id_agente" required>
@@ -103,7 +103,7 @@
             </div>
 
             <!-- Notas de resolución -->
-            <div class="form-group" style="margin-bottom:16px;">
+            <div class="form-group ticket-resolution-form-group">
                 <label for="notas_resolucion">Notas de resolución *</label>
                 <textarea id="notas_resolucion" name="notas_resolucion" rows="5"
                           placeholder="Describe qué se hizo para resolver el problema: pasos ejecutados, causa raíz, solución aplicada, pruebas realizadas..."

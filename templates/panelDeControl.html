@@ -12,33 +12,33 @@
 <!-- STATS -->
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-num" style="color: var(--verde)">3,000</div>
+        <div class="stat-num verde">3,000</div>
         <div class="stat-label">Hectáreas monitoreadas</div>
     </div>
     <div class="stat-card">
-        <div class="stat-num" style="color: var(--azul)">40</div>
+        <div class="stat-num azul">40</div>
         <div class="stat-label">Sistemas en producción</div>
     </div>
     <div class="stat-card">
-        <div class="stat-num" style="color: var(--acento)">12</div>
+        <div class="stat-num acento">12</div>
         <div class="stat-label">Tickets abiertos</div>
     </div>
     <div class="stat-card">
-        <div class="stat-num" style="color: var(--verde)">98%</div>
+        <div class="stat-num verde">98%</div>
         <div class="stat-label">Uptime de servicios</div>
     </div>
 </div>
 
 <!-- ACCESOS RÁPIDOS -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+<div class="accesos-grid-container">
 
     <div class="card">
         <div class="card-header">🌱 Evaluaciones de campo</div>
         <div class="card-body">
-            <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
+            <p class="card-body-text">
                 Registra inspecciones de plagas sin papel. La información queda disponible en tiempo real.
             </p>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="card-actions-wrap">
                 <a class="btn btn-verde btn-sm" href="{{ url_for('form_evaluacion') }}">+ Nueva evaluación</a>
                 <a class="btn btn-outline btn-sm" href="{{ url_for('listar_evaluaciones') }}">Ver registros</a>
             </div>
@@ -48,10 +48,10 @@
     <div class="card">
         <div class="card-header">🎫 Soporte</div>
         <div class="card-body">
-            <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
+            <p class="card-body-text">
                 Registra incidencias y peticiones. Centraliza el soporte reemplazando correos y WhatsApp.
             </p>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="card-actions-wrap">
                 <a class="btn btn-verde btn-sm" href="{{ url_for('form_ticket') }}">+ Nuevo ticket</a>
                 <a class="btn btn-outline btn-sm" href="{{ url_for('listar_tickets') }}">Ver tickets</a>
             </div>
@@ -61,10 +61,10 @@
     <div class="card">
         <div class="card-header">🚀 Proyectos de software</div>
         <div class="card-body">
-            <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
+            <p class="card-body-text">
                 Gestiona proyectos con metodología ágil. Reemplaza el proceso BBP de 150 páginas.
             </p>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="card-actions-wrap">
                 <a class="btn btn-verde btn-sm" href="{{ url_for('form_proyecto') }}">+ Nuevo proyecto</a>
                 <a class="btn btn-outline btn-sm" href="{{ url_for('listar_proyectos') }}">Ver proyectos</a>
             </div>
@@ -74,10 +74,10 @@
     <div class="card">
         <div class="card-header">📊 Reportes e Indicadores</div>
         <div class="card-body">
-            <p style="font-size:0.88rem; color:var(--gris-texto); margin-bottom:14px;">
+            <p class="card-body-text">
                 Visualiza el cumplimiento de objetivos y métricas clave de soporte y proyectos en tiempo real.
             </p>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="card-actions-wrap">
                 <a class="btn btn-verde btn-sm" href="{{ url_for('indicadores_soporte') }}">Ver indicadores</a>
             </div>
         </div>
@@ -86,14 +86,15 @@
 </div>
 
 <!-- INFORMACIÓN ADICIONAL -->
-<div style="margin-top: 24px; display: grid; grid-template-columns: 1fr; gap: 16px;">
+<div class="info-adicional-container">
     <div class="card">
         <div class="card-header">📢 Avisos del Sistema</div>
         <div class="card-body">
-            <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem;">
+            <div class="aviso-item">
                 <span class="badge badge-verde">INFO</span>
-                <span style="color: var(--gris-texto);">Mantenimiento programado: Domingo 02:00 AM.</span>
+                <span class="aviso-text">Mantenimiento programado: Domingo 02:00 AM.</span>
         </div>
     </div>
+</div>
 </div>
 {% endblock %}

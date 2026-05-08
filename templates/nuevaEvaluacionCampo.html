@@ -16,7 +16,7 @@
         <form action="{{ url_for('guardar_evaluacion') }}" method="POST">
 
             <!-- FILA 1: Lote y Plaga -->
-            <div class="form-grid" style="margin-bottom:16px;">
+            <div class="form-grid form-section-spacing">
                 <div class="form-group">
                     <label for="id_lote">Lote inspeccionado *</label>
                     <select id="id_lote" name="id_lote" required>
@@ -44,7 +44,7 @@
             </div>
 
             <!-- FILA 2: Inspector, Fecha y Hora -->
-            <div class="form-grid tres" style="margin-bottom:16px;">
+            <div class="form-grid tres form-section-spacing">
                 <div class="form-group">
                     <label for="id_inspector">Inspector *</label>
                     <select id="id_inspector" name="id_inspector" required>
@@ -67,7 +67,7 @@
             </div>
 
             <!-- FILA 3: Plantas evaluadas, afectadas, nivel -->
-            <div class="form-grid tres" style="margin-bottom:16px;">
+            <div class="form-grid tres form-section-spacing">
                 <div class="form-group">
                     <label for="plantas_evaluadas">Plantas evaluadas *</label>
                     <input type="number" id="plantas_evaluadas" name="plantas_evaluadas"
@@ -93,7 +93,7 @@
             </div>
 
             <!-- FILA 4: Foto y Observaciones -->
-            <div class="form-grid" style="margin-bottom:16px;">
+            <div class="form-grid form-section-spacing">
                 <div class="form-group">
                     <label for="foto_url">URL de foto evidencia</label>
                     <input type="url" id="foto_url" name="foto_url"

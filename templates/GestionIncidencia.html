@@ -7,109 +7,6 @@
 {% endblock %}
 
 {% block content %}
-
-<style>
-/* ── BUSCADOR ─────────────────────────────────────────── */
-.buscador-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--gris-borde);
-    flex-wrap: wrap;
-}
-.buscador-input {
-    flex: 1;
-    min-width: 200px;
-    padding: 9px 13px 9px 36px;
-    border: 1.5px solid var(--gris-borde);
-    border-radius: 8px;
-    font-size: 0.88rem;
-    font-family: var(--fuente);
-    color: var(--negro);
-    background: var(--gris-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 11px center;
-    transition: border-color .15s, box-shadow .15s;
-}
-.buscador-input:focus {
-    outline: none;
-    border-color: var(--verde);
-    box-shadow: 0 0 0 3px rgba(26,122,74,.12);
-    background-color: var(--blanco);
-}
-.filtro-estado {
-    padding: 9px 12px;
-    border: 1.5px solid var(--gris-borde);
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-family: var(--fuente);
-    color: var(--negro);
-    background: var(--blanco);
-    cursor: pointer;
-}
-.sin-resultados {
-    text-align: center;
-    padding: 36px;
-    color: var(--gris-texto);
-    font-size: 0.9rem;
-    display: none;
-}
-
-/* ── TABLA RESPONSIVA ─────────────────────────────────── */
-.tabla-wrap { overflow-x: auto; }
-
-@media (max-width: 900px) {
-    .col-aplicacion, .col-agente { display: none; }
-}
-
-@media (max-width: 640px) {
-    .tabla-tickets thead { display: none; }
-
-    .tabla-tickets tbody tr {
-        display: block;
-        border: 1px solid var(--gris-borde);
-        border-radius: 10px;
-        margin-bottom: 12px;
-        padding: 14px 16px;
-        box-shadow: 0 1px 6px rgba(0,0,0,.06);
-        background: var(--blanco);
-    }
-    .tabla-tickets tbody tr:hover td { background: transparent; }
-
-    .tabla-tickets td {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 5px 0;
-        border: none;
-        font-size: 0.85rem;
-    }
-    .tabla-tickets td::before {
-        content: attr(data-label);
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .6px;
-        color: var(--gris-texto);
-        min-width: 90px;
-    }
-    .td-id {
-        font-size: 0.78rem !important;
-        padding-bottom: 8px !important;
-        border-bottom: 1px solid var(--gris-borde) !important;
-        margin-bottom: 4px;
-    }
-    .td-titulo { font-weight: 600; }
-    .td-accion {
-        justify-content: flex-end !important;
-        padding-top: 10px !important;
-        border-top: 1px solid var(--gris-borde) !important;
-        margin-top: 4px;
-    }
-    .td-accion::before { display: none; }
-    .col-aplicacion, .col-agente, .col-apertura { display: none !important; }
-}
-</style>
-
 <!-- ══════════════════════════════════════════════════════
      TICKETS
      ══════════════════════════════════════════════════════ -->
@@ -158,8 +55,7 @@
                     <tr data-texto="{{ (t.titulo ~ ' ' ~ t.nombre_solicitante ~ ' ' ~ t.aplicacion ~ ' SD-' ~ t.id_ticket)|lower }}"
                         data-estado="{{ t.estado }}">
 
-                        <td class="td-id" data-label="ID"
-                            style="color:var(--azul); font-weight:600; font-size:0.8rem;">
+                        <td class="td-id ticket-id" data-label="ID">
                             SD-{{ t.id_ticket }}
                         </td>
                         <td class="td-titulo" data-label="Título">
@@ -336,7 +232,7 @@ function filtrarTickets() {
                 {% if proyectos %}
                     {% for p in proyectos %}
                     <tr>
-                        <td style="color:var(--azul); font-weight:600; font-size:0.8rem;">PR-{{ p.id_proyecto }}</td>
+                        <td class="proyecto-id">PR-{{ p.id_proyecto }}</td>
                         <td><strong>{{ p.nombre }}</strong></td>
                         <td>{{ p.nombre_responsable }}</td>
                         <td>
@@ -347,14 +243,14 @@ function filtrarTickets() {
                             {% else %}<span class="badge badge-gris">📝 Planificado</span>
                             {% endif %}
                         </td>
-                        <td style="font-size:0.84rem;">{{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}</td>
-                        <td style="font-size:0.84rem;">{{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}</td>
+                        <td class="proyecto-fecha">{{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}</td>
+                        <td class="proyecto-fecha">{{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}</td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr><td colspan="6" class="tabla-empty">
                         No hay proyectos registrados.
-                        <a href="{{ url_for('form_proyecto') }}" style="color:var(--verde);">Crea el primero →</a>
+                        <a href="{{ url_for('form_proyecto') }}">Crea el primero →</a>
                     </td></tr>
                 {% endif %}
             </tbody>
