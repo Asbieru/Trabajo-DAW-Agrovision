@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AgroVisión{% endblock %} · Sistema de Gestión</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
     <style>
         /* ── RESET ─────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -49,7 +50,7 @@
             background: var(--verde-oscuro);
             display: flex;
             align-items: center;
-            padding: 0 24px;
+            padding: 0 40px;
             gap: 16px;
             position: sticky;
             top: 0;
@@ -144,9 +145,9 @@
         /* ── MAIN ───────────────────────────── */
         .main {
             flex: 1;
-            padding: 28px 32px;
-            max-width: 1100px;
+            padding: 28px 40px;
             width: 100%;
+            /* max-width eliminado — index.css lo controla por breakpoint */
         }
 
         /* ── PAGE HEADER ────────────────────── */
@@ -332,12 +333,13 @@
         .alerta-rojo  { background: var(--rojo-claro);  color: var(--rojo);         border: 1px solid #f5c6cb; }
         .alerta-info  { background: var(--azul-claro);  color: var(--azul);         border: 1px solid #b8d4f1; }
 
-        /* ── RESPONSIVE ─────────────────────── */
+        /* ── RESPONSIVE MÓVIL ───────────────── */
         @media (max-width: 768px) {
             .sidebar { display: none; }
             .main { padding: 16px; }
             .form-grid, .form-grid.tres { grid-template-columns: 1fr; }
             .stats-grid { grid-template-columns: 1fr 1fr; }
+            .topbar { padding: 0 16px; }
         }
 
         /* ── AVATAR MENU ─────────────────────────── */
@@ -398,7 +400,6 @@
     function toggleMenu() {
         document.getElementById('dropdown-menu').classList.toggle('abierto');
     }
-    // Cierra el menu si haces clic fuera
     document.addEventListener('click', function(e) {
         const menu = document.getElementById('dropdown-menu');
         if (menu && !e.target.closest('.avatar-menu')) {
@@ -415,25 +416,23 @@
         <span class="topbar-badge">Sistemas</span>
     </a>
     <div class="topbar-spacer"></div>
-  <div class="topbar-user">
-    <span>{{ session['usuario']['nombre_completo'] }}</span>
-
-    <!-- Contenedor del avatar con menú desplegable -->
-    <div class="avatar-menu">
-        <div class="avatar" onclick="toggleMenu()" title="Opciones de cuenta">
-            {{ session['usuario']['nombre_completo'].split()[0][0] }}{{ session['usuario']['nombre_completo'].split()[-1][0] }}
-        </div>
-        <div class="dropdown" id="dropdown-menu">
-            <div class="dropdown-info">
-                <strong>{{ session['usuario']['nombre_completo'] }}</strong>
-                <span>{{ session['usuario']['correo'] }}</span>
+    <div class="topbar-user">
+        <span>{{ session['usuario']['nombre_completo'] }}</span>
+        <div class="avatar-menu">
+            <div class="avatar" onclick="toggleMenu()" title="Opciones de cuenta">
+                {{ session['usuario']['nombre_completo'].split()[0][0] }}{{ session['usuario']['nombre_completo'].split()[-1][0] }}
             </div>
-            <a href="{{ url_for('logout') }}" class="dropdown-item">
-                🚪 Cerrar sesión
-            </a>
+            <div class="dropdown" id="dropdown-menu">
+                <div class="dropdown-info">
+                    <strong>{{ session['usuario']['nombre_completo'] }}</strong>
+                    <span>{{ session['usuario']['correo'] }}</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="dropdown-item">
+                    🚪 Cerrar sesión
+                </a>
+            </div>
         </div>
     </div>
-</div>
 </header>
 
 <div class="layout">

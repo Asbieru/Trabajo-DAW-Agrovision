@@ -1,0 +1,98 @@
+/* ════════════════════════════════════════════════════
+   AGROVISION · CSS RESPONSIVO GLOBAL
+   Añadir en base.html dentro del <head>:
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+   ════════════════════════════════════════════════════ */
+
+/* ── 1. AMPLIAR EL CONTENEDOR PRINCIPAL ──────────────
+   El .main original tiene max-width: 1100px, lo que
+   deja ~800px en blanco a los lados en Full HD.       */
+.main {
+    max-width: 1400px;          /* Full HD cómodo       */
+    padding: 28px 40px;
+}
+
+/* ── 2. SIDEBAR MÁS ANCHO EN PANTALLAS GRANDES ────── */
+@media (min-width: 1440px) {
+    :root { --sidebar-w: 240px; }
+    .main { max-width: 1600px; padding: 32px 48px; }
+}
+
+/* ── 3. GRILLAS QUE APROVECHAN EL ESPACIO EXTRA ───── */
+
+/* Stats dashboard: hasta 5 columnas en FHD */
+.stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+@media (min-width: 1280px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Cards de acceso rápido: máx 3 columnas bien distribuidas */
+@media (min-width: 1100px) {
+    .accesos-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Formularios de 2 columnas: más espaciosas */
+@media (min-width: 1200px) {
+    .form-grid {
+        gap: 20px;
+    }
+    .form-grid.tres {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+}
+
+/* ── 4. TABLA: USAR EL ANCHO COMPLETO ───────────────
+   En pantallas anchas las tablas se ven muy comprimidas
+   si el contenedor estaba limitado a 1100px.          */
+.tabla-wrap {
+    width: 100%;
+}
+
+/* ── 5. INDICADORES (2 columnas → 3 en FHD) ─────────
+   Las filas de cards de indicadores pasan a 3 col.   */
+@media (min-width: 1400px) {
+    .indicadores-fila-2 {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+/* ── 6. CARD DE TENDENCIA MENSUAL: MÁS ALTA ─────────
+   Con más ancho disponible el gráfico de barras
+   puede ser más legible.                              */
+@media (min-width: 1200px) {
+    .tendencia-barras {
+        height: 120px !important;
+    }
+}
+
+/* ── 7. TOPBAR: NO SE ESTIRA DE MÁS ─────────────────
+   Fijar un max-width al contenido interno del topbar  */
+.topbar {
+    padding: 0 40px;
+}
+
+/* ── 8. RESPONSIVE MÓVIL (mantiene el comportamiento
+   original del base.html sin cambios)                */
+@media (max-width: 768px) {
+    .main {
+        padding: 16px;
+        max-width: 100%;
+    }
+    .topbar {
+        padding: 0 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
