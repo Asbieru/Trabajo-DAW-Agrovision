@@ -3,21 +3,21 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
 from flask import Flask, render_template, request, redirect, url_for, session
+from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,)
+from proyectoDB import (Proyecto, listarProyectos, insertarProyecto)
 from ad import (
     # DTOs
-    EvaluacionCampo, Ticket, Proyecto,
+    EvaluacionCampo,
     # Consultas
     obtenerLotes, obtenerPlagas, obtenerUsuarios,
-    listarEvaluaciones, listarTickets, listarProyectos,
+    listarEvaluaciones,
     # Inserciones
-    insertarEvaluacion, insertarTicket, insertarProyecto,
+    insertarEvaluacion,
     # KPIs Indicadores
     kpiResumenTickets, kpiTicketsPorAplicacion, kpiTicketsPorPrioridad,
     kpiTicketsPorAgente, kpiTicketsPorMes,kpiAvanceSprintActual,
     # Auth
-    registrarUsuario, autenticarUsuario,
-    # Resolución de tickets
-    obtenerTicket, resolverTicket,
+    registrarUsuario, autenticarUsuario,    
 )
 
 app = Flask(__name__)
