@@ -128,22 +128,7 @@
     </div>
 </div>
 
-<script>
-    function mostrarTab(tab, btn) {
-        // Ocultar todos los paneles
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('activo'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
-        // Mostrar el seleccionado
-        document.getElementById('panel-' + tab).classList.add('activo');
-        btn.classList.add('activo');
-    }
-
-    // Si Flask redirigió con ?tab=registro, abrir ese panel
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('tab') === 'registro') {
-        document.querySelectorAll('.tab-btn')[1].click();
-    }
-</script>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
 </body>
 </html>

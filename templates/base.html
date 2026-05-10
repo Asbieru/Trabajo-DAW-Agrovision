@@ -6,17 +6,6 @@
     <title>{% block title %}AgroVisión{% endblock %} · Sistema de Gestión</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
 </head>
-<script>
-    function toggleMenu() {
-        document.getElementById('dropdown-menu').classList.toggle('abierto');
-    }
-    document.addEventListener('click', function(e) {
-        const menu = document.getElementById('dropdown-menu');
-        if (menu && !e.target.closest('.avatar-menu')) {
-            menu.classList.remove('abierto');
-        }
-    });
-</script>
 <body>
 
 <!-- TOPBAR -->
@@ -96,6 +85,6 @@
         {% block content %}{% endblock %}
     </main>
 </div>
-
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

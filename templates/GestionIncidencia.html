@@ -135,21 +135,6 @@
     </div>
 </div>
 
-<script>
-function filtrarTickets() {
-    const texto  = document.getElementById('buscar-ticket').value.toLowerCase().trim();
-    const estado = document.getElementById('filtro-estado').value;
-    const filas  = document.querySelectorAll('#tbody-tickets tr[data-texto]');
-    let visibles = 0;
-    filas.forEach(function(fila) {
-        const okTexto  = !texto  || fila.dataset.texto.includes(texto);
-        const okEstado = !estado || fila.dataset.estado === estado;
-        fila.style.display = (okTexto && okEstado) ? '' : 'none';
-        if (okTexto && okEstado) visibles++;
-    });
-    document.getElementById('sin-resultados').style.display = visibles === 0 ? 'block' : 'none';
-}
-</script>
 
 
 <!-- ══════════════════════════════════════════════════════
