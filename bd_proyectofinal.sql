@@ -1,6 +1,6 @@
 -- ============================================================
 --  BASE DE DATOS: bd_proyectofinal  (AgroVisión)
---  Ejecutar en MySQL / MariaDB
+--  Ejecutar en MySQL / MariaDB (XAMPP)
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS bd_proyectofinal
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id_usuario      INT AUTO_INCREMENT PRIMARY KEY,
     nombre_completo VARCHAR(120) NOT NULL,
     correo          VARCHAR(120) NOT NULL UNIQUE,
-    password_hash   VARCHAR(255) NULL,                          -- ← AGREGADO
+    password_hash   VARCHAR(255) NULL,                          -- ← agregado
     rol             ENUM('inspector','analista','admin','soporte') NOT NULL DEFAULT 'inspector',
     activo          TINYINT(1) NOT NULL DEFAULT 1,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -96,10 +96,6 @@ CREATE TABLE IF NOT EXISTS tickets (
     CONSTRAINT fk_ticket_agente FOREIGN KEY (id_agente)      REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
--- Si la tabla ya existe en tu BD, ejecuta esto en lugar del CREATE:
--- ALTER TABLE tickets ADD COLUMN id_agente INT NULL, ADD COLUMN notas_resolucion TEXT NULL;
--- ALTER TABLE tickets ADD CONSTRAINT fk_ticket_agente FOREIGN KEY (id_agente) REFERENCES usuarios(id_usuario);
-
 -- ── 6. PROYECTOS DE SOFTWARE ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS proyectos (
     id_proyecto        INT AUTO_INCREMENT PRIMARY KEY,
@@ -113,9 +109,42 @@ CREATE TABLE IF NOT EXISTS proyectos (
     CONSTRAINT fk_proy_resp     FOREIGN KEY (id_responsable) REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
-INSERT INTO tickets (titulo, tipo, prioridad, aplicacion, estado, sla_horas, descripcion, id_solicitante, id_agente, fecha_apertura, fecha_resolucion) VALUES
+-- ── 7. SPRINTS (faltante en tu script original) ───────────────
+CREATE TABLE IF NOT EXISTS sprints (
+    id_sprint     INT AUTO_INCREMENT PRIMARY KEY,
+    id_proyecto   INT NOT NULL,
+    nombre        VARCHAR(150) NOT NULL,
+    objetivo      TEXT,
+    estado        ENUM('planificado','activo','completado','cancelado') NOT NULL DEFAULT 'planificado',
+    capacidad_pts INT DEFAULT 0,
+    fecha_inicio  DATE NOT NULL,
+    fecha_fin     DATE NOT NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sprint_proy FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto)
+) ENGINE=InnoDB;
 
--- Tickets resueltos (generan datos en tendencia y SLA)
+-- ── 8. HISTORIAS (faltante en tu script original) ─────────────
+CREATE TABLE IF NOT EXISTS historias (
+    id_historia   INT AUTO_INCREMENT PRIMARY KEY,
+    id_proyecto   INT NOT NULL,
+    id_sprint     INT NULL,
+    id_asignado   INT NULL,
+    codigo        VARCHAR(30) NOT NULL UNIQUE,
+    titulo        VARCHAR(200) NOT NULL,
+    tipo          ENUM('funcional','tecnica','bug') NOT NULL DEFAULT 'funcional',
+    prioridad     ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
+    estado        ENUM('backlog','por_hacer','en_progreso','completada','cancelada') NOT NULL DEFAULT 'backlog',
+    story_points  SMALLINT DEFAULT 0,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_historia_proy   FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto),
+    CONSTRAINT fk_historia_sprint FOREIGN KEY (id_sprint)   REFERENCES sprints(id_sprint),
+    CONSTRAINT fk_historia_asig   FOREIGN KEY (id_asignado) REFERENCES usuarios(id_usuario)
+) ENGINE=InnoDB;
+
+-- ── 9. INSERTS DE DATOS (en orden seguro) ──────────────────────
+
+-- Tickets resueltos / cerrados (no dependen de sprints/historias)
+INSERT INTO tickets (titulo, tipo, prioridad, aplicacion, estado, sla_horas, descripcion, id_solicitante, id_agente, fecha_apertura, fecha_resolucion) VALUES
 ('Error al exportar PDF de evaluaciones',       'incidencia', 'alta',   'Módulo Campo',     'resuelto', 8,  'El botón exportar no responde al hacer clic.',        1, 2, NOW() - INTERVAL 25 DAY, NOW() - INTERVAL 24 DAY),
 ('Acceso denegado en panel de control',         'incidencia', 'critica','Panel Control',    'cerrado',  4,  'Usuario no puede ingresar al sistema.',               1, 5, NOW() - INTERVAL 22 DAY, NOW() - INTERVAL 22 DAY),
 ('Solicitud de nuevo usuario inspector',        'peticion',   'media',  'Gestión Usuarios', 'cerrado',  24, 'Agregar nuevo inspector al sistema.',                 1, 2, NOW() - INTERVAL 20 DAY, NOW() - INTERVAL 19 DAY),
@@ -137,37 +166,37 @@ INSERT INTO tickets (titulo, tipo, prioridad, aplicacion, estado, sla_horas, des
 ('Error al imprimir evaluación de campo',       'incidencia', 'media',  'Módulo Campo',     'abierto',  24, 'La impresión sale con formato incorrecto.',           1, NULL, NOW(),                   NULL),
 ('Consulta sobre proceso de cierre de sprint',  'consulta',   'baja',   'Mesa de Ayuda',    'abierto',  48, '¿Cómo se realiza el cierre formal de un sprint?',    1, NULL, NOW(),                   NULL);
 
+-- Proyectos
 INSERT INTO proyectos (nombre, descripcion, estado, id_responsable, fecha_inicio, fecha_fin_plan) VALUES
-('Sistema AgroVisión v2',     'Módulo de gestión de campo y soporte técnico',   'activo', 1, '2025-01-01', '2025-12-31'),
-('App Móvil Inspectores',     'Aplicación móvil para registro de evaluaciones', 'activo', 1, '2025-02-01', '2025-09-30'),
-('Portal de Reportes Gerencia','Dashboard ejecutivo con KPIs de producción',    'activo', 1, '2025-03-01', '2025-10-31');
- 
--- Sprints activos
+('Sistema AgroVisión v2',     'Módulo de gestión de campo y soporte técnico',   'planificado', 1, '2025-01-01', '2025-12-31'),
+('App Móvil Inspectores',     'Aplicación móvil para registro de evaluaciones', 'planificado', 1, '2025-02-01', '2025-09-30'),
+('Portal de Reportes Gerencia','Dashboard ejecutivo con KPIs de producción',    'planificado', 1, '2025-03-01', '2025-10-31');
+
+-- Sprints activos (necesarios para historias)
 INSERT INTO sprints (id_proyecto, nombre, objetivo, estado, capacidad_pts, fecha_inicio, fecha_fin) VALUES
 (1, 'Sprint 4 – Dashboard KPIs',      'Implementar panel de indicadores para Jefe TI',         'activo', 60, CURDATE() - INTERVAL 10 DAY, CURDATE() + INTERVAL 4 DAY),
 (2, 'Sprint 2 – Registro Offline',    'Permitir registro de evaluaciones sin conexión a internet','activo', 40, CURDATE() - INTERVAL 5 DAY,  CURDATE() + INTERVAL 9 DAY),
 (3, 'Sprint 1 – Módulo Producción',   'Conectar datos de campo con reportes de gerencia',       'activo', 50, CURDATE() - INTERVAL 2 DAY,  CURDATE() + INTERVAL 12 DAY);
- 
--- Historias para Sprint 1 (id_sprint=1)
+
+-- Historias para los sprints (dependen de proyectos y sprints)
 INSERT INTO historias (id_proyecto, id_sprint, id_asignado, codigo, titulo, tipo, prioridad, estado, story_points) VALUES
+-- Sprint 1 (id_sprint=1)
 (1, 1, 2, 'HU-001', 'Ver KPIs de tickets en tiempo real',       'funcional', 'alta',   'completada',  8),
 (1, 1, 2, 'HU-002', 'Gráfico tendencia mensual de tickets',     'funcional', 'alta',   'completada',  5),
 (1, 1, 5, 'HU-003', 'Filtro de indicadores por fecha',          'funcional', 'media',  'completada',  3),
 (1, 1, 5, 'HU-004', 'KPI SLA cumplido en tiempo real',          'funcional', 'alta',   'en_progreso', 8),
 (1, 1, 2, 'HU-005', 'Carga de trabajo por programador',         'funcional', 'media',  'en_progreso', 5),
 (1, 1, 5, 'HU-006', 'Exportar reporte PDF de indicadores',      'funcional', 'baja',   'por_hacer',   5),
-(1, 1, 2, 'HU-007', 'Alertas automáticas tickets críticos',     'funcional', 'alta',   'backlog',     8);
- 
--- Historias para Sprint 2 (id_sprint=2)
-INSERT INTO historias (id_proyecto, id_sprint, id_asignado, codigo, titulo, tipo, prioridad, estado, story_points) VALUES
+(1, 1, 2, 'HU-007', 'Alertas automáticas tickets críticos',     'funcional', 'alta',   'backlog',     8),
+
+-- Sprint 2 (id_sprint=2)
 (2, 2, 2, 'HU-008', 'Registro evaluación sin internet',         'funcional', 'critica', 'completada',  8),
 (2, 2, 5, 'HU-009', 'Sincronización automática al reconectar',  'tecnica',   'alta',    'en_progreso', 8),
 (2, 2, 2, 'HU-010', 'Caché local de lotes y plagas',            'tecnica',   'media',   'en_progreso', 5),
 (2, 2, 5, 'HU-011', 'Notificación de sync exitoso',             'funcional', 'baja',    'por_hacer',   3),
-(2, 2, 2, 'HU-012', 'Manejo de conflictos de datos offline',    'tecnica',   'alta',    'backlog',     8);
- 
--- Historias para Sprint 3 (id_sprint=3)
-INSERT INTO historias (id_proyecto, id_sprint, id_asignado, codigo, titulo, tipo, prioridad, estado, story_points) VALUES
+(2, 2, 2, 'HU-012', 'Manejo de conflictos de datos offline',    'tecnica',   'alta',    'backlog',     8),
+
+-- Sprint 3 (id_sprint=3)
 (3, 3, 5, 'HU-013', 'Dashboard ejecutivo con KPIs producción',  'funcional', 'alta',   'en_progreso', 8),
 (3, 3, 2, 'HU-014', 'Gráfico de hectáreas monitoreadas',        'funcional', 'media',  'por_hacer',   5),
 (3, 3, 5, 'HU-015', 'Reporte semanal automático por correo',    'funcional', 'media',  'backlog',     5),

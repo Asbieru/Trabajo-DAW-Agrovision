@@ -3,7 +3,7 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
 from flask import Flask, render_template, request, redirect, url_for, session
-from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,)
+from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
 from proyectoDB import (Proyecto, listarProyectos, insertarProyecto)
 from ad import (
     # DTOs
@@ -14,7 +14,6 @@ from ad import (
     # Inserciones
     insertarEvaluacion,
     # KPIs Indicadores
-    kpiResumenTickets, kpiTicketsPorAplicacion, kpiTicketsPorPrioridad,
     kpiTicketsPorAgente, kpiTicketsPorMes,kpiAvanceSprintActual,
     # Auth
     registrarUsuario, autenticarUsuario,    
@@ -242,9 +241,9 @@ def listar_proyectos():
 
 @app.route('/indicadores')
 def indicadores_soporte():
-    resumen       = kpiResumenTickets()
-    por_app       = kpiTicketsPorAplicacion()
-    por_prioridad = kpiTicketsPorPrioridad()
+    resumen       = resumenTickets()
+    por_app       = ticketsPorAplicacion()
+    por_prioridad = ticketsPorPrioridad()
     por_agente    = kpiTicketsPorAgente()
     por_mes       = kpiTicketsPorMes()
     sprint_activo = kpiAvanceSprintActual()
