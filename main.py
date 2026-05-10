@@ -181,6 +181,13 @@ def listar_tickets():
     return render_template('GestionIncidencia.html', tickets=tickets)
 
 
+@app.route('/tickets/resolver')
+def resolver_tickets():
+    todos = listarTickets()
+    pendientes = [t for t in todos if t['estado'] in ('abierto', 'en_progreso')]
+    return render_template('resolverTicket.html', tickets_pendientes=pendientes)
+
+
 @app.route('/ticket/<int:id_ticket>/resolver')
 def form_resolver_ticket(id_ticket):
     ticket   = obtenerTicket(id_ticket)

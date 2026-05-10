@@ -62,6 +62,10 @@
            class="{{ 'activo' if request.endpoint == 'listar_tickets' else '' }}">
             <span class="ico">📨</span> Ver tickets
         </a>
+        <a href="{{ url_for('resolver_tickets') }}"
+           class="{{ 'activo' if request.endpoint in ('resolver_tickets', 'form_resolver_ticket') else '' }}">
+            <span class="ico">🔧</span> Resolver tickets
+        </a>
 
         <div class="sidebar-section">Proyectos</div>
         <a href="{{ url_for('form_proyecto') }}"

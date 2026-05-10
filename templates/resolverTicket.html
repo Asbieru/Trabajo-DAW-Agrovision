@@ -1,7 +1,109 @@
 {% extends "base.html" %}
-{% block title %}Resolver Ticket SD-{{ ticket.id_ticket }}{% endblock %}
+{% block title %}
+    {% if ticket is defined %}Resolver Ticket SD-{{ ticket.id_ticket }}
+    {% else %}Tickets pendientes
+    {% endif %}
+{% endblock %}
 
 {% block content %}
+
+{# ══════════════════════════════════════════════════════
+   VISTA A: Lista de tickets pendientes (entrada por sidebar)
+   Se activa cuando no viene un ticket concreto.
+   ══════════════════════════════════════════════════════ #}
+{% if ticket is not defined %}
+
+<div class="page-header">
+    <div>
+        <h1>🔧 Resolver tickets</h1>
+        <p>Tickets abiertos o en progreso · Selecciona uno para gestionarlo</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="tabla-wrap">
+        <table class="tabla tabla-tickets">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Tipo</th>
+                    <th>Prioridad</th>
+                    <th class="col-aplicacion">Aplicación</th>
+                    <th>Estado</th>
+                    <th>Solicitante</th>
+                    <th class="col-apertura">Apertura</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if tickets_pendientes %}
+                    {% for t in tickets_pendientes %}
+                    <tr>
+                        <td class="td-id ticket-id" data-label="ID">SD-{{ t.id_ticket }}</td>
+                        <td class="td-titulo" data-label="Título"><strong>{{ t.titulo }}</strong></td>
+                        <td data-label="Tipo">
+                            {% if t.tipo == 'incidencia' %}
+                                <span class="badge badge-rojo">Incidencia</span>
+                            {% elif t.tipo == 'peticion' %}
+                                <span class="badge badge-azul">Petición</span>
+                            {% else %}
+                                <span class="badge badge-gris">Consulta</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Prioridad">
+                            {% if t.prioridad == 'critica' %}
+                                <span class="badge badge-rojo">🚨 Crítica</span>
+                            {% elif t.prioridad == 'alta' %}
+                                <span class="badge badge-rojo">Alta</span>
+                            {% elif t.prioridad == 'media' %}
+                                <span class="badge badge-acento">Media</span>
+                            {% else %}
+                                <span class="badge badge-verde">Baja</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-aplicacion" data-label="Aplicación"
+                            style="color:var(--gris-texto); font-size:0.84rem;">
+                            {{ t.aplicacion }}
+                        </td>
+                        <td data-label="Estado">
+                            {% if t.estado == 'abierto' %}
+                                <span class="badge badge-rojo">Abierto</span>
+                            {% else %}
+                                <span class="badge badge-acento">En progreso</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Solicitante">{{ t.nombre_solicitante }}</td>
+                        <td class="col-apertura" data-label="Apertura"
+                            style="font-size:0.8rem; color:var(--gris-texto);">
+                            {{ t.fecha_apertura.strftime('%d/%m/%Y %H:%M') if t.fecha_apertura else '—' }}
+                        </td>
+                        <td class="td-accion">
+                            <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
+                               class="btn btn-sm btn-verde">🔧 Resolver</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="tabla-empty">
+                            ✅ No hay tickets pendientes por resolver.
+                            <a href="{{ url_for('listar_tickets') }}" style="color:var(--verde);">
+                                Ver todos los tickets →
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════
+   VISTA B: Formulario de resolución de un ticket concreto
+   Se activa cuando se llega desde "Resolver" en la tabla.
+   ══════════════════════════════════════════════════════ #}
+{% else %}
 <div class="page-header">
     <div>
         <h1>🔧 Resolver ticket <span class="ticket-id-header">SD-{{ ticket.id_ticket }}</span></h1>
@@ -119,4 +221,5 @@
         </form>
     </div>
 </div>
+{% endif %}
 {% endblock %}

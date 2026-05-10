@@ -42,6 +42,7 @@ body {
     flex-direction: column;
     font-size: 15px;
     line-height: 1.5;
+    padding-top: 60px; /* compensa el topbar fixed */
 }
 
 /* ── TOPBAR ─────────────────────────── */
@@ -52,8 +53,10 @@ body {
     align-items: center;
     padding: 0 40px;
     gap: 16px;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    width: 100%;
     z-index: 100;
     box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
@@ -361,14 +364,7 @@ body {
     }
 }
 
-/* ── 7. TOPBAR: NO SE ESTIRA DE MÁS ─────────────────
-   Fijar un max-width al contenido interno del topbar  */
-.topbar {
-    padding: 0 40px;
-}
-
-/* ── 8. RESPONSIVE MÓVIL (mantiene el comportamiento
-   original del base.html sin cambios)                */
+/* ── 8. RESPONSIVE MÓVIL ─────────────────────────── */
 @media (max-width: 768px) {
     .main {
         padding: 16px;
