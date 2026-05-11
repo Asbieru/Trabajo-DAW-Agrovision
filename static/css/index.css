@@ -866,7 +866,7 @@ body {
 }
 .ticket-resolution-form-grid { margin-bottom: 16px; }
 .ticket-resolution-form-group { margin-bottom: 16px; }
-}
+
 
 @media (max-width: 480px) {
     .stats-grid {

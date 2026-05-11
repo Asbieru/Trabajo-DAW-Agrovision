@@ -5,6 +5,9 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 from flask import Flask, render_template, request, redirect, url_for, session
 from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
 from proyectoDB import (Proyecto, listarProyectos, insertarProyecto)
+from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
+                            kpiPorAgente, kpiPorMes, kpiSprintsActivos)
+
 from ad import (
     # DTOs
     EvaluacionCampo,
@@ -13,9 +16,6 @@ from ad import (
     listarEvaluaciones,
     # Inserciones
     insertarEvaluacion,
-    # KPIs Indicadores
-    kpiTicketsPorAgente, kpiTicketsPorMes,kpiAvanceSprintActual,
-    # Auth
     registrarUsuario, autenticarUsuario,    
 )
 
@@ -24,15 +24,14 @@ app.secret_key = 'agrovision_secret_2024'
 app.config['SESSION_PERMANENT'] = False
 
 # ──────────────────────────────────────────────────────────────
-#  RUTA RAIZ: redirige siempre al login o al dashboard
-#  Esta es la que se abre cuando entras a http://127.0.0.1:5000/
+#  RUTA RAIZ
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/')
 def raiz():
     if 'usuario' not in session:
-        return redirect(url_for('login'))       # sin sesion -> login
-    return redirect(url_for('index'))           # con sesion -> dashboard
+        return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -41,7 +40,6 @@ def raiz():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Si ya tiene sesion activa, va directo al dashboard
     if 'usuario' in session:
         return redirect(url_for('index'))
 
@@ -241,19 +239,18 @@ def listar_proyectos():
     return render_template('GestionIncidencia.html', proyectos=proyectos)
 
 
-
-# ══════════════════════════════════════════════════════════════
+# ──────────────────────────────────────────────────────────────
 #  INDICADORES DE SOPORTE
-# ══════════════════════════════════════════════════════════════
+# ──────────────────────────────────────────────────────────────
 
 @app.route('/indicadores')
 def indicadores_soporte():
-    resumen       = resumenTickets()
-    por_app       = ticketsPorAplicacion()
-    por_prioridad = ticketsPorPrioridad()
-    por_agente    = kpiTicketsPorAgente()
-    por_mes       = kpiTicketsPorMes()
-    sprint_activo = kpiAvanceSprintActual()
+    resumen       = resumenKPI()
+    por_app       = kpiPorAplicacion()
+    por_prioridad = kpiPorPrioridad()
+    por_agente    = kpiPorAgente()
+    por_mes       = kpiPorMes()
+    sprint_activo = kpiSprintsActivos()
     return render_template('indicadores.html',
                            resumen=resumen,
                            por_app=por_app,

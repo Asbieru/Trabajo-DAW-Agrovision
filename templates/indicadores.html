@@ -1,206 +1,243 @@
-{% extends "base.html" %}
-{% block title %}Indicadores de Soporte{% endblock %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indicadores de Soporte · Sistema de Gestión</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/indicadores.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
 
-{% block content %}
-<div class="page-header">
-    <div>
-        <h1>📊 Indicadores de Soporte</h1>
-        <p>Panel de KPIs para el Jefe TI · Área de Sistemas AgroVisión</p>
-    </div>
-    <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">🎫 Ver tickets</a>
-</div>
-
-<!-- FILA 1: KPIs -->
-<div class="kpi-grid-row-1">
-
-    <div class="card kpi-card-base kpi-total">
-        <div class="kpi-card-border-top"></div>
-        <div class="kpi-card-label">Total tickets</div>
-        <div class="kpi-card-num">{{ resumen.total or 0 }}</div>
-        <div class="kpi-card-icon">🎫</div>
-    </div>
-
-    <div class="card kpi-card-base kpi-pendientes">
-        <div class="kpi-card-border-top"></div>
-        <div class="kpi-card-label">Pendientes</div>
-        <div class="kpi-card-num">{{ (resumen.abiertos or 0) + (resumen.en_progreso or 0) }}</div>
-        <div class="kpi-card-icon">🔴</div>
-    </div>
-
-    <div class="card kpi-card-base kpi-resueltos">
-        <div class="kpi-card-border-top"></div>
-        <div class="kpi-card-label">Resueltos / Cerrados</div>
-        <div class="kpi-card-num">{{ (resumen.resueltos or 0) + (resumen.cerrados or 0) }}</div>
-        <div class="kpi-card-icon">✅</div>
-    </div>
-
-    <div class="card kpi-card-base kpi-promedio">
-        <div class="kpi-card-border-top"></div>
-        <div class="kpi-card-label">Tiempo prom. resolución</div>
-        <div class="kpi-card-num">
-            {{ resumen.promedio_horas_resolucion or '—' }}{% if resumen.promedio_horas_resolucion %}<span class="kpi-card-num-unit">h</span>{% endif %}
-        </div>
-        <div class="kpi-card-icon">⏱</div>
-    </div>
-
-    <div class="card kpi-card-base kpi-sla">
-        <div class="kpi-card-border-top"></div>
-        <div class="kpi-card-label">SLA cumplido</div>
-        <div class="kpi-sla-circle-wrap">
-            <div class="kpi-sla-circle">
-                {{ resumen.pct_sla or 0 }}%
+<!-- TOPBAR -->
+<header class="topbar">
+    <a class="topbar-logo" href="{{ url_for('index') }}">
+        🌿 Agro<em>visión</em>
+        <span class="topbar-badge">Sistemas</span>
+    </a>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-user">
+        <span>{{ session['usuario']['nombre_completo'] }}</span>
+        <div class="avatar-menu">
+            <div class="avatar" onclick="toggleMenu()" title="Opciones de cuenta">
+                {{ session['usuario']['nombre_completo'].split()[0][0] }}{{ session['usuario']['nombre_completo'].split()[-1][0] }}
+            </div>
+            <div class="dropdown" id="dropdown-menu">
+                <div class="dropdown-info">
+                    <strong>{{ session['usuario']['nombre_completo'] }}</strong>
+                    <span>{{ session['usuario']['correo'] }}</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="dropdown-item">
+                    🚪 Cerrar sesión
+                </a>
             </div>
         </div>
     </div>
+</header>
 
-</div>
+<div class="layout">
 
-<!-- FILA 2: Por aplicación + Por prioridad -->
-<div class="kpi-grid-row-2">
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+        <div class="sidebar-section">Principal</div>
+        <a href="{{ url_for('index') }}">
+            <span class="ico">🏠</span> Dashboard
+        </a>
 
-    <div class="card">
-        <div class="card-header">🖥 Tickets por aplicación</div>
-        <div class="card-body">
-            {% if por_app %}
-                {% set max_total = por_app | map(attribute='total') | max %}
-                {% for a in por_app %}
-                <div class="kpi-progress-item">
-                    <span class="kpi-progress-label" title="{{ a.aplicacion }}">{{ a.aplicacion }}</span>
-                    <div class="kpi-progress-bar-bg">
-                        <div class="barra-w" data-pct="{{ (a.total / max_total * 100) | int }}"></div>
-                    </div>
-                    <span class="kpi-progress-count">{{ a.total }}</span>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="kpi-no-data">Sin datos aún</div>
-            {% endif %}
+        <div class="sidebar-section">Campo</div>
+        <a href="{{ url_for('form_evaluacion') }}">
+            <span class="ico">🌱</span> Nueva evaluación
+        </a>
+        <a href="{{ url_for('listar_evaluaciones') }}">
+            <span class="ico">📋</span> Ver evaluaciones
+        </a>
+
+        <div class="sidebar-section">Soporte</div>
+        <a href="{{ url_for('form_ticket') }}">
+            <span class="ico">🎫</span> Nuevo ticket
+        </a>
+        <a href="{{ url_for('listar_tickets') }}">
+            <span class="ico">📨</span> Ver tickets
+        </a>
+        <a href="{{ url_for('resolver_tickets') }}">
+            <span class="ico">🔧</span> Resolver tickets
+        </a>
+
+        <div class="sidebar-section">Proyectos</div>
+        <a href="{{ url_for('form_proyecto') }}">
+            <span class="ico">🚀</span> Nuevo proyecto
+        </a>
+        <a href="{{ url_for('listar_proyectos') }}">
+            <span class="ico">📁</span> Ver proyectos
+        </a>
+
+        <div class="sidebar-section">Métricas</div>
+        <a href="{{ url_for('indicadores_soporte') }}" class="activo">
+            <span class="ico">📊</span> Indicadores
+        </a>
+    </nav>
+
+    <!-- CONTENIDO -->
+    <main class="main">
+
+        <!-- Datos para JS externo -->
+        <div id="datos-graficos"
+             data-app='{{ por_app | tojson if por_app else "[]" }}'
+             data-prioridad='{{ por_prioridad | tojson if por_prioridad else "[]" }}'
+             data-mes='{{ por_mes | tojson if por_mes else "[]" }}'>
         </div>
-    </div>
 
-    <div class="card">
-        <div class="card-header">🚨 Distribución por prioridad</div>
-        <div class="card-body">
-            {% if por_prioridad %}
-                {% set total_p = por_prioridad | sum(attribute='total') %}
-                {% for p in por_prioridad %}
-                {% set pct = ((p.total / total_p) * 100) | int if total_p else 0 %}
-                <div class="kpi-progress-item">
-                    <span class="kpi-progress-label kpi-priority-label">{{ p.prioridad | capitalize }}</span>
-                    <div class="kpi-progress-bar-bg">
-                        <div class="barra-w" data-pct="{{ pct }}"></div>
-                    </div>
-                    <span class="kpi-progress-count kpi-priority-count">{{ p.total }}</span>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="kpi-no-data">Sin datos aún</div>
-            {% endif %}
+        <div class="page-header">
+            <div>
+                <h1>📊 Indicadores de Soporte</h1>
+                <p>Panel de KPIs para el Jefe TI · Área de Sistemas AgroVisión</p>
+            </div>
+            <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">🎫 Ver tickets</a>
         </div>
-    </div>
 
-</div>
+        <!-- FILA 1: KPIs -->
+        <div class="kpi-fila">
 
-<!-- FILA 3: Por agente + Sprints -->
-<div class="kpi-grid-row-3">
+            <div class="kpi-card total">
+                <div class="etiqueta">Total tickets</div>
+                <div class="numero">{{ resumen.total or 0 }}</div>
+            </div>
 
-    <div class="card">
-        <div class="card-header">👨‍💻 Carga por programador</div>
-        <div class="card-body">
-            {% if por_agente %}
-                {% for a in por_agente %}
-                <div class="kpi-agente-item">
-                    <div class="kpi-agente-avatar">
-                        {{ a.agente.split()[0][0] }}{{ a.agente.split()[-1][0] if a.agente.split()|length > 1 else '' }}
-                    </div>
-                    <div class="kpi-agente-info">
-                        <div class="kpi-agente-name">{{ a.agente }}</div>
-                        <div class="kpi-agente-subtext">
-                            {{ a.resueltos }} resueltos · {% if a.promedio_horas %}promedio {{ a.promedio_horas }}h{% else %}sin datos{% endif %}
-                        </div>
-                    </div>
-                    <div class="kpi-agente-total-wrap">
-                        <div class="kpi-agente-total-num">{{ a.total_atendidos }}</div>
-                        <div class="kpi-agente-total-label">tickets</div>
-                    </div>
+            <div class="kpi-card pendiente">
+                <div class="etiqueta">Pendientes</div>
+                <div class="numero">{{ (resumen.abiertos or 0) + (resumen.en_progreso or 0) }}</div>
+            </div>
+
+            <div class="kpi-card resuelto">
+                <div class="etiqueta">Resueltos / Cerrados</div>
+                <div class="numero">{{ (resumen.resueltos or 0) + (resumen.cerrados or 0) }}</div>
+            </div>
+
+            <div class="kpi-card promedio">
+                <div class="etiqueta">Tiempo prom. resolución</div>
+                <div class="numero">
+                    {{ resumen.promedio_horas_resolucion or '—' }}{% if resumen.promedio_horas_resolucion %}h{% endif %}
                 </div>
-                {% endfor %}
-            {% else %}
-                <div class="kpi-no-data">Sin agentes asignados aún.</div>
-            {% endif %}
-        </div>
-    </div>
+            </div>
 
-    <div class="card">
-        <div class="card-header">⚡ Avance de sprints activos</div>
-        <div class="card-body">
-            {% if sprint_activo %}
-                {% for s in sprint_activo %}
-                {% set pct_sp = ((s.pts_completados / s.capacidad_pts) * 100) | int if s.capacidad_pts else 0 %}
-                <div class="kpi-sprint-item">
-                    <div class="kpi-sprint-header">
-                        <span class="kpi-sprint-name">{{ s.sprint }}</span>
-                        <span class="kpi-sprint-project">{{ s.proyecto }}</span>
-                    </div>
-                    <div class="kpi-sprint-progress-bg">
-                        <div class="barra-w" data-pct="{{ pct_sp if pct_sp <= 100 else 100 }}"></div>
-                    </div>
-                    <div class="kpi-sprint-progress-text">
-                        <span>{{ s.pts_completados }} / {{ s.capacidad_pts }} pts ({{ pct_sp }}%)</span>
-                        <span>
-                            {% if s.dias_restantes is not none %}
-                                {% if s.dias_restantes > 0 %}{{ s.dias_restantes }} día{{ 's' if s.dias_restantes != 1 }} restantes
-                                {% elif s.dias_restantes == 0 %}⚠️ Termina hoy
-                                {% else %}🔴 Vencido hace {{ s.dias_restantes|abs }} día{{ 's' if s.dias_restantes|abs != 1 }}
-                                {% endif %}
-                            {% endif %}
-                        </span>
-                    </div>
-                    {% if s.pts_en_progreso > 0 %} {# This state is handled by the kpi-sprint-in-progress class #}
-                    <div class="kpi-sprint-in-progress">🔄 {{ s.pts_en_progreso }} pts en progreso</div>
+            <div class="kpi-card sla">
+                <div class="etiqueta">SLA cumplido</div>
+                <div class="numero">{{ resumen.pct_sla or 0 }}%</div>
+            </div>
+
+        </div>
+
+        <!-- FILA 2: Gráfico barras por aplicación + Gráfico dona por prioridad -->
+        <div class="fila-dos">
+
+            <div class="seccion">
+                <div class="seccion-titulo">🖥 Tickets por aplicación</div>
+                <div class="seccion-cuerpo">
+                    {% if por_app %}
+                    <canvas id="grafico-app"></canvas>
+                    {% else %}
+                    <div class="sin-datos">Sin datos aún</div>
                     {% endif %}
                 </div>
-                {% endfor %}
-            {% else %}
-                <div class="kpi-no-data">No hay sprints activos.</div>
-            {% endif %}
-        </div>
-    </div>
+            </div>
 
-</div>
-
-<!-- FILA 4: Tendencia mensual -->
-<div class="card kpi-tendencia-card">
-    <div class="card-header">📈 Tendencia de tickets — últimos 6 meses</div>
-    <div class="card-body">
-        {% if por_mes %}
-            {% set max_mes = por_mes | map(attribute='total') | max %}
-            <div class="kpi-tendencia-chart-wrap">
-                {% for m in por_mes %}
-                {% set h_t = ((m.total / max_mes) * 70) | int if max_mes else 0 %}
-                {% set h_r = ((m.resueltos / max_mes) * 70) | int if max_mes else 0 %}
-                <div class="kpi-tendencia-bar-item">
-                    <span class="kpi-tendencia-bar-count">{{ m.total }}</span>
-                    <div class="kpi-tendencia-bars-container">
-                        <div class="barra-h kpi-tendencia-bar-azul" data-h="{{ h_t }}"></div>
-                        <div class="barra-h kpi-tendencia-bar-verde" data-h="{{ h_r }}"></div>
-                    </div>
+            <div class="seccion">
+                <div class="seccion-titulo">🚨 Distribución por prioridad</div>
+                <div class="seccion-cuerpo">
+                    {% if por_prioridad %}
+                    <canvas id="grafico-prioridad"></canvas>
+                    {% else %}
+                    <div class="sin-datos">Sin datos aún</div>
+                    {% endif %}
                 </div>
-                {% endfor %}
             </div>
-            <div class="kpi-tendencia-labels-wrap">
-                {% for m in por_mes %}
-                <div class="kpi-tendencia-month-label">{{ m.mes_label }}</div>
-                {% endfor %}
+
+        </div>
+
+        <!-- FILA 3: Carga por agente + Sprints -->
+        <div class="fila-dos">
+
+            <div class="seccion">
+                <div class="seccion-titulo">👨‍💻 Carga por programador</div>
+                <div class="seccion-cuerpo">
+                    {% if por_agente %}
+                        {% for a in por_agente %}
+                        <div class="agente-item">
+                            <div class="agente-avatar">
+                                {{ a.agente.split()[0][0] }}{{ a.agente.split()[-1][0] if a.agente.split()|length > 1 else '' }}
+                            </div>
+                            <div class="agente-info">
+                                <div class="agente-nombre">{{ a.agente }}</div>
+                                <div class="agente-dato">
+                                    {{ a.resueltos }} resueltos ·
+                                    {% if a.promedio_horas %}promedio {{ a.promedio_horas }}h{% else %}sin datos{% endif %}
+                                </div>
+                            </div>
+                            <div class="agente-total">{{ a.total_atendidos }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="sin-datos">Sin agentes asignados aún.</div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="kpi-tendencia-legend-wrap">
-                <span><span class="kpi-tendencia-legend-item kpi-tendencia-legend-azul"></span>Apertura</span>
-                <span><span class="kpi-tendencia-legend-item kpi-tendencia-legend-verde"></span>Resueltos</span>
+
+            <div class="seccion">
+                <div class="seccion-titulo">⚡ Avance de sprints activos</div>
+                <div class="seccion-cuerpo">
+                    {% if sprint_activo %}
+                        {% for s in sprint_activo %}
+                        {% set pct_sp = ((s.pts_completados / s.capacidad_pts) * 100) | int if s.capacidad_pts else 0 %}
+                        {% set pct_final = [pct_sp, 100] | min %}
+                        <div class="sprint-item">
+                            <div class="sprint-nombre">{{ s.sprint }}</div>
+                            <div class="sprint-proyecto">{{ s.proyecto }}</div>
+                            <div class="sprint-barra-fondo">
+                                <div class="sprint-barra-relleno" data-ancho="{{ pct_final }}"></div>
+                            </div>
+                            <div class="sprint-texto">
+                                <span>{{ s.pts_completados }} / {{ s.capacidad_pts }} pts ({{ pct_sp }}%)</span>
+                                <span>
+                                    {% if s.dias_restantes is not none %}
+                                        {% if s.dias_restantes > 0 %}{{ s.dias_restantes }} día{{ 's' if s.dias_restantes != 1 }} restantes
+                                        {% elif s.dias_restantes == 0 %}⚠️ Termina hoy
+                                        {% else %}🔴 Vencido hace {{ s.dias_restantes | abs }} día{{ 's' if s.dias_restantes | abs != 1 }}
+                                        {% endif %}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if s.pts_en_progreso > 0 %}
+                            <div class="sprint-progreso">🔄 {{ s.pts_en_progreso }} pts en progreso</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="sin-datos">No hay sprints activos.</div>
+                    {% endif %}
+                </div>
             </div>
-        {% else %}
-            <div class="kpi-no-data">Sin datos de tendencia aún.</div>
-        {% endif %}
-    </div>
+
+        </div>
+
+        <!-- FILA 4: Tendencia mensual -->
+        <div class="tendencia-wrap">
+            <div class="seccion">
+                <div class="seccion-titulo">📈 Tendencia de tickets — últimos 6 meses</div>
+                <div class="seccion-cuerpo">
+                    {% if por_mes %}
+                    <canvas id="grafico-tendencia"></canvas>
+                    {% else %}
+                    <div class="sin-datos">Sin datos de tendencia aún.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </main>
 </div>
 
-{% endblock %}
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script src="{{ url_for('static', filename='js/indicadores.js') }}"></script>
+</body>
+</html>
