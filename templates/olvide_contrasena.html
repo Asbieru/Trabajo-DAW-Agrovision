@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olvidé mi contraseña · AgroVisión</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/olvide_contrasena.css') }}">
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <span class="topbar-logo">
+        🌿 Agro<em>visión</em>
+        <span class="topbar-badge">Sistemas</span>
+    </span>
+</header>
+
+<!-- CAJA -->
+<div class="auth-wrap">
+    <div class="auth-box">
+
+        <div class="auth-content">
+
+            <p class="auth-title">🔑 Recuperar contraseña</p>
+            <p class="auth-sub">
+                Ingresa tu correo corporativo y te enviaremos
+                instrucciones para restablecer tu contraseña.
+            </p>
+
+            <!-- Mensaje de resultado -->
+            {% if mensaje %}
+                <div class="msg-{{ tipo }}">{{ mensaje }}</div>
+            {% endif %}
+
+            <!-- FORMULARIO -->
+            <form method="POST" action="{{ url_for('olvide_contrasena') }}">
+
+                <div class="form-group">
+                    <label for="correo">Correo corporativo</label>
+                    <input
+                        type="email"
+                        id="correo"
+                        name="correo"
+                        placeholder="usuario@agrovisioncorp.com"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+
+                <button type="submit" class="btn-full">Enviar instrucciones</button>
+
+            </form>
+
+            <a href="{{ url_for('login') }}" class="back-link">← Volver al inicio de sesión</a>
+
+        </div>
+
+        <!-- PIE -->
+        <div class="auth-footer">
+            🔒 Acceso restringido · Solo personal autorizado de AgroVisión
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

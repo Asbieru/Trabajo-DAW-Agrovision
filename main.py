@@ -3,6 +3,7 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
 from flask import Flask, render_template, request, redirect, url_for, session
+from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo
 from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
 from proyectoDB import (Proyecto, listarProyectos, insertarProyecto)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
@@ -15,8 +16,7 @@ from ad import (
     obtenerLotes, obtenerPlagas, obtenerUsuarios,
     listarEvaluaciones,
     # Inserciones
-    insertarEvaluacion,
-    registrarUsuario, autenticarUsuario,    
+    insertarEvaluacion,   
 )
 
 app = Flask(__name__)
@@ -37,50 +37,51 @@ def raiz():
 # ──────────────────────────────────────────────────────────────
 #  LOGIN
 # ──────────────────────────────────────────────────────────────
-
+ 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Si ya hay sesión activa, ir al dashboard
     if 'usuario' in session:
         return redirect(url_for('index'))
-
+ 
+    error = None
+ 
     if request.method == 'POST':
         correo   = request.form.get('correo', '').strip()
         password = request.form.get('password', '')
-
+ 
         ok, mensaje, datos = autenticarUsuario(correo, password)
         if ok:
             session['usuario'] = datos
             return redirect(url_for('index'))
-
-    return render_template('login.html')
-
-
+        else:
+            error = mensaje
+ 
+    return render_template('login.html', error=error)
+ 
+ 
 # ──────────────────────────────────────────────────────────────
-#  REGISTRO
+#  OLVIDÉ MI CONTRASEÑA
 # ──────────────────────────────────────────────────────────────
-
-@app.route('/registro', methods=['POST'])
-def registro():
-    nombre    = request.form.get('nombre_completo', '').strip()
-    correo    = request.form.get('correo', '').strip()
-    password  = request.form.get('password', '')
-    password2 = request.form.get('password2', '')
-
-    if not nombre:
-        return redirect(url_for('login') + '?tab=registro')
-
-    if password != password2:
-        return redirect(url_for('login') + '?tab=registro')
-
-    if len(password) < 6:
-        return redirect(url_for('login') + '?tab=registro')
-
-    ok, mensaje = registrarUsuario(nombre, correo, password)
-    if ok:
-        return redirect(url_for('login'))
-    else:
-        return redirect(url_for('login') + '?tab=registro')
-
+ 
+@app.route('/olvide-contrasena', methods=['GET', 'POST'])
+def olvide_contrasena():
+    mensaje = None
+    tipo    = None   # 'exito' o 'error' (para el color del mensaje)
+ 
+    if request.method == 'POST':
+        correo = request.form.get('correo', '').strip()
+        if buscarUsuarioPorCorreo(correo):
+            # En producción aquí se enviaría un correo real
+            mensaje = ('Si el correo está registrado, recibirás un enlace '
+                       'para restablecer tu contraseña.')
+            tipo = 'exito'
+        else:
+            mensaje = 'No se encontró una cuenta activa con ese correo.'
+            tipo = 'error'
+ 
+    return render_template('olvide_contrasena.html', mensaje=mensaje, tipo=tipo)
+ 
 
 # ──────────────────────────────────────────────────────────────
 #  LOGOUT
