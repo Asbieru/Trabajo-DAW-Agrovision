@@ -4,11 +4,11 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 
 from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo
 from flask import Flask, render_template, request, redirect, url_for, session, Response
-from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
-from historiasDB import (Historia, listarHistorias, insertarHistoria,
+from ticketAD import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
+from historiasAD import (Historia, listarHistorias, insertarHistoria,
                          actualizarEstadoHistoria, listarTodosSprints,
                          listarSprintsPorProyecto, resumenHistoriasPorProyecto)
-from proyectoDB import (Proyecto, listarProyectos, insertarProyecto)
+from proyectoAD import (Proyecto, listarProyectos, insertarProyecto)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos)
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
