@@ -867,9 +867,278 @@ body {
 .ticket-resolution-form-grid { margin-bottom: 16px; }
 .ticket-resolution-form-group { margin-bottom: 16px; }
 
+/* ── SPRINT BARRA RELLENO ── */
+.kpi-sprint-progress-relleno {
+    height: 100%;
+    border-radius: 20px;
+    background: var(--verde);
+}
 
 @media (max-width: 480px) {
     .stats-grid {
         grid-template-columns: 1fr 1fr;
     }
 }
+/* ── INDICADORES · clases del indicadores.html ── */
+
+.kpi-fila {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.fila-dos .seccion {
+    height: 100%;
+}
+
+.fila-dos .seccion-cuerpo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: calc(100% - 50px);
+}
+
+.kpi-card {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: var(--radio);
+    padding: 18px 20px;
+    box-shadow: var(--sombra);
+    text-align: center;
+}
+
+.kpi-card .etiqueta {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--gris-texto);
+    margin-bottom: 6px;
+}
+
+.kpi-card .numero {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    font-family: var(--fuente-titulo);
+}
+
+.kpi-card.total     .numero { color: var(--negro); }
+.kpi-card.pendiente .numero { color: var(--rojo); }
+.kpi-card.resuelto  .numero { color: var(--verde-oscuro); }
+.kpi-card.promedio  .numero { color: var(--azul); }
+.kpi-card.sla       .numero { color: var(--verde-oscuro); }
+
+.fila-dos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.tendencia-wrap {
+    margin-bottom: 20px;
+}
+
+.seccion {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: var(--radio);
+    box-shadow: var(--sombra);
+    overflow: hidden;
+}
+
+.seccion-titulo {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--gris-borde);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--negro);
+    font-family: var(--fuente-titulo);
+}
+
+.seccion-cuerpo {
+    padding: 18px 20px;
+}
+
+.sin-datos {
+    text-align: center;
+    padding: 20px;
+    color: var(--gris-texto);
+    font-size: 0.85rem;
+}
+
+.agente-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gris-borde);
+    font-size: 0.85rem;
+}
+.agente-item:last-child { border-bottom: none; }
+
+.agente-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--verde-claro);
+    color: var(--verde-oscuro);
+    display: flex;
+    align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+.agente-info   { flex: 1; }
+.agente-nombre { font-weight: 600; }
+.agente-dato   { color: var(--gris-texto); font-size: 0.78rem; }
+.agente-total  { font-weight: 800; color: var(--verde-oscuro); font-size: 1.1rem; }
+
+.sprint-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gris-borde);
+    font-size: 0.85rem;
+}
+.sprint-item:last-child { border-bottom: none; }
+
+.sprint-nombre   { font-weight: 700; }
+.sprint-proyecto { color: var(--gris-texto); font-size: 0.78rem; margin-bottom: 4px; }
+
+.sprint-barra-fondo {
+    background: var(--gris-borde);
+    border-radius: 20px;
+    height: 10px;
+    overflow: hidden;
+    margin: 6px 0;
+}
+
+.sprint-barra-relleno {
+    height: 100%;
+    border-radius: 20px;
+    background: var(--verde);
+}
+
+.sprint-texto {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--gris-texto);
+}
+
+.sprint-progreso {
+    font-size: 0.73rem;
+    color: var(--azul);
+    margin-top: 4px;
+}
+
+.reporte-fila {
+    grid-template-columns: repeat(6, 1fr);
+}
+ 
+.reporte-filtros-form { display: flex; flex-direction: column; gap: 16px; }
+ 
+.reporte-filtros-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+}
+ 
+.reporte-filtro-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+ 
+.reporte-filtro-grupo label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--gris-texto);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+ 
+.reporte-filtro-grupo input,
+.reporte-filtro-grupo select {
+    padding: 8px 10px;
+    border: 1.5px solid var(--gris-borde);
+    border-radius: 7px;
+    font-family: var(--fuente);
+    font-size: 0.88rem;
+    color: var(--negro);
+    background: var(--blanco);
+}
+ 
+.reporte-filtro-grupo input:focus,
+.reporte-filtro-grupo select:focus {
+    outline: none;
+    border-color: var(--verde);
+    box-shadow: 0 0 0 3px rgba(26,122,74,0.12);
+}
+ 
+.reporte-filtros-botones {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+ 
+.btn-exportar-csv {
+    background: var(--azul);
+    color: var(--blanco);
+    border: none;
+    padding: 9px 20px;
+    border-radius: var(--radio);
+    font-family: var(--fuente);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+}
+.btn-exportar-csv:hover { background: var(--verde-oscuro); }
+ 
+.btn-exportar-pdf {
+    background: var(--rojo);
+    color: var(--blanco);
+    border: none;
+    padding: 9px 20px;
+    border-radius: var(--radio);
+    font-family: var(--fuente);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+}
+.btn-exportar-pdf:hover { opacity: 0.88; }
+ 
+.reporte-total-badge {
+    float: right;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--verde-claro);
+    color: var(--verde-oscuro);
+    padding: 2px 10px;
+    border-radius: 20px;
+}
+ 
+/* ── PRINT: oculta lo que no debe aparecer en PDF ── */
+@media print {
+    .topbar, .sidebar, .reporte-no-print,
+    .page-header .btn, .kpi-fila, .fila-dos { display: none !important; }
+    body { padding-top: 0 !important; background: white !important; }
+    .layout { display: block !important; }
+    .main { padding: 0 !important; max-width: 100% !important; }
+    .seccion { box-shadow: none !important; border: 1px solid #ccc !important; margin-bottom: 16px; }
+    #tabla-reporte { display: block !important; }
+}
+ 
+@media (max-width: 1100px) { .reporte-fila { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px)  { .reporte-filtros-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px)  { .reporte-fila { grid-template-columns: repeat(2, 1fr); } }

@@ -115,3 +115,232 @@ function filtrarTickets() {
     document.getElementById('sin-resultados').style.display =
         visibles === 0 ? 'block' : 'none';
 }
+
+/* ============================================================
+   3. INDICADORES – indicadores.html
+      Lee datos desde data- attributes y dibuja gráficos
+      con Chart.js. Solo se ejecuta si existe #datos-graficos.
+   ============================================================ */
+
+(function iniciarIndicadores() {
+    var contenedor = document.getElementById('datos-graficos');
+    if (!contenedor) return;
+
+    var porApp       = JSON.parse(contenedor.getAttribute('data-app'));
+    var porPrioridad = JSON.parse(contenedor.getAttribute('data-prioridad'));
+    var porMes       = JSON.parse(contenedor.getAttribute('data-mes'));
+
+    // Barras de sprints
+    document.querySelectorAll('.sprint-barra-relleno').forEach(function (el) {
+        el.style.width = el.getAttribute('data-ancho') + '%';
+    });
+
+    // Gráfico barras horizontales: Tickets por aplicación
+    if (document.getElementById('grafico-app') && porApp.length) {
+        new Chart(document.getElementById('grafico-app'), {
+            type: 'bar',
+            data: {
+                labels: porApp.map(function (a) { return a.aplicacion; }),
+                datasets: [{
+                    label: 'Tickets',
+                    data: porApp.map(function (a) { return a.total; }),
+                    backgroundColor: 'rgba(30, 95, 168, 0.7)',
+                    borderColor: 'rgba(30, 95, 168, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    }
+
+    // Gráfico dona: Distribución por prioridad
+    if (document.getElementById('grafico-prioridad') && porPrioridad.length) {
+        new Chart(document.getElementById('grafico-prioridad'), {
+            type: 'doughnut',
+            data: {
+                labels: porPrioridad.map(function (p) { return p.prioridad; }),
+                datasets: [{
+                    data: porPrioridad.map(function (p) { return p.total; }),
+                    backgroundColor: [
+                        'rgba(192, 57, 43, 0.8)',
+                        'rgba(230, 126, 34, 0.8)',
+                        'rgba(241, 196, 15, 0.8)',
+                        'rgba(26, 122, 74, 0.8)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }
+            }
+        });
+    }
+
+    // Gráfico barras: Tendencia mensual
+    if (document.getElementById('grafico-tendencia') && porMes.length) {
+        new Chart(document.getElementById('grafico-tendencia'), {
+            type: 'bar',
+            data: {
+                labels: porMes.map(function (m) { return m.mes_label; }),
+                datasets: [
+                    {
+                        label: 'Apertura',
+                        data: porMes.map(function (m) { return m.total; }),
+                        backgroundColor: 'rgba(30, 95, 168, 0.7)',
+                        borderColor: 'rgba(30, 95, 168, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Resueltos',
+                        data: porMes.map(function (m) { return m.resueltos; }),
+                        backgroundColor: 'rgba(26, 122, 74, 0.7)',
+                        borderColor: 'rgba(26, 122, 74, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top', labels: { font: { size: 12 } } } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    }
+})();
+
+/* ============================================================
+   5. REPORTES – reportes.html
+   ============================================================ */
+
+(function iniciarReportes() {
+    var contenedor = document.getElementById('datos-reportes');
+    if (!contenedor) return;
+
+    var porApp      = JSON.parse(contenedor.getAttribute('data-app'));
+    var porTipo     = JSON.parse(contenedor.getAttribute('data-tipo'));
+    var storyPoints = JSON.parse(contenedor.getAttribute('data-sp'));
+    var carryover   = JSON.parse(contenedor.getAttribute('data-carryover'));
+
+    if (document.getElementById('grafico-reporte-app') && porApp.length) {
+        new Chart(document.getElementById('grafico-reporte-app'), {
+            type: 'bar',
+            data: {
+                labels: porApp.map(function (a) { return a.aplicacion; }),
+                datasets: [
+                    { label: 'Pendientes', data: porApp.map(function (a) { return a.pendientes; }), backgroundColor: 'rgba(192, 57, 43, 0.7)', borderRadius: 4 },
+                    { label: 'Cerrados',   data: porApp.map(function (a) { return a.cerrados; }),   backgroundColor: 'rgba(26, 122, 74, 0.7)',  borderRadius: 4 }
+                ]
+            },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+
+    if (document.getElementById('grafico-reporte-tipo') && porTipo.length) {
+        new Chart(document.getElementById('grafico-reporte-tipo'), {
+            type: 'doughnut',
+            data: {
+                labels: porTipo.map(function (t) { return t.tipo; }),
+                datasets: [{ data: porTipo.map(function (t) { return t.total; }), backgroundColor: ['rgba(192, 57, 43, 0.8)', 'rgba(26, 122, 74, 0.8)', 'rgba(30, 95, 168, 0.8)'], borderWidth: 2 }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
+        });
+    }
+
+    if (document.getElementById('grafico-reporte-sp') && storyPoints.length) {
+        new Chart(document.getElementById('grafico-reporte-sp'), {
+            type: 'bar',
+            data: {
+                labels: storyPoints.map(function (p) { return p.programador; }),
+                datasets: [
+                    { label: 'Asignados',   data: storyPoints.map(function (p) { return p.pts_asignados; }),   backgroundColor: 'rgba(30, 95, 168, 0.5)', borderRadius: 4 },
+                    { label: 'Completados', data: storyPoints.map(function (p) { return p.pts_completados; }), backgroundColor: 'rgba(26, 122, 74, 0.8)',  borderRadius: 4 }
+                ]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+
+    if (document.getElementById('grafico-reporte-carryover') && carryover.length) {
+        new Chart(document.getElementById('grafico-reporte-carryover'), {
+            type: 'bar',
+            data: {
+                labels: carryover.map(function (c) { return c.programador; }),
+                datasets: [{ label: 'Pts carryover', data: carryover.map(function (c) { return c.pts_carryover; }), backgroundColor: 'rgba(240, 165, 0, 0.8)', borderRadius: 4 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+})();
+
+function imprimirReporte() {
+    window.print();
+}
+ 
+(function iniciarReportes() {
+    var contenedor = document.getElementById('datos-reportes');
+    if (!contenedor) return;
+ 
+    var porApp      = JSON.parse(contenedor.getAttribute('data-app'));
+    var porTipo     = JSON.parse(contenedor.getAttribute('data-tipo'));
+    var storyPoints = JSON.parse(contenedor.getAttribute('data-sp'));
+    var carryover   = JSON.parse(contenedor.getAttribute('data-carryover'));
+ 
+    if (document.getElementById('grafico-reporte-app') && porApp.length) {
+        new Chart(document.getElementById('grafico-reporte-app'), {
+            type: 'bar',
+            data: {
+                labels: porApp.map(function (a) { return a.aplicacion; }),
+                datasets: [
+                    { label: 'Pendientes', data: porApp.map(function (a) { return a.pendientes; }), backgroundColor: 'rgba(192, 57, 43, 0.7)', borderRadius: 4 },
+                    { label: 'Cerrados',   data: porApp.map(function (a) { return a.cerrados; }),   backgroundColor: 'rgba(26, 122, 74, 0.7)',  borderRadius: 4 }
+                ]
+            },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+ 
+    if (document.getElementById('grafico-reporte-tipo') && porTipo.length) {
+        new Chart(document.getElementById('grafico-reporte-tipo'), {
+            type: 'doughnut',
+            data: {
+                labels: porTipo.map(function (t) { return t.tipo; }),
+                datasets: [{ data: porTipo.map(function (t) { return t.total; }), backgroundColor: ['rgba(192, 57, 43, 0.8)', 'rgba(26, 122, 74, 0.8)', 'rgba(30, 95, 168, 0.8)'], borderWidth: 2 }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
+        });
+    }
+ 
+    if (document.getElementById('grafico-reporte-sp') && storyPoints.length) {
+        new Chart(document.getElementById('grafico-reporte-sp'), {
+            type: 'bar',
+            data: {
+                labels: storyPoints.map(function (p) { return p.programador; }),
+                datasets: [
+                    { label: 'Asignados',   data: storyPoints.map(function (p) { return p.pts_asignados; }),   backgroundColor: 'rgba(30, 95, 168, 0.5)', borderRadius: 4 },
+                    { label: 'Completados', data: storyPoints.map(function (p) { return p.pts_completados; }), backgroundColor: 'rgba(26, 122, 74, 0.8)',  borderRadius: 4 }
+                ]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+ 
+    if (document.getElementById('grafico-reporte-carryover') && carryover.length) {
+        new Chart(document.getElementById('grafico-reporte-carryover'), {
+            type: 'bar',
+            data: {
+                labels: carryover.map(function (c) { return c.programador; }),
+                datasets: [{ label: 'Pts carryover', data: carryover.map(function (c) { return c.pts_carryover; }), backgroundColor: 'rgba(240, 165, 0, 0.8)', borderRadius: 4 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+})();

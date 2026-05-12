@@ -4,19 +4,21 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo
+from flask import Flask, render_template, request, redirect, url_for, session, Response
 from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
 from proyectoDB import (Proyecto, listarProyectos, insertarProyecto)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos)
-
+from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
+                         reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
+                         reporteTicketsFiltrados, generarCSV, obtenerAplicaciones)
 from ad import (
-    # DTOs
     EvaluacionCampo,
-    # Consultas
     obtenerLotes, obtenerPlagas, obtenerUsuarios,
     listarEvaluaciones,
     # Inserciones
     insertarEvaluacion,   
+    insertarEvaluacion,
 )
 
 app = Flask(__name__)
@@ -135,7 +137,6 @@ def guardar_evaluacion():
         insertarEvaluacion(obj)
     except Exception as e:
         print(f'Error al procesar el formulario: {e}')
-
     return redirect(url_for('form_evaluacion'))
 
 
@@ -170,7 +171,6 @@ def guardar_ticket():
         insertarTicket(obj)
     except Exception as e:
         print(f'Error al procesar el formulario: {e}')
-
     return redirect(url_for('form_ticket'))
 
 
@@ -201,7 +201,6 @@ def guardar_resolucion(id_ticket):
     id_agente = request.form.get('id_agente')
     estado    = request.form.get('estado')
     notas     = request.form.get('notas_resolucion', '').strip()
-
     resolverTicket(id_ticket, id_agente, estado, notas)
     return redirect(url_for('listar_tickets'))
 
@@ -230,7 +229,6 @@ def guardar_proyecto():
         insertarProyecto(obj)
     except Exception as e:
         print(f'Error al procesar el formulario: {e}')
-
     return redirect(url_for('form_proyecto'))
 
 
@@ -259,6 +257,70 @@ def indicadores_soporte():
                            por_agente=por_agente,
                            por_mes=por_mes,
                            sprint_activo=sprint_activo)
+
+
+# ──────────────────────────────────────────────────────────────
+#  REPORTES
+# ──────────────────────────────────────────────────────────────
+
+def limpiar(valor):
+    """Convierte string vacío a None, limpia espacios."""
+    if valor is None:
+        return None
+    valor = valor.strip()
+    return valor if valor else None
+
+@app.route('/reportes')
+def gestion_reportes():
+    fecha_inicio = limpiar(request.args.get('fecha_inicio', ''))
+    fecha_fin    = limpiar(request.args.get('fecha_fin', ''))
+    aplicacion   = limpiar(request.args.get('aplicacion', ''))
+    estado       = limpiar(request.args.get('estado', ''))
+    prioridad    = limpiar(request.args.get('prioridad', ''))
+
+    resumen           = reporteResumen()
+    tickets_app       = reporteTicketsPorApp()
+    tickets_tipo      = reporteTicketsPorTipo()
+    story_points      = reporteStoryPointsPorProgramador()
+    carryover         = reporteCarryoverPorProgramador()
+    aplicaciones      = obtenerAplicaciones()
+    tickets_filtrados = reporteTicketsFiltrados(
+        fecha_inicio, fecha_fin, aplicacion, estado, prioridad
+    )
+
+    return render_template('reportes.html',
+                           resumen=resumen,
+                           tickets_app=tickets_app,
+                           tickets_tipo=tickets_tipo,
+                           story_points=story_points,
+                           carryover=carryover,
+                           aplicaciones=aplicaciones,
+                           tickets_filtrados=tickets_filtrados,
+                           fecha_inicio=fecha_inicio or '',
+                           fecha_fin=fecha_fin       or '',
+                           aplicacion=aplicacion     or '',
+                           estado=estado             or '',
+                           prioridad=prioridad       or '')
+
+
+@app.route('/reportes/exportar-csv')
+def exportar_csv():
+    fecha_inicio = limpiar(request.args.get('fecha_inicio', ''))
+    fecha_fin    = limpiar(request.args.get('fecha_fin', ''))
+    aplicacion   = limpiar(request.args.get('aplicacion', ''))
+    estado       = limpiar(request.args.get('estado', ''))
+    prioridad    = limpiar(request.args.get('prioridad', ''))
+
+    tickets  = reporteTicketsFiltrados(
+        fecha_inicio, fecha_fin, aplicacion, estado, prioridad
+    )
+    csv_data = generarCSV(tickets)
+    return Response(
+        csv_data,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=reporte_tickets.csv'}
+    )
+
 
 
 # ──────────────────────────────────────────────────────────────
