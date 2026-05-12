@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicadores de Soporte · Sistema de Gestión</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/indicadores.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -76,12 +75,15 @@
         <a href="{{ url_for('indicadores_soporte') }}" class="activo">
             <span class="ico">📊</span> Indicadores
         </a>
+        <a href="{{ url_for('gestion_reportes') }}">
+            <span class="ico">📈</span> Reportes
+        </a>
     </nav>
 
     <!-- CONTENIDO -->
     <main class="main">
 
-        <!-- Datos para JS externo -->
+        <!-- Datos para JS -->
         <div id="datos-graficos"
              data-app='{{ por_app | tojson if por_app else "[]" }}'
              data-prioridad='{{ por_prioridad | tojson if por_prioridad else "[]" }}'
@@ -128,7 +130,7 @@
 
         </div>
 
-        <!-- FILA 2: Gráfico barras por aplicación + Gráfico dona por prioridad -->
+        <!-- FILA 2: Tickets por aplicación + Prioridad -->
         <div class="fila-dos">
 
             <div class="seccion">
@@ -155,7 +157,7 @@
 
         </div>
 
-        <!-- FILA 3: Carga por agente + Sprints -->
+        <!-- FILA 3: Agentes + Sprints -->
         <div class="fila-dos">
 
             <div class="seccion">
@@ -238,6 +240,5 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-<script src="{{ url_for('static', filename='js/indicadores.js') }}"></script>
 </body>
 </html>
