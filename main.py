@@ -2,7 +2,6 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from flask import Flask, render_template, request, redirect, url_for, session
 from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo
 from flask import Flask, render_template, request, redirect, url_for, session, Response
 from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
@@ -20,8 +19,7 @@ from ad import (
     obtenerLotes, obtenerPlagas, obtenerUsuarios,
     listarEvaluaciones,
     # Inserciones
-    insertarEvaluacion,   
-    insertarEvaluacion,
+    insertarEvaluacion
 )
 
 app = Flask(__name__)

@@ -10,7 +10,8 @@ def obtenerconexion():
                                      database='bd_proyectofinal',
                                      cursorclass=pymysql.cursors.DictCursor)
         return connection
-    except:
+    except Exception as e:
+        print(f"[ERROR conexion] {e}")
         return None
 
 def obtenerAplicaciones():
@@ -23,7 +24,8 @@ def obtenerAplicaciones():
                     cursor.execute(sql)
                     return [row['aplicacion'] for row in cursor.fetchall()]
         return []
-    except:
+    except Exception as e:
+        print(f"[ERROR obtenerAplicaciones] {e}")
         return []
 
 def reporteResumen():
@@ -42,7 +44,8 @@ def reporteResumen():
                     cursor.execute(sql)
                     return cursor.fetchone()
         return {}
-    except:
+    except Exception as e:
+        print(f"[ERROR reporteResumen] {e}")
         return {}
 
 def reporteTicketsPorApp():
@@ -60,7 +63,8 @@ def reporteTicketsPorApp():
                     cursor.execute(sql)
                     return cursor.fetchall()
         return []
-    except:
+    except Exception as e:
+        print(f"[ERROR reporteTicketsPorApp] {e}")
         return []
 
 def reporteTicketsPorTipo():
@@ -75,7 +79,8 @@ def reporteTicketsPorTipo():
                     cursor.execute(sql)
                     return cursor.fetchall()
         return []
-    except:
+    except Exception as e:
+        print(f"[ERROR reporteTicketsPorTipo] {e}")
         return []
 
 def reporteStoryPointsPorProgramador():
@@ -89,13 +94,14 @@ def reporteStoryPointsPorProgramador():
                     sql += " THEN h.story_points ELSE 0 END), 0) AS pts_completados,"
                     sql += " COALESCE(SUM(h.story_points), 0) AS pts_asignados"
                     sql += " FROM historias h"
-                    sql += " JOIN usuarios u ON h.id_responsable = u.id_usuario"
-                    sql += " GROUP BY h.id_responsable, u.nombre_completo"
+                    sql += " JOIN usuarios u ON h.id_asignado = u.id_usuario"
+                    sql += " GROUP BY h.id_asignado, u.nombre_completo"
                     sql += " ORDER BY pts_completados DESC"
                     cursor.execute(sql)
                     return cursor.fetchall()
         return []
-    except:
+    except Exception as e:
+        print(f"[ERROR reporteStoryPointsPorProgramador] {e}")
         return []
 
 def reporteCarryoverPorProgramador():
@@ -109,68 +115,69 @@ def reporteCarryoverPorProgramador():
                     sql += " COALESCE(SUM(h.story_points), 0) AS pts_carryover"
                     sql += " FROM historias h"
                     sql += " JOIN sprints s ON h.id_sprint = s.id_sprint"
-                    sql += " JOIN usuarios u ON h.id_responsable = u.id_usuario"
+                    sql += " JOIN usuarios u ON h.id_asignado = u.id_usuario"
                     sql += " WHERE s.estado = 'completado'"
                     sql += " AND h.estado != 'completada'"
-                    sql += " GROUP BY h.id_responsable, u.nombre_completo"
+                    sql += " GROUP BY h.id_asignado, u.nombre_completo"
                     sql += " ORDER BY pts_carryover DESC"
                     cursor.execute(sql)
                     return cursor.fetchall()
         return []
-    except:
+    except Exception as e:
+        print(f"[ERROR reporteCarryoverPorProgramador] {e}")
         return []
 
 def reporteTicketsFiltrados(fecha_inicio=None, fecha_fin=None,
                              aplicacion=None, estado=None, prioridad=None):
-    conn = obtenerconexion()
-    if not conn:
+    try:
+        conn = obtenerconexion()
+        if not conn:
+            return []
+        with conn:
+            with conn.cursor() as cursor:
+
+                fi = fecha_inicio.strip() if fecha_inicio and fecha_inicio.strip() else None
+                ff = fecha_fin.strip()    if fecha_fin    and fecha_fin.strip()    else None
+                ap = aplicacion.strip()   if aplicacion   and aplicacion.strip()   else None
+                es = estado.strip()       if estado       and estado.strip()       else None
+                pr = prioridad.strip()    if prioridad    and prioridad.strip()    else None
+
+                sql =  "SELECT t.id_ticket, t.titulo, t.aplicacion,"
+                sql += " t.tipo, t.prioridad, t.estado,"
+                sql += " DATE_FORMAT(t.fecha_apertura, '%%d/%%m/%%Y') AS fecha_apertura,"
+                sql += " u.nombre_completo AS solicitante"
+                sql += " FROM tickets t"
+                sql += " JOIN usuarios u ON t.id_solicitante = u.id_usuario"
+
+                condiciones = []
+                params      = []
+
+                if fi:
+                    condiciones.append("DATE(t.fecha_apertura) >= %s")
+                    params.append(fi)
+                if ff:
+                    condiciones.append("DATE(t.fecha_apertura) <= %s")
+                    params.append(ff)
+                if ap:
+                    condiciones.append("t.aplicacion = %s")
+                    params.append(ap)
+                if es:
+                    condiciones.append("t.estado = %s")
+                    params.append(es)
+                if pr:
+                    condiciones.append("t.prioridad = %s")
+                    params.append(pr)
+
+                if condiciones:
+                    sql += " WHERE " + " AND ".join(condiciones)
+
+                sql += " ORDER BY t.fecha_apertura DESC"
+
+                cursor.execute(sql, tuple(params) if params else None)
+                return cursor.fetchall()
+    except Exception as e:
+        print(f"[ERROR reporteTicketsFiltrados] {e}")
         return []
-    with conn:
-        with conn.cursor() as cursor:
-
-            fi = fecha_inicio.strip() if fecha_inicio and fecha_inicio.strip() else None
-            ff = fecha_fin.strip()    if fecha_fin    and fecha_fin.strip()    else None
-            ap = aplicacion.strip()   if aplicacion   and aplicacion.strip()   else None
-            es = estado.strip()       if estado       and estado.strip()       else None
-            pr = prioridad.strip()    if prioridad    and prioridad.strip()    else None
-
-            sql =  "SELECT t.id_ticket, t.titulo, t.aplicacion,"
-            sql += " t.tipo, t.prioridad, t.estado,"
-            sql += " DATE_FORMAT(t.fecha_apertura, '%%d/%%m/%%Y') AS fecha_apertura,"
-            sql += " u.nombre_completo AS solicitante"
-            sql += " FROM tickets t"
-            sql += " JOIN usuarios u ON t.id_solicitante = u.id_usuario"
-
-            condiciones = []
-            params      = []
-
-            if fi:
-                condiciones.append("DATE(t.fecha_apertura) >= %s")
-                params.append(fi)
-            if ff:
-                condiciones.append("DATE(t.fecha_apertura) <= %s")
-                params.append(ff)
-            if ap:
-                condiciones.append("t.aplicacion = %s")
-                params.append(ap)
-            if es:
-                condiciones.append("t.estado = %s")
-                params.append(es)
-            if pr:
-                condiciones.append("t.prioridad = %s")
-                params.append(pr)
-
-            if condiciones:
-                sql += " WHERE " + " AND ".join(condiciones)
-
-            sql += " ORDER BY t.fecha_apertura DESC"
-
-            if params:
-                cursor.execute(sql, tuple(params))
-            else:
-                cursor.execute(sql)
-
-            return cursor.fetchall()
 
 def generarCSV(tickets):
     try:
@@ -185,5 +192,6 @@ def generarCSV(tickets):
                 t['solicitante'], t['fecha_apertura']
             ])
         return output.getvalue()
-    except:
+    except Exception as e:
+        print(f"[ERROR generarCSV] {e}")
         return ''

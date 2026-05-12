@@ -79,7 +79,7 @@ def insertarTicket(obj):
                         obj.aplicacion, obj.id_solicitante,
                         obj.sla_horas, obj.descripcion
                     ))
-                conn.commit()
+                    conn.commit()
             return True
     except Exception as e:
         print(f"[ERROR insertarTicket] {e}")
