@@ -6,6 +6,9 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo
 from flask import Flask, render_template, request, redirect, url_for, session, Response
 from ticketDB import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
+from historiasDB import (Historia, listarHistorias, insertarHistoria,
+                         actualizarEstadoHistoria, listarTodosSprints,
+                         listarSprintsPorProyecto, resumenHistoriasPorProyecto)
 from proyectoDB import (Proyecto, listarProyectos, insertarProyecto)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos)
@@ -322,6 +325,55 @@ def exportar_csv():
     )
 
 
+@app.route('/historias')
+def listar_historias():
+    id_proyecto = request.args.get('id_proyecto', type=int)
+    historias   = listarHistorias(id_proyecto)
+    proyectos   = listarProyectos()
+    return render_template('gestionHistorias.html',
+                           historias=historias,
+                           proyectos=proyectos,
+                           id_proyecto_sel=id_proyecto)
+
+
+@app.route('/historia/nueva')
+def form_historia():
+    id_proyecto_pre = request.args.get('id_proyecto', type=int)
+    proyectos       = listarProyectos()
+    sprints         = listarTodosSprints()
+    usuarios        = obtenerUsuarios()
+    return render_template('nuevaHistoria.html',
+                           proyectos=proyectos,
+                           sprints=sprints,
+                           usuarios=usuarios,
+                           id_proyecto_pre=id_proyecto_pre)
+
+
+@app.route('/historia/guardar', methods=['POST'])
+def guardar_historia():
+    try:
+        obj = Historia(
+            id_proyecto  = request.form['id_proyecto'],
+            id_sprint    = request.form.get('id_sprint') or None,
+            id_asignado  = request.form.get('id_asignado') or None,
+            codigo       = request.form['codigo'],
+            titulo       = request.form['titulo'],
+            tipo         = request.form['tipo'],
+            prioridad    = request.form['prioridad'],
+            estado       = request.form['estado'],
+            story_points = request.form.get('story_points') or 0,
+        )
+        insertarHistoria(obj)
+    except Exception as e:
+        print(f'Error al guardar historia: {e}')
+    return redirect(url_for('listar_historias'))
+
+
+@app.route('/historia/<int:id_historia>/estado', methods=['POST'])
+def cambiar_estado_historia(id_historia):
+    nuevo_estado = request.form.get('estado')
+    actualizarEstadoHistoria(id_historia, nuevo_estado)
+    return redirect(request.referrer or url_for('listar_historias'))
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE

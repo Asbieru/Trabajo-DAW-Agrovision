@@ -77,6 +77,16 @@
             <span class="ico">📁</span> Ver proyectos
         </a>
 
+         <div class="sidebar-section">Historias</div>
+        <a href="{{ url_for('form_historia') }}"
+           class="{{ 'activo' if request.endpoint == 'form_historia' else '' }}">
+            <span class="ico">📖</span> Nueva historia
+        </a>
+        <a href="{{ url_for('listar_historias') }}"
+           class="{{ 'activo' if request.endpoint == 'listar_historias' else '' }}">
+            <span class="ico">📋</span> Ver tablero
+        </a>
+        
         <div class="sidebar-section">Métricas</div>
         <a href="{{ url_for('indicadores_soporte') }}"
            class="{{ 'activo' if request.endpoint == 'indicadores_soporte' else '' }}">

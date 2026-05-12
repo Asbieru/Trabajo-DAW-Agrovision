@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Nueva Historia de Usuario{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>📖 Nueva historia de usuario</h1>
+        <p>Registra una historia o tarea dentro de un sprint</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_historias') }}">← Ver tablero</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Datos de la historia</div>
+    <div class="card-body">
+        <form action="{{ url_for('guardar_historia') }}" method="POST">
+
+            <!-- Código y Título -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label for="codigo">Código * <span style="font-weight:400;color:var(--gris-texto)">(ej. HU-017)</span></label>
+                    <input type="text" id="codigo" name="codigo"
+                           placeholder="HU-017" required maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label for="titulo">Título de la historia *</label>
+                    <input type="text" id="titulo" name="titulo"
+                           placeholder="Ej. Ver KPIs en tiempo real" required>
+                </div>
+            </div>
+
+            <!-- Proyecto y Sprint -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label for="id_proyecto">Proyecto *</label>
+                    <select id="id_proyecto" name="id_proyecto" required onchange="filtrarSprints()">
+                        <option value="">— Selecciona proyecto —</option>
+                        {% for p in proyectos %}
+                        <option value="{{ p.id_proyecto }}"
+                            {% if id_proyecto_pre and id_proyecto_pre == p.id_proyecto %}selected{% endif %}>
+                            {{ p.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_sprint">Sprint (opcional)</label>
+                    <select id="id_sprint" name="id_sprint">
+                        <option value="">— Sin sprint asignado —</option>
+                        {% for s in sprints %}
+                        <option value="{{ s.id_sprint }}" data-proyecto="{{ s.id_proyecto }}">
+                            [{{ s.nombre_proyecto }}] {{ s.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-hint">Solo se muestran sprints del proyecto seleccionado</span>
+                </div>
+            </div>
+
+            <!-- Tipo, Prioridad y Estado -->
+            <div class="form-grid tres form-section-spacing">
+                <div class="form-group">
+                    <label for="tipo">Tipo *</label>
+                    <select id="tipo" name="tipo" required>
+                        <option value="funcional">📋 Funcional</option>
+                        <option value="tecnica">⚙️ Técnica</option>
+                        <option value="bug">🐛 Bug</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prioridad">Prioridad *</label>
+                    <select id="prioridad" name="prioridad" required>
+                        <option value="critica">🔴 Crítica</option>
+                        <option value="alta">🟠 Alta</option>
+                        <option value="media" selected>🟡 Media</option>
+                        <option value="baja">🟢 Baja</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="estado">Estado inicial *</label>
+                    <select id="estado" name="estado" required>
+                        <option value="backlog" selected>📥 Backlog</option>
+                        <option value="por_hacer">📝 Por hacer</option>
+                        <option value="en_progreso">⚙️ En progreso</option>
+                        <option value="completada">✅ Completada</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Asignado y Story Points -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label for="id_asignado">Asignar a (opcional)</label>
+                    <select id="id_asignado" name="id_asignado">
+                        <option value="">— Sin asignar —</option>
+                        {% for u in usuarios %}
+                        <option value="{{ u.id_usuario }}">{{ u.nombre_completo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="story_points">Story Points</label>
+                    <input type="number" id="story_points" name="story_points"
+                           min="0" max="100" value="0" placeholder="0">
+                    <span class="form-hint">Estimación del esfuerzo relativo (0–100)</span>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">📖 Guardar historia</button>
+                <a href="{{ url_for('listar_historias') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+function filtrarSprints() {
+    const proyectoId = document.getElementById('id_proyecto').value;
+    const sprintSel  = document.getElementById('id_sprint');
+    const opciones   = sprintSel.querySelectorAll('option');
+
+    opciones.forEach(op => {
+        if (!op.value) return; // "Sin sprint" siempre visible
+        op.style.display = (op.dataset.proyecto === proyectoId) ? '' : 'none';
+    });
+    sprintSel.value = ''; // resetear selección
+}
+// Ejecutar al cargar si hay proyecto pre-seleccionado
+document.addEventListener('DOMContentLoaded', filtrarSprints);
+</script>
+{% endblock %}
