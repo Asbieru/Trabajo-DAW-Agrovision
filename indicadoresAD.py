@@ -1,15 +1,4 @@
-import pymysql.cursors
-
-def obtenerconexion():
-    try:
-        connection = pymysql.connect(host='localhost',
-                                     user='root',
-                                     password='',
-                                     database='bd_proyectofinal',
-                                     cursorclass=pymysql.cursors.DictCursor)
-        return connection
-    except:
-        return None
+from conexion import obtenerconexion
 
 def resumenKPI():
     try:

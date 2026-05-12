@@ -1,4 +1,4 @@
-from ad import (obtenerconexion)
+from conexion import (obtenerconexion)
 
 class Ticket:
     def __init__(self, titulo, tipo, prioridad, aplicacion, id_solicitante, sla_horas, descripcion):

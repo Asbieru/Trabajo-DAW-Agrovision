@@ -1,18 +1,6 @@
-import pymysql.cursors
 import csv
 import io
-
-def obtenerconexion():
-    try:
-        connection = pymysql.connect(host='localhost',
-                                     user='root',
-                                     password='',
-                                     database='bd_proyectofinal',
-                                     cursorclass=pymysql.cursors.DictCursor)
-        return connection
-    except Exception as e:
-        print(f"[ERROR conexion] {e}")
-        return None
+from conexion import obtenerconexion
 
 def obtenerAplicaciones():
     try:

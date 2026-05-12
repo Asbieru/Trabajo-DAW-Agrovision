@@ -2,28 +2,8 @@
 usuarioAD.py  –  Acceso a datos de la tabla 'usuarios' (AgroVision)
 Estructura basada en la guía del profesor (clase DTO + obtenerconexion + funciones AD)
 """
-
-import pymysql.cursors
 from werkzeug.security import check_password_hash
-
-
-# ──────────────────────────────────────────────────────────────
-#  CONEXIÓN  (igual que el ejemplo peliculaAD.py del profesor)
-# ──────────────────────────────────────────────────────────────
-
-def obtenerconexion():
-    try:
-        connection = pymysql.connect(
-            host='localhost',
-            user='root',
-            password='',              # cambia si tu MySQL tiene contraseña
-            database='bd_proyectofinal',
-            cursorclass=pymysql.cursors.DictCursor
-        )
-        return connection
-    except Exception as e:
-        print(f"[ERROR conexión] {e}")
-        return None
+from conexion import obtenerconexion
 
 
 # ──────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 """
-ad.py  –  Utils para la conexión y funciones extras del proyecto.
+conexion.py  –  Utils para la conexión y funciones extras del proyecto.
 """
 
 import pymysql.cursors
@@ -173,54 +173,6 @@ def insertarEvaluacion(obj: EvaluacionCampo) -> bool:
 # ══════════════════════════════════════════════════════════════
 #  KPIs INDICADORES DE SOPORTE
 # ══════════════════════════════════════════════════════════════
-
-def kpiTicketsPorAgente():
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT u.nombre_completo AS agente,
-                               COUNT(*) AS total_atendidos,
-                               SUM(t.estado IN ('resuelto','cerrado')) AS resueltos,
-                               ROUND(AVG(
-                                   CASE WHEN t.fecha_resolucion IS NOT NULL
-                                   THEN TIMESTAMPDIFF(HOUR, t.fecha_apertura, t.fecha_resolucion)
-                                   END
-                               ), 1) AS promedio_horas
-                        FROM tickets t
-                        JOIN usuarios u ON t.id_agente = u.id_usuario
-                        WHERE t.id_agente IS NOT NULL
-                        GROUP BY t.id_agente
-                        ORDER BY total_atendidos DESC
-                    """)
-                    return cursor.fetchall()
-    except Exception as e:
-        print(f"[ERROR kpiTicketsPorAgente] {e}")
-    return []
-
-
-def kpiTicketsPorMes():
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT DATE_FORMAT(fecha_apertura, '%%Y-%%m') AS mes,
-                               DATE_FORMAT(fecha_apertura, '%%b %%Y') AS mes_label,
-                               COUNT(*) AS total,
-                               SUM(estado IN ('resuelto','cerrado')) AS resueltos
-                        FROM tickets
-                        WHERE fecha_apertura >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-                        GROUP BY mes, mes_label
-                        ORDER BY mes ASC
-                    """)
-                    return cursor.fetchall()
-    except Exception as e:
-        print(f"[ERROR kpiTicketsPorMes] {e}")
-    return []
 
 def kpiAvanceSprintActual():
     """Story points del sprint activo de cada proyecto."""

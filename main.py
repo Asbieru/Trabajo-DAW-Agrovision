@@ -14,7 +14,7 @@ from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
                          reporteTicketsFiltrados, generarCSV, obtenerAplicaciones)
-from ad import (
+from conexion import (
     EvaluacionCampo,
     obtenerLotes, obtenerPlagas, obtenerUsuarios,
     listarEvaluaciones,

@@ -1,4 +1,4 @@
-from ad import (obtenerconexion)
+from conexion import (obtenerconexion)
 
 class Proyecto:
     def __init__(self, nombre, id_responsable, estado,
