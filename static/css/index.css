@@ -1142,3 +1142,205 @@ body {
 @media (max-width: 1100px) { .reporte-fila { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 900px)  { .reporte-filtros-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px)  { .reporte-fila { grid-template-columns: repeat(2, 1fr); } }
+
+/* ════════════════════════════════════════════════════
+   AGROVISION · ESTILOS DE AUTENTICACIÓN
+   (Login + Olvidé contraseña) — incluidos en index.css
+   ════════════════════════════════════════════════════ */
+
+/* ── AUTH WRAP ──────────────────────── */
+.auth-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+}
+
+/* ── AUTH BOX ───────────────────────── */
+.auth-box {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+    width: 100%;
+    max-width: 460px;
+    overflow: hidden;
+}
+
+/* ── AUTH CONTENT (padding interior) ── */
+.auth-content {
+    padding: 40px 44px 32px;
+}
+
+/* ── TÍTULOS ────────────────────────── */
+.auth-title {
+    font-family: var(--fuente-titulo);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--negro);
+    margin-bottom: 10px;
+}
+
+.auth-sub {
+    font-size: 0.87rem;
+    color: var(--gris-texto);
+    margin-bottom: 32px;
+    line-height: 1.6;
+}
+
+.auth-sub strong {
+    color: var(--verde);
+}
+
+/* ── MENSAJE DE ERROR (login) ───────── */
+.error-msg {
+    background: var(--rojo-claro);
+    color: var(--rojo);
+    border: 1px solid #f5b7b1;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+/* ── MENSAJES DE ESTADO (olvide contraseña) ── */
+.msg-exito {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.msg-error {
+    background: var(--rojo-claro);
+    color: var(--rojo);
+    border: 1px solid #f5b7b1;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+/* ── FORMULARIO AUTH ────────────────── */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: #3a3f47;
+}
+
+.form-group input {
+    padding: 12px 14px;
+    border: 1.5px solid var(--gris-borde);
+    border-radius: 8px;
+    font-family: var(--fuente);
+    font-size: 0.93rem;
+    color: var(--negro);
+    background: var(--blanco);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--verde);
+    box-shadow: 0 0 0 3px rgba(26, 122, 74, 0.12);
+}
+
+.form-group input::placeholder {
+    color: #b0b8c1;
+}
+
+/* ── ENLACE OLVIDÉ CONTRASEÑA ───────── */
+.forgot-link {
+    display: block;
+    text-align: right;
+    margin-top: -10px;
+    margin-bottom: 28px;
+    font-size: 0.84rem;
+    color: var(--verde);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.forgot-link:hover {
+    color: var(--verde-oscuro);
+    text-decoration: underline;
+}
+
+/* ── BOTÓN PRINCIPAL AUTH ───────────── */
+.btn-full {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    background: var(--verde);
+    color: var(--blanco);
+    border: none;
+    border-radius: 10px;
+    font-family: var(--fuente);
+    font-size: 0.97rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    letter-spacing: 0.2px;
+    margin-bottom: 20px;
+}
+
+.btn-full:hover {
+    background: var(--verde-oscuro);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(15, 79, 46, 0.25);
+}
+
+.btn-full:active {
+    transform: translateY(0);
+}
+
+/* ── ENLACE VOLVER (olvide contraseña) ── */
+.back-link {
+    display: block;
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--verde);
+    text-decoration: none;
+    transition: color 0.15s;
+    padding: 4px 0;
+}
+
+.back-link:hover {
+    color: var(--verde-oscuro);
+    text-decoration: underline;
+}
+
+/* ── PIE DE AUTH ────────────────────── */
+.auth-footer {
+    background: #f7faf7;
+    border-top: 1px solid var(--gris-borde);
+    padding: 16px 44px;
+    font-size: 0.78rem;
+    color: var(--gris-texto);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── RESPONSIVE AUTH ────────────────── */
+@media (max-width: 520px) {
+    .auth-wrap    { padding: 32px 16px; }
+    .auth-content { padding: 28px 24px 24px; }
+    .auth-footer  { padding: 14px 24px; }
+    .auth-title   { font-size: 1.2rem; }
+}

@@ -3,8 +3,8 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
 from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo
-from flask import Flask, render_template, request, redirect, url_for, session, Response
-from ticketAD import (Ticket,listarTickets,insertarTicket,obtenerTicket, resolverTicket,resumenTickets,ticketsPorAplicacion,ticketsPorPrioridad)
+from flask import Flask, render_template, request, redirect, url_for, Response
+from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket, resumenTickets, ticketsPorAplicacion, ticketsPorPrioridad)
 from historiasAD import (Historia, listarHistorias, insertarHistoria,
                          actualizarEstadoHistoria, listarTodosSprints,
                          listarSprintsPorProyecto, resumenHistoriasPorProyecto)
@@ -18,73 +18,70 @@ from conexion import (
     EvaluacionCampo,
     obtenerLotes, obtenerPlagas, obtenerUsuarios,
     listarEvaluaciones,
-    # Inserciones
     insertarEvaluacion
 )
 
 app = Flask(__name__)
-app.secret_key = 'agrovision_secret_2024'
-app.config['SESSION_PERMANENT'] = False
 
+# Variable global para guardar el usuario logueado
+usuario_actual = {}
+
+@app.context_processor
+def inyectar_usuario():
+    return dict(session={'usuario': usuario_actual})
 # ──────────────────────────────────────────────────────────────
 #  RUTA RAIZ
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/')
 def raiz():
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 
 # ──────────────────────────────────────────────────────────────
 #  LOGIN
 # ──────────────────────────────────────────────────────────────
- 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Si ya hay sesión activa, ir al dashboard
-    if 'usuario' in session:
-        return redirect(url_for('index'))
- 
+    global usuario_actual
     error = None
- 
+
     if request.method == 'POST':
         correo   = request.form.get('correo', '').strip()
         password = request.form.get('password', '')
- 
+
         ok, mensaje, datos = autenticarUsuario(correo, password)
         if ok:
-            session['usuario'] = datos
+            usuario_actual = datos
             return redirect(url_for('index'))
         else:
             error = mensaje
- 
+
     return render_template('login.html', error=error)
- 
- 
+
+
 # ──────────────────────────────────────────────────────────────
 #  OLVIDÉ MI CONTRASEÑA
 # ──────────────────────────────────────────────────────────────
- 
+
 @app.route('/olvide-contrasena', methods=['GET', 'POST'])
 def olvide_contrasena():
     mensaje = None
     tipo    = None   # 'exito' o 'error' (para el color del mensaje)
- 
+
     if request.method == 'POST':
         correo = request.form.get('correo', '').strip()
         if buscarUsuarioPorCorreo(correo):
-            # En producción aquí se enviaría un correo real
             mensaje = ('Si el correo está registrado, recibirás un enlace '
                        'para restablecer tu contraseña.')
             tipo = 'exito'
         else:
             mensaje = 'No se encontró una cuenta activa con ese correo.'
             tipo = 'error'
- 
+
     return render_template('olvide_contrasena.html', mensaje=mensaje, tipo=tipo)
- 
+
 
 # ──────────────────────────────────────────────────────────────
 #  LOGOUT
@@ -92,7 +89,8 @@ def olvide_contrasena():
 
 @app.route('/logout')
 def logout():
-    session.pop('usuario', None)
+    global usuario_actual
+    usuario_actual = {}
     return redirect(url_for('login'))
 
 
