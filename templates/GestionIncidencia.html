@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block title %}
     {% if tickets is defined %}Tickets de Soporte
-    {% elif evaluaciones is defined %}Evaluaciones de Campo
     {% else %}Proyectos de Software
     {% endif %}
 {% endblock %}
@@ -145,61 +144,6 @@
     </div>
 </div>
 
-
-
-<!-- ══════════════════════════════════════════════════════
-     EVALUACIONES
-     ══════════════════════════════════════════════════════ -->
-{% elif evaluaciones is defined %}
-<div class="page-header">
-    <div>
-        <h1>📋 Evaluaciones de campo</h1>
-        <p>Historial de inspecciones de plagas registradas</p>
-    </div>
-    <a class="btn btn-verde" href="{{ url_for('form_evaluacion') }}">+ Nueva evaluación</a>
-</div>
-
-<div class="card">
-    <div class="tabla-wrap">
-        <table class="tabla">
-            <thead>
-                <tr>
-                    <th>#</th><th>Fecha</th><th>Lote</th><th>Plaga</th>
-                    <th>Inspector</th><th>Evaluadas</th><th>Afectadas</th><th>Nivel</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if evaluaciones %}
-                    {% for e in evaluaciones %}
-                    <tr>
-                        <td style="color:var(--verde); font-weight:600; font-size:0.8rem;">EC-{{ e.id_evaluacion }}</td>
-                        <td style="font-size:0.84rem;">{{ e.fecha_evaluacion.strftime('%d/%m/%Y') if e.fecha_evaluacion else '—' }}</td>
-                        <td>
-                            <strong>{{ e.codigo_lote }}</strong>
-                            <br><span style="font-size:0.78rem; color:var(--gris-texto);">{{ e.nombre_fundo }}</span>
-                        </td>
-                        <td>{{ e.nombre_plaga }}</td>
-                        <td style="font-size:0.84rem;">{{ e.nombre_inspector }}</td>
-                        <td style="text-align:center;">{{ e.plantas_evaluadas }}</td>
-                        <td style="text-align:center;">{{ e.plantas_afectadas }}</td>
-                        <td>
-                            {% if e.nivel_incidencia == 'alto' %}<span class="badge badge-rojo">🔴 Alto</span>
-                            {% elif e.nivel_incidencia == 'medio' %}<span class="badge badge-acento">🟡 Medio</span>
-                            {% else %}<span class="badge badge-verde">🟢 Bajo</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr><td colspan="8" class="tabla-empty">
-                        No hay evaluaciones registradas.
-                        <a href="{{ url_for('form_evaluacion') }}" style="color:var(--verde);">Registra la primera →</a>
-                    </td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>
 
 
 <!-- ══════════════════════════════════════════════════════

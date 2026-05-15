@@ -99,3 +99,26 @@ def buscarUsuarioPorCorreo(correo):
     except Exception as e:
         print(f"[ERROR buscarUsuarioPorCorreo] {e}")
     return False
+
+def obtenerUsuarios(rol):
+    """Retorna usuarios activos. Si se pasa rol, filtra por él."""
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    if rol:
+                        cursor.execute(
+                            "SELECT id_usuario, nombre_completo, rol "
+                            "FROM usuarios WHERE activo=1 AND rol=%s ORDER BY nombre_completo",
+                            (rol,)
+                        )
+                    else:
+                        cursor.execute(
+                            "SELECT id_usuario, nombre_completo, rol "
+                            "FROM usuarios WHERE activo=1 ORDER BY nombre_completo"
+                        )
+                    return cursor.fetchall()
+    except Exception as e:
+        print(f"[ERROR obtenerUsuarios] {e}")
+    return []

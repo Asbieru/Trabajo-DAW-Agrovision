@@ -2,24 +2,17 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo
+from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios
 from flask import Flask, render_template, request, redirect, url_for, Response
-from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket, resumenTickets, ticketsPorAplicacion, ticketsPorPrioridad)
+from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket)
 from historiasAD import (Historia, listarHistorias, insertarHistoria,
-                         actualizarEstadoHistoria, listarTodosSprints,
-                         listarSprintsPorProyecto, resumenHistoriasPorProyecto)
+                         actualizarEstadoHistoria, listarTodosSprints)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos)
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
                          reporteTicketsFiltrados, generarCSV, obtenerAplicaciones)
-from conexion import (
-    EvaluacionCampo,
-    obtenerLotes, obtenerPlagas, obtenerUsuarios,
-    listarEvaluaciones,
-    insertarEvaluacion
-)
 
 app = Flask(__name__)
 
@@ -101,48 +94,6 @@ def logout():
 @app.route('/dashboard')
 def index():
     return render_template('panelDeControl.html')
-
-
-# ──────────────────────────────────────────────────────────────
-#  EVALUACIONES DE CAMPO
-# ──────────────────────────────────────────────────────────────
-
-@app.route('/evaluacion/nueva')
-def form_evaluacion():
-    lotes       = obtenerLotes()
-    plagas      = obtenerPlagas()
-    inspectores = obtenerUsuarios()
-    return render_template('nuevaEvaluacionCampo.html',
-                           lotes=lotes,
-                           plagas=plagas,
-                           inspectores=inspectores)
-
-
-@app.route('/evaluacion/guardar', methods=['POST'])
-def guardar_evaluacion():
-    try:
-        obj = EvaluacionCampo(
-            id_lote           = request.form['id_lote'],
-            id_plaga          = request.form['id_plaga'],
-            id_inspector      = request.form['id_inspector'],
-            fecha_evaluacion  = request.form['fecha_evaluacion'],
-            hora_evaluacion   = request.form.get('hora_evaluacion', ''),
-            plantas_evaluadas = request.form['plantas_evaluadas'],
-            plantas_afectadas = request.form['plantas_afectadas'],
-            nivel_incidencia  = request.form['nivel_incidencia'],
-            foto_url          = request.form.get('foto_url', ''),
-            observaciones     = request.form.get('observaciones', ''),
-        )
-        insertarEvaluacion(obj)
-    except Exception as e:
-        print(f'Error al procesar el formulario: {e}')
-    return redirect(url_for('form_evaluacion'))
-
-
-@app.route('/evaluaciones')
-def listar_evaluaciones():
-    registros = listarEvaluaciones()
-    return render_template('GestionIncidencia.html', evaluaciones=registros)
 
 
 # ──────────────────────────────────────────────────────────────
