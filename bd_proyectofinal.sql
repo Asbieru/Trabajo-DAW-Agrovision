@@ -119,6 +119,26 @@ CREATE TABLE IF NOT EXISTS historias (
     CONSTRAINT fk_historia_asig   FOREIGN KEY (id_asignado) REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
+-- ── 6. AVANCES DE PROYECTO (Bitácora de revisiones) ──────────
+CREATE TABLE IF NOT EXISTS avances_proyecto (
+    id_avance         INT AUTO_INCREMENT PRIMARY KEY,
+    id_proyecto       INT NOT NULL,
+    id_autor          INT NOT NULL, -- Quién registra el avance (Jefe TI)
+    fecha_reporte     DATE NOT NULL, -- Fecha de la revisión
+    porcentaje_avance DECIMAL(5,2) NOT NULL DEFAULT 0.00, -- Ej: 45.50%
+    estado_salud      ENUM('a_tiempo', 'en_riesgo', 'retrasado') NOT NULL DEFAULT 'a_tiempo',
+    logros_periodo    TEXT NOT NULL, -- ¿Qué se avanzó?
+    pendientes_next   TEXT,          -- ¿Qué sigue?
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_avance_proy  FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto) ON DELETE CASCADE,
+    CONSTRAINT fk_avance_autor FOREIGN KEY (id_autor)    REFERENCES usuarios(id_usuario)
+) ENGINE=InnoDB;
+
+
+-- Registro de prueba para visualizarlo luego
+INSERT INTO avances_proyecto (id_proyecto, id_autor, fecha_reporte, porcentaje_avance, estado_salud, logros_periodo) 
+VALUES (1, 1, CURDATE(), 43.00, 'a_tiempo', 'Finalización del módulo de reportes base y conexión con la base de datos.');
+
 INSERT INTO historias (id_proyecto, id_sprint, id_asignado, codigo, titulo, tipo, prioridad, estado, story_points) VALUES
 -- Sprint 1 – Dashboard KPIs (proyecto 1)
 (1, 1, 3, 'HU-001', 'Ver KPIs de tickets en tiempo real',       'funcional', 'alta',   'completada',  8),

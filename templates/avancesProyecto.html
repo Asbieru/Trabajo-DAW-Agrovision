@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Avances · {{ proyecto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>📊 Historial de Avances</h1>
+        <p>PR-{{ proyecto.id_proyecto }} · {{ proyecto.nombre }}</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Volver</a>
+        <button class="btn btn-exportar-pdf" onclick="window.print()">📄 Exportar PDF</button>
+        <a class="btn btn-verde" href="{{ url_for('nuevo_avance', id_proyecto=proyecto.id_proyecto) }}">+ Nuevo Reporte</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Bitácora de revisiones</div>
+    <div class="card-body">
+        {% if avances %}
+        <div class="tabla-wrap">
+            <table class="tabla tabla-tickets">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Autor</th>
+                        <th>% Avance</th>
+                        <th>Salud</th>
+                        <th>Logros del periodo</th>
+                        <th>Acción</th> </tr>
+                </thead>
+                <tbody>
+                    {% for av in avances %}
+                    <tr>
+                        <td data-label="Fecha" style="font-weight: 600;">{{ av.fecha_reporte.strftime('%d/%m/%Y') }}</td>
+                        <td data-label="Autor" class="ticket-agente">{{ av.autor }}</td>
+                        <td data-label="% Avance"><span class="badge badge-verde">{{ av.porcentaje_avance }}%</span></td>
+                        <td data-label="Salud">
+                            {% if av.estado_salud == 'a_tiempo' %}
+                                <span style="color: var(--verde); font-weight: 600;">A tiempo</span>
+                            {% elif av.estado_salud == 'en_riesgo' %}
+                                <span style="color: var(--acento); font-weight: 600;">En riesgo</span>
+                            {% else %}
+                                <span style="color: var(--rojo); font-weight: 600;">Retrasado</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Logros" style="font-size: 0.85rem; max-width: 300px;">{{ av.logros_periodo }}</td>
+                        <td data-label="Acción" class="td-accion">
+                            <form action="{{ url_for('eliminar_avance_ruta', id_proyecto=proyecto.id_proyecto, id_avance=av.id_avance) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este reporte de avance? Esta acción no se puede deshacer.');">
+                                <button type="submit" class="btn btn-sm btn-rojo" style="padding: 5px 10px; font-size: 0.75rem;">🗑️ Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="sin-resultados" style="display: block;">
+            No hay reportes de avance registrados para este proyecto todavía.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -17,6 +17,10 @@ from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorT
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
                          reporteTicketsFiltrados, generarCSV, obtenerAplicaciones)
 
+from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
+                        obtenerProyecto, actualizarProyecto,
+                        resumenHistoriasPorProyecto, 
+                        listarAvances, insertarAvance, eliminarAvance) 
 app = Flask(__name__)
 app.secret_key = 'agrovision-clave-secreta-2024'  # necesario para usar session de Flask
 
@@ -269,8 +273,59 @@ def actualizar_proyecto(id_proyecto):
         mensaje               = mensaje,
         tipo                  = tipo,
     )
+    
+@app.route('/proyecto/<int:id_proyecto>/avances')
+def historial_avances(id_proyecto):
+    proyecto = obtenerProyecto(id_proyecto)
+    if not proyecto:
+        return redirect(url_for('listar_proyectos'))
+    
+    avances = listarAvances(id_proyecto)
+    return render_template('avancesProyecto.html', proyecto=proyecto, avances=avances)
 
+@app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['GET', 'POST'])
+def nuevo_avance(id_proyecto):
+    proyecto = obtenerProyecto(id_proyecto)
+    if not proyecto:
+        return redirect(url_for('listar_proyectos'))
 
+    # Mantenemos el cálculo solo para sugerirlo en el placeholder
+    resumen = resumenHistoriasPorProyecto()
+    fila_actual = next((r for r in resumen if r['id_proyecto'] == id_proyecto), None)
+    
+    total = int(fila_actual['total'] or 0) if fila_actual else 0
+    completadas = int(fila_actual['completadas'] or 0) if fila_actual else 0
+    sugerencia_pct = round(completadas * 100 / total) if total > 0 else 0
+
+    from datetime import date
+    hoy_db = date.today().strftime('%Y-%m-%d')
+    hoy_mostrar = date.today().strftime('%d/%m/%Y')
+
+    if request.method == 'POST':
+        # LEEMOS EL PORCENTAJE DEL FORMULARIO (MANUAL)
+        pct_manual = request.form['porcentaje_avance']
+        estado_salud = request.form['estado_salud']
+        logros_periodo = request.form['logros_periodo'].strip()
+        pendientes_next = request.form.get('pendientes_next', '').strip()
+        
+        id_autor = session.get('usuario', {}).get('id_usuario')
+
+        if id_autor:
+            # Guardamos el pct_manual que ingresó el usuario
+            insertarAvance(id_proyecto, id_autor, hoy_db, pct_manual, estado_salud, logros_periodo, pendientes_next)
+        
+        return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
+
+    return render_template('nuevoAvance.html', 
+                           proyecto=proyecto, 
+                           hoy_mostrar=hoy_mostrar, 
+                           sugerencia_pct=sugerencia_pct)
+    
+@app.route('/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
+def eliminar_avance_ruta(id_proyecto, id_avance):
+    # Aquí podríamos verificar si el usuario tiene permisos, pero por ahora lo dejamos directo
+    eliminarAvance(id_avance)
+    return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
 # ──────────────────────────────────────────────────────────────
 #  INDICADORES DE SOPORTE
 # ──────────────────────────────────────────────────────────────

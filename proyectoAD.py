@@ -132,3 +132,60 @@ def resumenHistoriasPorProyecto():
     except Exception as e:
         print(f"[ERROR resumenHistoriasPorProyecto] {e}")
     return []
+
+def listarAvances(id_proyecto):
+    """Retorna el historial de avances de un proyecto específico."""
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    sql = """
+                        SELECT a.id_avance, a.fecha_reporte, a.porcentaje_avance, 
+                               a.estado_salud, a.logros_periodo, a.pendientes_next,
+                               u.nombre_completo AS autor
+                        FROM avances_proyecto a
+                        JOIN usuarios u ON a.id_autor = u.id_usuario
+                        WHERE a.id_proyecto = %s
+                        ORDER BY a.fecha_reporte DESC, a.created_at DESC
+                    """
+                    cursor.execute(sql, (id_proyecto,))
+                    return cursor.fetchall()
+    except Exception as e:
+        print(f"[ERROR listarAvances] {e}")
+    return []
+
+
+def insertarAvance(id_proyecto, id_autor, fecha_reporte, porcentaje_avance, estado_salud, logros_periodo, pendientes_next):
+    """Guarda un nuevo reporte de avance en la bitácora."""
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    sql = """
+                        INSERT INTO avances_proyecto 
+                            (id_proyecto, id_autor, fecha_reporte, porcentaje_avance, estado_salud, logros_periodo, pendientes_next)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """
+                    cursor.execute(sql, (id_proyecto, id_autor, fecha_reporte, porcentaje_avance, estado_salud, logros_periodo, pendientes_next))
+                conn.commit()
+            return True
+    except Exception as e:
+        print(f"[ERROR insertarAvance] {e}")
+    return False
+
+def eliminarAvance(id_avance):
+    """Elimina un reporte de avance específico por su ID."""
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    sql = "DELETE FROM avances_proyecto WHERE id_avance = %s"
+                    cursor.execute(sql, (id_avance,))
+                conn.commit()
+            return True
+    except Exception as e:
+        print(f"[ERROR eliminarAvance] {e}")
+    return False

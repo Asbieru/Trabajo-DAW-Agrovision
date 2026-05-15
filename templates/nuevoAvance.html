@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Avance · {{ proyecto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>📝 Registrar Avance</h1>
+        <p>PR-{{ proyecto.id_proyecto }} · {{ proyecto.nombre }}</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('historial_avances', id_proyecto=proyecto.id_proyecto) }}">← Cancelar</a>
+</div>
+
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-header">Datos del reporte de avance</div>
+    <div class="card-body">
+        
+        <form action="{{ url_for('nuevo_avance', id_proyecto=proyecto.id_proyecto) }}" method="POST">
+
+            <div class="form-grid form-section-spacing">
+                
+                <div class="form-group">
+                    <label>Fecha de registro</label>
+                    <input type="text" value="{{ hoy_mostrar }}" disabled style="background-color: var(--gris-bg); color: var(--gris-texto); font-weight: 600;">
+                </div>
+
+                <div class="form-group">
+                    <label for="porcentaje_avance">% de Avance real *</label>
+                    <input type="number" 
+                           id="porcentaje_avance" 
+                           name="porcentaje_avance" 
+                           step="1" 
+                           min="0" 
+                           max="100" 
+                           placeholder="Sugerido: {{ sugerencia_pct }}%" 
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label for="estado_salud">Salud del proyecto *</label>
+                    <select id="estado_salud" name="estado_salud" required>
+                        <option value="a_tiempo">🟢 A tiempo (On track)</option>
+                        <option value="en_riesgo">🟡 En riesgo (At risk)</option>
+                        <option value="retrasado">🔴 Retrasado (Delayed)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group form-section-spacing">
+                <label for="logros_periodo">¿Qué se avanzó en este periodo? (Logros) *</label>
+                <textarea id="logros_periodo" name="logros_periodo" rows="4" required placeholder="Describe las tareas completadas o los hitos alcanzados..."></textarea>
+            </div>
+
+            <div class="form-group form-section-spacing">
+                <label for="pendientes_next">¿Cuáles son los siguientes pasos o bloqueos? (Opcional)</label>
+                <textarea id="pendientes_next" name="pendientes_next" rows="3" placeholder="Riesgos detectados, dependencias o tareas inmediatas..."></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 20px;">
+                <button type="submit" class="btn btn-verde">💾 Guardar Reporte</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}

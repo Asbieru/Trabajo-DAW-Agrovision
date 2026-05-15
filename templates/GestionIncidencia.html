@@ -200,10 +200,16 @@
                         </td>
                         <!-- BOTÓN VER GESTIÓN (nuevo) -->
                         <td>
-                            <a href="{{ url_for('gestion_proyecto', id_proyecto=p.id_proyecto) }}"
-                               class="btn btn-sm btn-outline">
-                                ⚙️ Ver gestión
-                            </a>
+                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                <a href="{{ url_for('gestion_proyecto', id_proyecto=p.id_proyecto) }}"
+                                class="btn btn-sm btn-outline">
+                                    ⚙️ Ver gestión
+                                </a>
+                                <a href="{{ url_for('historial_avances', id_proyecto=p.id_proyecto) }}"
+                                class="btn btn-sm btn-outline">
+                                    📊 Historial
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
