@@ -90,8 +90,10 @@ function mostrarTab(tab, btn) {
     var porPrioridad = JSON.parse(contenedor.getAttribute('data-prioridad'));
     var porMes       = JSON.parse(contenedor.getAttribute('data-mes'));
 
-    if (document.getElementById('grafico-app') && porApp.length) {
-        new Chart(document.getElementById('grafico-app'), {
+        if (document.getElementById('grafico-app') && porApp.length) {
+        var canvasApp = document.getElementById('grafico-app');
+        canvasApp.style.height = '400px';
+        new Chart(canvasApp, {
             type: 'bar',
             data: {
                 labels: porApp.map(function (a) { return a.aplicacion; }),
@@ -99,44 +101,48 @@ function mostrarTab(tab, btn) {
                     backgroundColor: 'rgba(30,95,168,0.7)', borderColor: 'rgba(30,95,168,1)',
                     borderWidth: 1, borderRadius: 4 }]
             },
-            options: { indexAxis: 'y', responsive: true,
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
         });
     }
 
     if (document.getElementById('grafico-prioridad') && porPrioridad.length) {
-        new Chart(document.getElementById('grafico-prioridad'), {
+        var canvasPrioridad = document.getElementById('grafico-prioridad');
+        canvasPrioridad.style.height = '400px';
+        new Chart(canvasPrioridad, {
             type: 'doughnut',
             data: {
                 labels: porPrioridad.map(function (p) { return p.prioridad; }),
                 datasets: [{ data: porPrioridad.map(function (p) { return p.total; }),
                     backgroundColor: ['rgba(192,57,43,0.8)','rgba(230,126,34,0.8)',
-                                      'rgba(241,196,15,0.8)','rgba(26,122,74,0.8)'],
+                                    'rgba(241,196,15,0.8)','rgba(26,122,74,0.8)'],
                     borderWidth: 2 }]
             },
-            options: { responsive: true,
+            options: { responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
         });
     }
 
     if (document.getElementById('grafico-tendencia') && porMes.length) {
-        new Chart(document.getElementById('grafico-tendencia'), {
-            type: 'bar',
-            data: {
-                labels: porMes.map(function (m) { return m.mes_label; }),
-                datasets: [
-                    { label: 'Apertura',  data: porMes.map(function (m) { return m.total; }),
-                      backgroundColor: 'rgba(30,95,168,0.7)', borderRadius: 4 },
-                    { label: 'Resueltos', data: porMes.map(function (m) { return m.resueltos; }),
-                      backgroundColor: 'rgba(26,122,74,0.7)', borderRadius: 4 }
-                ]
-            },
-            options: { responsive: true,
-                plugins: { legend: { position: 'top', labels: { font: { size: 12 } } } },
-                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-        });
-    }
+    var canvasTendencia = document.getElementById('grafico-tendencia');
+    canvasTendencia.style.height = '600px';
+    new Chart(canvasTendencia, {
+        type: 'bar',
+        data: {
+            labels: porMes.map(function (m) { return m.mes_label; }),
+            datasets: [
+                { label: 'Apertura',  data: porMes.map(function (m) { return m.total; }),
+                  backgroundColor: 'rgba(30,95,168,0.7)', borderRadius: 4 },
+                { label: 'Resueltos', data: porMes.map(function (m) { return m.resueltos; }),
+                  backgroundColor: 'rgba(26,122,74,0.7)', borderRadius: 4 }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 12 } } } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+}
 })();
 
 /* ============================================================
@@ -163,6 +169,13 @@ function filtrarTickets() {
         visibles === 0 ? 'block' : 'none';
 }   
 
+function limpiarFiltros() {
+    document.getElementById('form-filtro-reportes').reset();
+    document.querySelectorAll('#tabla-reporte tbody tr').forEach(function(fila) {
+        fila.style.display = '';
+    });
+}
+
 function imprimirReporte() {
     window.print();
 }
@@ -176,8 +189,11 @@ function imprimirReporte() {
     var storyPoints = JSON.parse(contenedor.getAttribute('data-sp'));
     var carryover   = JSON.parse(contenedor.getAttribute('data-carryover'));
  
+
     if (document.getElementById('grafico-reporte-app') && porApp.length) {
-        new Chart(document.getElementById('grafico-reporte-app'), {
+        var canvasApp = document.getElementById('grafico-reporte-app');
+        canvasApp.style.height = (porApp.length * 50) + 'px';
+        new Chart(canvasApp, {
             type: 'bar',
             data: {
                 labels: porApp.map(function (a) { return a.aplicacion; }),
@@ -186,23 +202,30 @@ function imprimirReporte() {
                     { label: 'Cerrados',   data: porApp.map(function (a) { return a.cerrados; }),   backgroundColor: 'rgba(26, 122, 74, 0.7)',  borderRadius: 4 }
                 ]
             },
-            options: { indexAxis: 'y', responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
         });
     }
- 
+
     if (document.getElementById('grafico-reporte-tipo') && porTipo.length) {
-        new Chart(document.getElementById('grafico-reporte-tipo'), {
+        var canvasTipo = document.getElementById('grafico-reporte-tipo');
+        canvasTipo.style.height = '400px'
+        new Chart(canvasTipo, {
             type: 'doughnut',
             data: {
                 labels: porTipo.map(function (t) { return t.tipo; }),
                 datasets: [{ data: porTipo.map(function (t) { return t.total; }), backgroundColor: ['rgba(192, 57, 43, 0.8)', 'rgba(26, 122, 74, 0.8)', 'rgba(30, 95, 168, 0.8)'], borderWidth: 2 }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
         });
     }
- 
+
     if (document.getElementById('grafico-reporte-sp') && storyPoints.length) {
-        new Chart(document.getElementById('grafico-reporte-sp'), {
+        var canvasSp = document.getElementById('grafico-reporte-sp');
+        canvasSp.style.height = '400px';
+        new Chart(canvasSp, {
             type: 'bar',
             data: {
                 labels: storyPoints.map(function (p) { return p.programador; }),
@@ -211,27 +234,63 @@ function imprimirReporte() {
                     { label: 'Completados', data: storyPoints.map(function (p) { return p.pts_completados; }), backgroundColor: 'rgba(26, 122, 74, 0.8)',  borderRadius: 4 }
                 ]
             },
-            options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            options: { responsive: true, maintainAspectRatio: false,
+            layout: { padding: { bottom: 20 } },
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
         });
     }
- 
+
     if (document.getElementById('grafico-reporte-carryover') && carryover.length) {
-        new Chart(document.getElementById('grafico-reporte-carryover'), {
+        var canvasCarry = document.getElementById('grafico-reporte-carryover');
+        canvasCarry.style.height = '400px';
+        new Chart(canvasCarry, {
             type: 'bar',
             data: {
                 labels: carryover.map(function (c) { return c.programador; }),
                 datasets: [{ label: 'Pts carryover', data: carryover.map(function (c) { return c.pts_carryover; }), backgroundColor: 'rgba(240, 165, 0, 0.8)', borderRadius: 4 }]
             },
-            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
         });
     }
 })();
 
+function filtrarReportes() {
+    var fechaInicio = document.querySelector('[name="fecha_inicio"]').value;
+    var fechaFin    = document.querySelector('[name="fecha_fin"]').value;
+    var aplicacion  = document.querySelector('[name="aplicacion"]').value.toLowerCase().trim();
+    var estado      = document.querySelector('[name="estado"]').value.toLowerCase().trim();
+    var prioridad   = document.querySelector('[name="prioridad"]').value.toLowerCase().trim();
+
+    var filas = document.querySelectorAll('#tabla-reporte tbody tr');
+
+    filas.forEach(function(fila) {
+        var celdas      = fila.querySelectorAll('td');
+        var fAplicacion = celdas[2].textContent.trim().toLowerCase();
+        var fEstado     = celdas[5].textContent.trim().toLowerCase();
+        var fPrioridad  = celdas[4].textContent.trim().toLowerCase();
+        var fFecha      = celdas[7].textContent.trim();
+
+        var ok = true;
+
+        if (aplicacion && !fAplicacion.includes(aplicacion)) ok = false;
+        if (estado     && !fEstado.includes(estado.replace('_', ' '))) ok = false;
+        if (prioridad  && !fPrioridad.includes(prioridad))   ok = false;
+
+        if (fechaInicio || fechaFin) {
+            var partes    = fFecha.split('/');
+            var fechaFila = partes[2] + '-' + partes[1] + '-' + partes[0];
+            if (fechaInicio && fechaFila < fechaInicio) ok = false;
+            if (fechaFin    && fechaFila > fechaFin)    ok = false;
+        }
+
+        fila.style.display = ok ? '' : 'none';
+    });
+}
 
 /* ============================================================
    6. GESTIÓN DE PROYECTO – gestionProyecto.html
-      Calcula días restantes en tiempo real y dibuja el
-      gráfico de barras con Chart.js (igual que indicadores.html).
    ============================================================ */
 
 (function iniciarGestionProyecto() {

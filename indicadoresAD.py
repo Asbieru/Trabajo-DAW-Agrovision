@@ -26,13 +26,16 @@ def resumenKPI():
                     sql += " FROM tickets"
                     cursor.execute(sql)
                     row = cursor.fetchone()
-                    if row and row['total_con_fecha']:
-                        row['pct_sla'] = round(row['sla_ok'] / row['total_con_fecha'] * 100, 1)
-                    else:
-                        row['pct_sla'] = 0
-                    return row
+                    if row:
+                        row = dict(row)
+                        if row.get('total_con_fecha'):
+                            row['pct_sla'] = round(row['sla_ok'] / row['total_con_fecha'] * 100, 1)
+                        else:
+                            row['pct_sla'] = 0
+                        return row
         return {}
-    except:
+    except Exception as e:
+        print("ERROR resumenKPI:", e)
         return {}
 
 def kpiPorAplicacion():
@@ -47,9 +50,10 @@ def kpiPorAplicacion():
                     sql += " ORDER BY total DESC"
                     sql += " LIMIT 10"
                     cursor.execute(sql)
-                    return cursor.fetchall()
+                    return [dict(r) for r in cursor.fetchall()]
         return []
-    except:
+    except Exception as e:
+        print("ERROR kpiPorAplicacion:", e)
         return []
 
 def kpiPorPrioridad():
@@ -63,9 +67,10 @@ def kpiPorPrioridad():
                     sql += " GROUP BY prioridad"
                     sql += " ORDER BY FIELD(prioridad,'critica','alta','media','baja')"
                     cursor.execute(sql)
-                    return cursor.fetchall()
+                    return [dict(r) for r in cursor.fetchall()]
         return []
-    except:
+    except Exception as e:
+        print("ERROR kpiPorPrioridad:", e)
         return []
 
 def kpiPorAgente():
@@ -86,9 +91,10 @@ def kpiPorAgente():
                     sql += " GROUP BY t.id_agente"
                     sql += " ORDER BY total_atendidos DESC"
                     cursor.execute(sql)
-                    return cursor.fetchall()
+                    return [dict(r) for r in cursor.fetchall()]
         return []
-    except:
+    except Exception as e:
+        print("ERROR kpiPorAgente:", e)
         return []
 
 def kpiPorMes():
@@ -115,7 +121,8 @@ def kpiPorMes():
                         resultado.append(f)
                     return resultado
         return []
-    except:
+    except Exception as e:
+        print("ERROR kpiPorMes:", e)
         return []
 
 def kpiSprintsActivos():
@@ -137,7 +144,10 @@ def kpiSprintsActivos():
                     sql += " WHERE s.estado = 'activo'"
                     sql += " GROUP BY s.id_sprint"
                     cursor.execute(sql)
-                    return cursor.fetchall()
+                    return [dict(r) for r in cursor.fetchall()]
         return []
-    except:
+    except Exception as e:
+        print("ERROR kpiSprintsActivos:", e)
         return []
+    
+    

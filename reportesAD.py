@@ -140,11 +140,15 @@ def reporteTicketsFiltrados(fecha_inicio=None, fecha_fin=None,
                 condiciones = []
                 params      = []
 
-                if fi:
-                    condiciones.append("DATE(t.fecha_apertura) >= %s")
+                if fi and ff:
+                    condiciones.append("DATE(t.fecha_apertura) BETWEEN %s AND %s")
                     params.append(fi)
-                if ff:
-                    condiciones.append("DATE(t.fecha_apertura) <= %s")
+                    params.append(ff)
+                elif fi:
+                    condiciones.append("DATE(t.fecha_apertura) = %s")
+                    params.append(fi)
+                elif ff:
+                    condiciones.append("DATE(t.fecha_apertura) = %s")
                     params.append(ff)
                 if ap:
                     condiciones.append("t.aplicacion = %s")
@@ -166,20 +170,3 @@ def reporteTicketsFiltrados(fecha_inicio=None, fecha_fin=None,
     except Exception as e:
         print(f"[ERROR reporteTicketsFiltrados] {e}")
         return []
-
-def generarCSV(tickets):
-    try:
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['#', 'Titulo', 'Aplicacion', 'Tipo',
-                         'Prioridad', 'Estado', 'Solicitante', 'Fecha'])
-        for t in tickets:
-            writer.writerow([
-                t['id_ticket'], t['titulo'], t['aplicacion'],
-                t['tipo'], t['prioridad'], t['estado'],
-                t['solicitante'], t['fecha_apertura']
-            ])
-        return output.getvalue()
-    except Exception as e:
-        print(f"[ERROR generarCSV] {e}")
-        return ''
