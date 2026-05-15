@@ -10,6 +10,14 @@
     <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Ver proyectos</a>
 </div>
 
+{% if ticket_origen %}
+<div class="alerta alerta-info" style="margin-bottom:1.5rem;">
+    🎫 <strong>Originado desde ticket SD-{{ ticket_origen.id_ticket }}</strong> —
+    Los campos de nombre y descripción se han pre-rellenado con los datos del ticket.
+    Puedes editarlos antes de guardar.
+</div>
+{% endif %}
+
 <div class="card">
     <div class="card-header">Datos del proyecto</div>
     <div class="card-body">
@@ -19,7 +27,9 @@
             <div class="form-group form-section-spacing">
                 <label for="nombre">Nombre del proyecto *</label>
                 <input type="text" id="nombre" name="nombre"
-                       placeholder="Ej. App Móvil de Registro de Plagas" required>
+                       placeholder="Ej. App Móvil de Registro de Plagas"
+                       value="{{ ticket_origen.titulo if ticket_origen else '' }}"
+                       required>
             </div>
 
             <!-- Responsable y Estado -->
@@ -64,7 +74,8 @@
             <div class="form-group form-section-spacing">
                 <label for="descripcion">Descripción y alcance *</label>
                 <textarea id="descripcion" name="descripcion" rows="5"
-                          placeholder="Describe el objetivo del proyecto, los módulos principales a desarrollar, el área usuaria involucrada y el problema que resuelve..." required></textarea>
+                          placeholder="Describe el objetivo del proyecto, los módulos principales a desarrollar, el área usuaria involucrada y el problema que resuelve..."
+                          required>{{ ticket_origen.descripcion if ticket_origen else '' }}</textarea>
                 <span class="form-hint">En lugar del BBP, describe el alcance en pocas líneas con enfoque ágil</span>
             </div>
 

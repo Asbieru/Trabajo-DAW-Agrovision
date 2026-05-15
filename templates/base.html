@@ -63,11 +63,14 @@
            class="{{ 'activo' if request.endpoint == 'listar_tickets' else '' }}">
             <span class="ico">📨</span> Ver tickets
         </a>
+        {% if session['usuario']['rol'] in ('admin', 'soporte', 'programador') %}
         <a href="{{ url_for('resolver_tickets') }}"
            class="{{ 'activo' if request.endpoint in ('resolver_tickets', 'form_resolver_ticket') else '' }}">
             <span class="ico">🔧</span> Resolver tickets
         </a>
+        {% endif %}
 
+        {% if session['usuario']['rol'] in ('admin', 'soporte', 'programador') %}
         <div class="sidebar-section">Proyectos</div>
         <a href="{{ url_for('form_proyecto') }}"
            class="{{ 'activo' if request.endpoint == 'form_proyecto' else '' }}">
@@ -77,6 +80,7 @@
            class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}">
             <span class="ico">📁</span> Ver proyectos
         </a>
+        {% endif %}
 
         <div class="sidebar-section">Historias</div>
         <a href="{{ url_for('form_historia') }}"
@@ -104,6 +108,7 @@
         {% block content %}{% endblock %}
     </main>
 </div>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

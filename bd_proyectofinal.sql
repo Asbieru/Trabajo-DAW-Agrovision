@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     nombre_completo VARCHAR(120) NOT NULL,
     correo          VARCHAR(120) NOT NULL UNIQUE,
     password_hash   VARCHAR(255) NULL,                          -- ← agregado
-    rol             ENUM('inspector','analista','admin','soporte') NOT NULL DEFAULT 'inspector',
+    rol             ENUM('inspector','analista','admin','soporte','programador') NOT NULL DEFAULT 'inspector',
     activo          TINYINT(1) NOT NULL DEFAULT 1,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -24,7 +24,8 @@ INSERT INTO usuarios (nombre_completo, correo, password_hash, rol) VALUES
     ('María Quispe',     'maria@agrovision.pe', '123456',  'inspector'),
     ('Luis Flores',      'luis@agrovision.pe', '123456',    'inspector'),
     ('Ana Torres',       'ana@agrovision.pe', '123456',    'analista'),
-    ('Carlos Mendoza',   'carlos@agrovision.pe','123456',   'soporte');
+    ('Carlos Mendoza',   'carlos@agrovision.pe','123456',   'soporte'),
+    ('Juan Pérez',       'juan@agrovision.pe','123456',   'programador');
 
 -- ── 2. LOTES ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS lotes (
@@ -87,7 +88,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     id_solicitante     INT         NOT NULL,
     sla_horas          SMALLINT    NOT NULL DEFAULT 24,
     descripcion        TEXT        NOT NULL,
-    estado             ENUM('abierto','en_progreso','resuelto','cerrado') NOT NULL DEFAULT 'abierto',
+    estado             ENUM('abierto','en_progreso','resuelto','cerrado','base_proyecto') NOT NULL DEFAULT 'abierto',
     fecha_apertura     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_resolucion   DATETIME,
     id_agente          INT         NULL,

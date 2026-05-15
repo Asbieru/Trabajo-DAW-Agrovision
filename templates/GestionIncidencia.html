@@ -29,6 +29,7 @@
             <option value="abierto">Abierto</option>
             <option value="en_progreso">En progreso</option>
             <option value="resuelto">Resuelto</option>
+            <option value="base_proyecto">Base de proyecto</option>
             <option value="cerrado">Cerrado</option>
         </select>
     </div>
@@ -92,6 +93,8 @@
                                 <span class="badge badge-acento">En progreso</span>
                             {% elif t.estado == 'resuelto' %}
                                 <span class="badge badge-verde">Resuelto</span>
+                            {% elif t.estado == 'base_proyecto' %}
+                                <span class="badge badge-azul">🚀 Base proyecto</span>
                             {% else %}
                                 <span class="badge badge-gris">Cerrado</span>
                             {% endif %}
@@ -107,10 +110,17 @@
                         </td>
                         <td class="td-accion">
                             {% if t.estado in ('abierto', 'en_progreso') %}
-                                <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
-                                   class="btn btn-sm btn-verde">🔧 Resolver</a>
+                                {% if session['usuario']['rol'] in ('admin', 'soporte', 'programador') %}
+                                    <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
+                                       class="btn btn-sm btn-verde">🔧 Resolver</a>
+                                {% else %}
+                                    <span class="badge badge-gris" style="opacity:.7;">🔒 Sin permiso</span>
+                                {% endif %}
                             {% elif t.estado == 'resuelto' %}
                                 <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
+                            {% elif t.estado == 'base_proyecto' %}
+                                <a href="{{ url_for('form_proyecto') }}"
+                                   class="btn btn-sm btn-azul">🚀 Ver proyecto</a>
                             {% else %}
                                 <span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>
                             {% endif %}

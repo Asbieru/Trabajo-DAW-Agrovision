@@ -10,3 +10,14 @@
 # flask --app main run --debug
 #    Crea la base de datos y las tablas o si no, no corre 
 # pip install pymysql 
+
+# --------------------------------------------------------------------------------------------------
+
+# Qué hacer si hago cambios en versiones desactualizadas.
+# NOTA: Revisar si cambiaron los nombres del archivo, eso se hace manualmante antes de estos pasos.
+# Guarda temporalmente tus cambios
+#   git stash -u
+# Trae los cambios del repositorio
+#   git pull origin main
+# Recupera tus cambios
+#   git stash pop
