@@ -9,8 +9,8 @@ class Proyecto:
         self.fecha_inicio    = fecha_inicio
         self.fecha_fin_plan  = fecha_fin_plan
         self.descripcion     = descripcion
-        
-        
+
+
 def listarProyectos():
     """Retorna proyectos con nombre del responsable."""
     try:
@@ -31,6 +31,7 @@ def listarProyectos():
     except Exception as e:
         print(f"[ERROR listarProyectos] {e}")
     return []
+
 
 def insertarProyecto(obj):
     """Inserta un proyecto de software. Retorna True si tuvo éxito."""
@@ -54,3 +55,80 @@ def insertarProyecto(obj):
     except Exception as e:
         print(f"[ERROR insertarProyecto] {e}")
     return False
+
+
+def obtenerProyecto(id_proyecto):
+    """Retorna el detalle completo de un proyecto por su ID."""
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    sql = """
+                        SELECT p.id_proyecto, p.nombre, p.estado,
+                               p.fecha_inicio, p.fecha_fin_plan, p.descripcion,
+                               p.id_responsable,
+                               u.nombre_completo AS nombre_responsable
+                        FROM proyectos p
+                        JOIN usuarios u ON p.id_responsable = u.id_usuario
+                        WHERE p.id_proyecto = %s
+                    """
+                    cursor.execute(sql, (id_proyecto,))
+                    return cursor.fetchone()
+    except Exception as e:
+        print(f"[ERROR obtenerProyecto] {e}")
+    return None
+
+
+def actualizarProyecto(id_proyecto, nombre, id_responsable, estado, descripcion):
+    """Actualiza nombre, responsable, estado y descripción de un proyecto."""
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    sql = """
+                        UPDATE proyectos
+                        SET nombre         = %s,
+                            id_responsable = %s,
+                            estado         = %s,
+                            descripcion    = %s
+                        WHERE id_proyecto = %s
+                    """
+                    cursor.execute(sql, (
+                        nombre, id_responsable, estado,
+                        descripcion, id_proyecto
+                    ))
+                conn.commit()
+            return True
+    except Exception as e:
+        print(f"[ERROR actualizarProyecto] {e}")
+    return False
+
+
+def resumenHistoriasPorProyecto():
+    """
+    Devuelve para cada proyecto: total de historias y cuántas
+    están completadas. Se usa en gestión de proyecto para la
+    barra de progreso y el gráfico de barras comparativo.
+    """
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    sql = """
+                        SELECT p.id_proyecto,
+                               p.nombre AS nombre_proyecto,
+                               COUNT(h.id_historia)         AS total,
+                               SUM(h.estado = 'completada') AS completadas
+                        FROM proyectos p
+                        LEFT JOIN historias h ON p.id_proyecto = h.id_proyecto
+                        GROUP BY p.id_proyecto, p.nombre
+                        ORDER BY p.created_at DESC
+                    """
+                    cursor.execute(sql)
+                    return cursor.fetchall()
+    except Exception as e:
+        print(f"[ERROR resumenHistoriasPorProyecto] {e}")
+    return []

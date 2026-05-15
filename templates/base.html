@@ -72,6 +72,10 @@
            class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}">
             <span class="ico">📁</span> Ver proyectos
         </a>
+        <a href="{{ url_for('listar_proyectos') }}"
+           class="{{ 'activo' if request.endpoint == 'gestion_proyecto' else '' }}">
+            <span class="ico">⚙️</span> Gestión proyecto
+        </a>
         {% endif %}
 
         <div class="sidebar-section">Historias</div>
@@ -101,8 +105,6 @@
     </main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
-{% block extra_scripts %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

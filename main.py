@@ -2,13 +2,15 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, Response, session
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket)
 from historiasAD import (Historia, listarHistorias, insertarHistoria,
                          actualizarEstadoHistoria, listarTodosSprints)
-from proyectoAD import (Proyecto, listarProyectos, insertarProyecto)
+from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
+                        obtenerProyecto, actualizarProyecto,
+                        resumenHistoriasPorProyecto)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos)
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
@@ -182,35 +184,112 @@ def listar_proyectos():
     return render_template('GestionIncidencia.html', proyectos=proyectos)
 
 
+@app.route('/proyecto/<int:id_proyecto>/gestion')
+def gestion_proyecto(id_proyecto):
+    proyecto     = obtenerProyecto(id_proyecto)
+    if not proyecto:
+        return redirect(url_for('listar_proyectos'))
+
+    responsables = obtenerUsuarios()
+    resumen      = resumenHistoriasPorProyecto()
+
+    # Progreso del proyecto actual
+    fila_actual = None
+    for r in resumen:
+        if r['id_proyecto'] == id_proyecto:
+            fila_actual = r
+            break
+
+    historias_total       = int(fila_actual['total']       or 0) if fila_actual else 0
+    historias_completadas = int(fila_actual['completadas'] or 0) if fila_actual else 0
+    pct_completado = round(historias_completadas * 100 / historias_total) if historias_total else 0
+
+    # Badge de riesgo: fecha de fin pasada y no está completado
+    fecha_fin = proyecto['fecha_fin_plan']
+    from datetime import date
+    hoy       = date.today()
+    en_riesgo = (fecha_fin < hoy) and (proyecto['estado'] != 'completado')
+
+    return render_template(
+        'gestionProyecto.html',
+        proyecto              = proyecto,
+        responsables          = responsables,
+        resumen               = resumen,
+        historias_total       = historias_total,
+        historias_completadas = historias_completadas,
+        pct_completado        = pct_completado,
+        en_riesgo             = en_riesgo,
+    )
+
+
+@app.route('/proyecto/<int:id_proyecto>/actualizar', methods=['POST'])
+def actualizar_proyecto(id_proyecto):
+    nombre         = request.form.get('nombre', '').strip()
+    id_responsable = request.form.get('id_responsable')
+    estado         = request.form.get('estado')
+    descripcion    = request.form.get('descripcion', '').strip()
+
+    ok = actualizarProyecto(id_proyecto, nombre, id_responsable, estado, descripcion)
+
+    if ok:
+        mensaje = '✅ Proyecto actualizado correctamente. Los cambios ya se reflejan en Ver proyectos.'
+        tipo    = 'exito'
+    else:
+        mensaje = '❌ Ocurrió un error al actualizar. Intenta de nuevo.'
+        tipo    = 'error'
+
+    proyecto     = obtenerProyecto(id_proyecto)
+    responsables = obtenerUsuarios()
+    resumen      = resumenHistoriasPorProyecto()
+
+    fila_actual = None
+    for r in resumen:
+        if r['id_proyecto'] == id_proyecto:
+            fila_actual = r
+            break
+
+    historias_total       = int(fila_actual['total']       or 0) if fila_actual else 0
+    historias_completadas = int(fila_actual['completadas'] or 0) if fila_actual else 0
+    pct_completado = round(historias_completadas * 100 / historias_total) if historias_total else 0
+
+    fecha_fin = proyecto['fecha_fin_plan']
+    from datetime import date
+    hoy       = date.today()
+    en_riesgo = (fecha_fin < hoy) and (proyecto['estado'] != 'completado')
+
+    return render_template(
+        'gestionProyecto.html',
+        proyecto              = proyecto,
+        responsables          = responsables,
+        resumen               = resumen,
+        historias_total       = historias_total,
+        historias_completadas = historias_completadas,
+        pct_completado        = pct_completado,
+        en_riesgo             = en_riesgo,
+        mensaje               = mensaje,
+        tipo                  = tipo,
+    )
+
+
 # ──────────────────────────────────────────────────────────────
 #  INDICADORES DE SOPORTE
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/indicadores')
 def indicadores_soporte():
-    mes_inicio  = request.args.get('mes_inicio', '')  or None
-    anio_inicio = request.args.get('anio_inicio', '') or None
-    mes_fin     = request.args.get('mes_fin', '')     or None
-    anio_fin    = request.args.get('anio_fin', '')    or None
- 
     resumen       = resumenKPI()
     por_app       = kpiPorAplicacion()
     por_prioridad = kpiPorPrioridad()
     por_agente    = kpiPorAgente()
     por_mes       = kpiPorMes()
     sprint_activo = kpiSprintsActivos()
- 
     return render_template('indicadores.html',
                            resumen=resumen,
                            por_app=por_app,
                            por_prioridad=por_prioridad,
                            por_agente=por_agente,
                            por_mes=por_mes,
-                           sprint_activo=sprint_activo,
-                           mes_inicio=mes_inicio   or '',
-                           anio_inicio=anio_inicio or '',
-                           mes_fin=mes_fin         or '',
-                           anio_fin=anio_fin       or '')
+                           sprint_activo=sprint_activo)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -255,6 +334,26 @@ def gestion_reportes():
                            aplicacion=aplicacion     or '',
                            estado=estado             or '',
                            prioridad=prioridad       or '')
+
+
+@app.route('/reportes/exportar-csv')
+def exportar_csv():
+    fecha_inicio = limpiar(request.args.get('fecha_inicio', ''))
+    fecha_fin    = limpiar(request.args.get('fecha_fin', ''))
+    aplicacion   = limpiar(request.args.get('aplicacion', ''))
+    estado       = limpiar(request.args.get('estado', ''))
+    prioridad    = limpiar(request.args.get('prioridad', ''))
+
+    tickets  = reporteTicketsFiltrados(
+        fecha_inicio, fecha_fin, aplicacion, estado, prioridad
+    )
+    csv_data = generarCSV(tickets)
+    return Response(
+        csv_data,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=reporte_tickets.csv'}
+    )
+
 
 @app.route('/historias')
 def listar_historias():

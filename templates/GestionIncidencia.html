@@ -163,8 +163,13 @@
         <table class="tabla">
             <thead>
                 <tr>
-                    <th>#</th><th>Nombre</th><th>Responsable</th>
-                    <th>Estado</th><th>Inicio</th><th>Fin planificado</th>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Responsable</th>
+                    <th>Estado</th>
+                    <th>Inicio</th>
+                    <th>Fin planificado</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -175,22 +180,40 @@
                         <td><strong>{{ p.nombre }}</strong></td>
                         <td>{{ p.nombre_responsable }}</td>
                         <td>
-                            {% if p.estado == 'completado' %}<span class="badge badge-verde">✅ Completado</span>
-                            {% elif p.estado == 'en_desarrollo' %}<span class="badge badge-azul">⚙️ En desarrollo</span>
-                            {% elif p.estado == 'qa' %}<span class="badge badge-acento">🧪 QA</span>
-                            {% elif p.estado == 'pausado' %}<span class="badge badge-gris">⏸️ Pausado</span>
-                            {% else %}<span class="badge badge-gris">📝 Planificado</span>
+                            {% if p.estado == 'completado' %}
+                                <span class="badge badge-verde">✅ Completado</span>
+                            {% elif p.estado == 'en_desarrollo' %}
+                                <span class="badge badge-azul">⚙️ En desarrollo</span>
+                            {% elif p.estado == 'qa' %}
+                                <span class="badge badge-acento">🧪 QA</span>
+                            {% elif p.estado == 'pausado' %}
+                                <span class="badge badge-gris">⏸️ Pausado</span>
+                            {% else %}
+                                <span class="badge badge-gris">📝 Planificado</span>
                             {% endif %}
                         </td>
-                        <td class="proyecto-fecha">{{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}</td>
-                        <td class="proyecto-fecha">{{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}</td>
+                        <td class="proyecto-fecha">
+                            {{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}
+                        </td>
+                        <td class="proyecto-fecha">
+                            {{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}
+                        </td>
+                        <!-- BOTÓN VER GESTIÓN (nuevo) -->
+                        <td>
+                            <a href="{{ url_for('gestion_proyecto', id_proyecto=p.id_proyecto) }}"
+                               class="btn btn-sm btn-outline">
+                                ⚙️ Ver gestión
+                            </a>
+                        </td>
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr><td colspan="6" class="tabla-empty">
-                        No hay proyectos registrados.
-                        <a href="{{ url_for('form_proyecto') }}">Crea el primero →</a>
-                    </td></tr>
+                    <tr>
+                        <td colspan="7" class="tabla-empty">
+                            No hay proyectos registrados.
+                            <a href="{{ url_for('form_proyecto') }}">Crea el primero →</a>
+                        </td>
+                    </tr>
                 {% endif %}
             </tbody>
         </table>

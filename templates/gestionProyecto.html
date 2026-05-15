@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Gestión · {{ proyecto.nombre }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Datos para el gráfico JS (igual que indicadores.html usa data- attributes) -->
+<div id="datos-gestion"
+     data-resumen='{{ resumen | tojson if resumen else "[]" }}'
+     data-id-actual="{{ proyecto.id_proyecto }}">
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     CABECERA
+     ══════════════════════════════════════════════════════ -->
+<div class="page-header">
+    <div>
+        <h1>⚙️ Gestión de proyecto</h1>
+        <p>PR-{{ proyecto.id_proyecto }} · {{ proyecto.nombre }}</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Ver proyectos</a>
+</div>
+
+<!-- Mensaje de éxito o error tras actualizar -->
+{% if mensaje %}
+<div class="{{ 'msg-exito' if tipo == 'exito' else 'msg-error' }}"
+     style="margin-bottom: 1.2rem; padding: 12px 16px; border-radius: 8px; font-size: 0.88rem;">
+    {{ mensaje }}
+</div>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════
+     SECCIÓN 1 – DATOS EDITABLES
+     ══════════════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">📋 Datos del proyecto</div>
+    <div class="card-body">
+        <form action="{{ url_for('actualizar_proyecto', id_proyecto=proyecto.id_proyecto) }}"
+              method="POST">
+
+            <!-- Nombre -->
+            <div class="form-group form-section-spacing">
+                <label for="nombre">Nombre del proyecto</label>
+                <input type="text" id="nombre" name="nombre"
+                       value="{{ proyecto.nombre }}" required>
+            </div>
+
+            <!-- Responsable + Estado -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label for="id_responsable">Responsable</label>
+                    <select id="id_responsable" name="id_responsable" required>
+                        {% for r in responsables %}
+                        <option value="{{ r.id_usuario }}"
+                            {% if r.id_usuario == proyecto.id_responsable %}selected{% endif %}>
+                            {{ r.nombre_completo }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="estado">Estado</label>
+                    <select id="estado" name="estado" required>
+                        <option value="planificado"
+                            {% if proyecto.estado == 'planificado' %}selected{% endif %}>
+                            📝 Planificado
+                        </option>
+                        <option value="en_desarrollo"
+                            {% if proyecto.estado == 'en_desarrollo' %}selected{% endif %}>
+                            ⚙️ En desarrollo
+                        </option>
+                        <option value="qa"
+                            {% if proyecto.estado == 'qa' %}selected{% endif %}>
+                            🧪 QA / Pruebas
+                        </option>
+                        <option value="completado"
+                            {% if proyecto.estado == 'completado' %}selected{% endif %}>
+                            ✅ Completado
+                        </option>
+                        <option value="pausado"
+                            {% if proyecto.estado == 'pausado' %}selected{% endif %}>
+                            ⏸️ Pausado
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-group form-section-spacing">
+                <label for="descripcion">Descripción / Alcance</label>
+                <textarea id="descripcion" name="descripcion" rows="4"
+                          required>{{ proyecto.descripcion }}</textarea>
+            </div>
+
+            <!-- Botón -->
+            <div style="display: flex; gap: 12px; margin-top: 8px;">
+                <button type="submit" class="btn btn-verde">💾 Actualizar proyecto</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SECCIÓN 2 – FECHAS Y DÍAS RESTANTES
+     ══════════════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">📅 Fechas y plazo</div>
+    <div class="card-body">
+
+        <!-- Badge de riesgo -->
+        {% if en_riesgo %}
+        <div class="msg-error"
+             style="margin-bottom: 1rem; padding: 12px 16px; border-radius: 8px; font-size: 0.88rem;">
+            🚨 <strong>Proyecto en riesgo:</strong> la fecha de fin planificada ya venció
+            y el proyecto aún no está completado.
+        </div>
+        {% endif %}
+
+        <div class="form-grid">
+
+            <!-- Fecha inicio -->
+            <div class="stat-card" style="border-left: 4px solid var(--verde);">
+                <div style="font-size: 0.78rem; color: var(--gris-texto); margin-bottom: 4px;">
+                    📅 Fecha de inicio
+                </div>
+                <div style="font-size: 1.1rem; font-weight: 700;">
+                    {{ proyecto.fecha_inicio.strftime('%d/%m/%Y') if proyecto.fecha_inicio else '—' }}
+                </div>
+            </div>
+
+            <!-- Fin planificado -->
+            <div class="stat-card" style="border-left: 4px solid var(--acento);">
+                <div style="font-size: 0.78rem; color: var(--gris-texto); margin-bottom: 4px;">
+                    🏁 Fin planificado
+                </div>
+                <div style="font-size: 1.1rem; font-weight: 700;">
+                    {{ proyecto.fecha_fin_plan.strftime('%d/%m/%Y') if proyecto.fecha_fin_plan else '—' }}
+                </div>
+            </div>
+
+            <!-- Días restantes (calculado en tiempo real por JS) -->
+            <div class="stat-card"
+                 style="border-left: 4px solid {% if en_riesgo %}var(--rojo){% else %}var(--azul){% endif %};">
+                <div style="font-size: 0.78rem; color: var(--gris-texto); margin-bottom: 4px;">
+                    ⏳ Días restantes
+                </div>
+                <div id="dias-restantes"
+                     data-fecha-fin="{{ proyecto.fecha_fin_plan.strftime('%Y-%m-%d') if proyecto.fecha_fin_plan else '' }}"
+                     style="font-size: 1.1rem; font-weight: 700;
+                            color: {% if en_riesgo %}var(--rojo){% else %}var(--verde){% endif %};">
+                    —
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SECCIÓN 3 – PROGRESO E HISTORIAS
+     ══════════════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">📊 Progreso de historias</div>
+    <div class="card-body">
+
+        <!-- Barra de progreso del proyecto seleccionado -->
+        <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between;
+                        font-size: 0.85rem; margin-bottom: 6px;">
+                <span>Historias completadas de este proyecto</span>
+                <span>
+                    <strong>{{ historias_completadas }}</strong> de
+                    <strong>{{ historias_total }}</strong>
+                    ({{ pct_completado }}%)
+                </span>
+            </div>
+            <div style="background: var(--gris-borde); border-radius: 20px;
+                        height: 14px; overflow: hidden;">
+                <div style="height: 100%; border-radius: 20px;
+                            background: var(--verde);
+                            width: {{ pct_completado }}%;"></div>
+            </div>
+        </div>
+
+        <!-- Gráfico de barras: todos los proyectos -->
+        <div>
+            <p style="font-size: 0.83rem; color: var(--gris-texto); margin-bottom: 8px;">
+                Comparativo de historias por proyecto
+                (barra verde = proyecto seleccionado)
+            </p>
+            <canvas id="grafico-historias" style="max-height: 220px;"></canvas>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
