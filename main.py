@@ -2,7 +2,7 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from flask import Flask, render_template, request, redirect, url_for, Response, session
+from flask import Flask, render_template, request, redirect, url_for, session
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket)
@@ -188,19 +188,29 @@ def listar_proyectos():
 
 @app.route('/indicadores')
 def indicadores_soporte():
+    mes_inicio  = request.args.get('mes_inicio', '')  or None
+    anio_inicio = request.args.get('anio_inicio', '') or None
+    mes_fin     = request.args.get('mes_fin', '')     or None
+    anio_fin    = request.args.get('anio_fin', '')    or None
+ 
     resumen       = resumenKPI()
     por_app       = kpiPorAplicacion()
     por_prioridad = kpiPorPrioridad()
     por_agente    = kpiPorAgente()
     por_mes       = kpiPorMes()
     sprint_activo = kpiSprintsActivos()
+ 
     return render_template('indicadores.html',
                            resumen=resumen,
                            por_app=por_app,
                            por_prioridad=por_prioridad,
                            por_agente=por_agente,
                            por_mes=por_mes,
-                           sprint_activo=sprint_activo)
+                           sprint_activo=sprint_activo,
+                           mes_inicio=mes_inicio   or '',
+                           anio_inicio=anio_inicio or '',
+                           mes_fin=mes_fin         or '',
+                           anio_fin=anio_fin       or '')
 
 
 # ──────────────────────────────────────────────────────────────
@@ -245,26 +255,6 @@ def gestion_reportes():
                            aplicacion=aplicacion     or '',
                            estado=estado             or '',
                            prioridad=prioridad       or '')
-
-
-@app.route('/reportes/exportar-csv')
-def exportar_csv():
-    fecha_inicio = limpiar(request.args.get('fecha_inicio', ''))
-    fecha_fin    = limpiar(request.args.get('fecha_fin', ''))
-    aplicacion   = limpiar(request.args.get('aplicacion', ''))
-    estado       = limpiar(request.args.get('estado', ''))
-    prioridad    = limpiar(request.args.get('prioridad', ''))
-
-    tickets  = reporteTicketsFiltrados(
-        fecha_inicio, fecha_fin, aplicacion, estado, prioridad
-    )
-    csv_data = generarCSV(tickets)
-    return Response(
-        csv_data,
-        mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment; filename=reporte_tickets.csv'}
-    )
-
 
 @app.route('/historias')
 def listar_historias():

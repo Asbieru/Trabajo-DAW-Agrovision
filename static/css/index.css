@@ -899,6 +899,14 @@ body {
     height: calc(100% - 50px);
 }
 
+.fila-dos .seccion-cuerpo:has(.sprint-item),
+.fila-dos .seccion-cuerpo:has(.agente-item) {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow-y: auto;
+}
+
 .kpi-card {
     background: var(--blanco);
     border: 1px solid var(--gris-borde);

@@ -132,7 +132,7 @@ def reporteTicketsFiltrados(fecha_inicio=None, fecha_fin=None,
 
                 sql =  "SELECT t.id_ticket, t.titulo, t.aplicacion,"
                 sql += " t.tipo, t.prioridad, t.estado,"
-                sql += " DATE_FORMAT(t.fecha_apertura, '%%d/%%m/%%Y') AS fecha_apertura,"
+                sql += " DATE_FORMAT(t.fecha_apertura, '%d/%m/%Y') AS fecha_apertura,"
                 sql += " u.nombre_completo AS solicitante"
                 sql += " FROM tickets t"
                 sql += " JOIN usuarios u ON t.id_solicitante = u.id_usuario"

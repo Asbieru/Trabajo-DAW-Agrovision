@@ -1,5 +1,11 @@
 from conexion import obtenerconexion
 
+MESES_CORTO = {
+    1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr',
+    5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+    9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
+}
+
 def resumenKPI():
     try:
         conn = obtenerconexion()
@@ -91,16 +97,23 @@ def kpiPorMes():
         if conn:
             with conn:
                 with conn.cursor() as cursor:
-                    sql =  "SELECT DATE_FORMAT(fecha_apertura, '%%Y-%%m') AS mes,"
-                    sql += " DATE_FORMAT(fecha_apertura, '%%b %%Y') AS mes_label,"
+                    sql =  "SELECT DATE_FORMAT(fecha_apertura, '%Y-%m') AS mes,"
+                    sql += " MONTH(fecha_apertura) AS num_mes,"
+                    sql += " YEAR(fecha_apertura) AS anio,"
                     sql += " COUNT(*) AS total,"
                     sql += " SUM(estado IN ('resuelto','cerrado')) AS resueltos"
                     sql += " FROM tickets"
                     sql += " WHERE fecha_apertura >= DATE_SUB(NOW(), INTERVAL 6 MONTH)"
-                    sql += " GROUP BY mes, mes_label"
+                    sql += " GROUP BY mes, num_mes, anio"
                     sql += " ORDER BY mes ASC"
                     cursor.execute(sql)
-                    return cursor.fetchall()
+                    filas = cursor.fetchall()
+                    resultado = []
+                    for f in filas:
+                        f = dict(f)
+                        f['mes_label'] = MESES_CORTO.get(f['num_mes'], '?') + ' ' + str(f['anio'])
+                        resultado.append(f)
+                    return resultado
         return []
     except:
         return []
