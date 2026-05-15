@@ -16,6 +16,7 @@
         <span class="topbar-badge">Sistemas</span>
     </a>
     <div class="topbar-spacer"></div>
+    {% if session.get('usuario') and session['usuario'].get('nombre_completo') %}
     <div class="topbar-user">
         <span>{{ session['usuario']['nombre_completo'] }}</span>
         <div class="avatar-menu">
@@ -33,6 +34,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </header>
 
 <div class="layout">
@@ -53,14 +55,14 @@
            class="{{ 'activo' if request.endpoint == 'listar_tickets' else '' }}">
             <span class="ico">📨</span> Ver tickets
         </a>
-        {% if session['usuario']['rol'] in ('admin', 'soporte', 'programador') %}
+        {% if session.get('usuario') and session['usuario'].get('rol') in ('admin', 'soporte', 'programador') %}
         <a href="{{ url_for('resolver_tickets') }}"
            class="{{ 'activo' if request.endpoint in ('resolver_tickets', 'form_resolver_ticket') else '' }}">
             <span class="ico">🔧</span> Resolver tickets
         </a>
         {% endif %}
 
-        {% if session['usuario']['rol'] in ('admin', 'soporte', 'programador') %}
+        {% if session.get('usuario') and session['usuario'].get('rol') in ('admin', 'soporte', 'programador') %}
         <div class="sidebar-section">Proyectos</div>
         <a href="{{ url_for('form_proyecto') }}"
            class="{{ 'activo' if request.endpoint == 'form_proyecto' else '' }}">

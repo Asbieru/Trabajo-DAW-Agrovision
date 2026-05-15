@@ -185,7 +185,7 @@
                         <option value="">— Selecciona el agente —</option>
                         {% for u in usuarios %}
                         <option value="{{ u.id_usuario }}"
-                            {{ 'selected' if session['usuario']['id_usuario'] == u.id_usuario }}>
+                            {{ 'selected' if session.get('usuario', {}).get('id_usuario') == u.id_usuario }}>
                             {{ u.nombre_completo }}
                         </option>
                         {% endfor %}

@@ -100,7 +100,7 @@ def buscarUsuarioPorCorreo(correo):
         print(f"[ERROR buscarUsuarioPorCorreo] {e}")
     return False
 
-def obtenerUsuarios(rol):
+def obtenerUsuarios(rol=None):
     """Retorna usuarios activos. Si se pasa rol, filtra por él."""
     try:
         conn = obtenerconexion()

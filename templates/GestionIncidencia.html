@@ -109,7 +109,7 @@
                         </td>
                         <td class="td-accion">
                             {% if t.estado in ('abierto', 'en_progreso') %}
-                                {% if session['usuario']['rol'] in ('admin', 'soporte', 'programador') %}
+                                {% if session.get('usuario', {}).get('rol') in ('admin', 'soporte', 'programador') %}
                                     <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
                                        class="btn btn-sm btn-verde">🔧 Resolver</a>
                                 {% else %}

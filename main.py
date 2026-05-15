@@ -2,8 +2,9 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from usuarioAD import autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios
-from flask import Flask, render_template, request, redirect, url_for, Response
+from flask import Flask, render_template, request, redirect, url_for, Response, session
+
+from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket)
 from historiasAD import (Historia, listarHistorias, insertarHistoria,
                          actualizarEstadoHistoria, listarTodosSprints)
@@ -15,13 +16,8 @@ from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorT
                          reporteTicketsFiltrados, generarCSV, obtenerAplicaciones)
 
 app = Flask(__name__)
+app.secret_key = 'agrovision-clave-secreta-2024'  # necesario para usar session de Flask
 
-# Variable global para guardar el usuario logueado
-usuario_actual = {}
-
-@app.context_processor
-def inyectar_usuario():
-    return dict(session={'usuario': usuario_actual})
 # ──────────────────────────────────────────────────────────────
 #  RUTA RAIZ
 # ──────────────────────────────────────────────────────────────
@@ -37,7 +33,6 @@ def raiz():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    global usuario_actual
     error = None
 
     if request.method == 'POST':
@@ -46,7 +41,7 @@ def login():
 
         ok, mensaje, datos = autenticarUsuario(correo, password)
         if ok:
-            usuario_actual = datos
+            session['usuario'] = datos
             return redirect(url_for('index'))
         else:
             error = mensaje
@@ -82,8 +77,7 @@ def olvide_contrasena():
 
 @app.route('/logout')
 def logout():
-    global usuario_actual
-    usuario_actual = {}
+    session.pop('usuario', None)
     return redirect(url_for('login'))
 
 
