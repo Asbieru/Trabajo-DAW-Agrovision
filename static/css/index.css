@@ -1352,3 +1352,112 @@ body {
     .auth-footer  { padding: 14px 24px; }
     .auth-title   { font-size: 1.2rem; }
 }
+
+/* ════════════════════════════════════════════════════
+   GESTIÓN PROYECTO · clases propias de gestionProyecto.html
+   ════════════════════════════════════════════════════ */
+ 
+/* Separación inferior de cada card de sección */
+.gp-card {
+    margin-bottom: 1.5rem;
+}
+ 
+/* Mensaje de éxito/error al inicio de la página */
+.gp-mensaje {
+    margin-bottom: 1.2rem;
+}
+ 
+/* Fila de botones del formulario de datos */
+.gp-form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+ 
+/* Alerta de riesgo en la sección de fechas */
+.gp-alerta-riesgo {
+    margin-bottom: 1rem;
+}
+ 
+/* Stat-card: fecha de inicio (borde verde) */
+.gp-stat-inicio {
+    border-left: 4px solid var(--verde);
+}
+ 
+/* Stat-card: fin planificado (borde acento) */
+.gp-stat-fin {
+    border-left: 4px solid var(--acento);
+}
+ 
+/* Stat-card: días restantes sin riesgo (borde azul) */
+.gp-stat-dias--ok {
+    border-left: 4px solid var(--azul);
+}
+ 
+/* Stat-card: días restantes en riesgo (borde rojo) */
+.gp-stat-dias--riesgo {
+    border-left: 4px solid var(--rojo);
+}
+ 
+/* Etiqueta pequeña dentro de cada stat-card de fechas */
+.gp-stat-label {
+    font-size: 0.78rem;
+    color: var(--gris-texto);
+    margin-bottom: 4px;
+}
+ 
+/* Valor principal de cada stat-card de fechas */
+.gp-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+ 
+/* Color del valor de días restantes: sin riesgo */
+.gp-dias-valor--ok {
+    color: var(--verde);
+}
+ 
+/* Color del valor de días restantes: en riesgo */
+.gp-dias-valor--riesgo {
+    color: var(--rojo);
+}
+ 
+/* Contenedor de la barra de progreso de historias */
+.gp-progreso-wrap {
+    margin-bottom: 1.5rem;
+}
+ 
+/* Fila de etiquetas sobre la barra de progreso */
+.gp-progreso-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+ 
+/* Fondo gris de la barra de progreso */
+.gp-progreso-bg {
+    background: var(--gris-borde);
+    border-radius: 20px;
+    height: 14px;
+    overflow: hidden;
+}
+ 
+/* Relleno verde de la barra de progreso (width se pone inline con Jinja) */
+.gp-progreso-fill {
+    height: 100%;
+    border-radius: 20px;
+    background: var(--verde);
+}
+ 
+/* Nota de texto bajo la barra, sobre el gráfico */
+.gp-chart-nota {
+    font-size: 0.83rem;
+    color: var(--gris-texto);
+    margin-bottom: 8px;
+}
+ 
+/* Tamaño máximo del canvas del gráfico Chart.js */
+.gp-canvas {
+    max-height: 220px;
+}
