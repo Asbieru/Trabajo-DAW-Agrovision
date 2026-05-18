@@ -1,35 +1,42 @@
-{% extends "base.html" %}
-{% block title %}Error 500{% endblock %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 500 · AgroVisión</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
 
-{% block content %}
+<header class="topbar">
+    <a class="topbar-logo" href="{{ url_for('index') }}">
+        🌿 Agro<em>visión</em>
+        <span class="topbar-badge">Sistemas</span>
+    </a>
+</header>
+
 <div class="error-page-wrap">
     <div class="error-page-box">
-
         <div class="error-page-banner error-page-banner--rojo">
             <span class="error-page-icon">🔴</span>
             <div class="error-page-code error-page-code--rojo">500</div>
             <div class="error-page-title">Error interno del servidor</div>
         </div>
-
         <div class="error-page-body">
             <p class="error-page-desc">
                 Algo falló en el servidor al procesar tu solicitud.
-                El equipo técnico ya está al tanto. Inténtalo de nuevo en unos minutos.
+                Puede ser un problema de conexión con la base de datos.
+                Inténtalo de nuevo en unos momentos.
             </p>
             <div class="error-page-actions">
-                <a href="javascript:location.reload()" class="btn btn-outline">
-                    ↺ Reintentar
-                </a>
-                <a href="{{ url_for('index') }}" class="btn btn-verde">
-                    🏠 Ir al Dashboard
-                </a>
+                <a href="javascript:history.back()" class="btn btn-outline">← Volver atrás</a>
             </div>
         </div>
-
         <div class="error-page-footer">
             🌿 AgroVisión Sistemas &nbsp;·&nbsp; Error 500 Internal Server Error
         </div>
-
     </div>
 </div>
-{% endblock %}
+
+</body>
+</html>

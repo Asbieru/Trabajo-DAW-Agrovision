@@ -109,12 +109,8 @@
                         </td>
                         <td class="td-accion">
                             {% if t.estado in ('abierto', 'en_progreso') %}
-                                {% if session.get('usuario', {}).get('rol') in ('admin', 'soporte', 'programador') %}
-                                    <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
-                                       class="btn btn-sm btn-verde">🔧 Resolver</a>
-                                {% else %}
-                                    <span class="badge badge-gris" style="opacity:.7;">🔒 Sin permiso</span>
-                                {% endif %}
+                                <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
+                                   class="btn btn-sm btn-verde">🔧 Resolver</a>
                             {% elif t.estado == 'resuelto' %}
                                 <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
                             {% elif t.estado == 'base_proyecto' %}

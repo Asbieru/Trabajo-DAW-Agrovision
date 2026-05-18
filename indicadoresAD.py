@@ -7,147 +7,117 @@ MESES_CORTO = {
 }
 
 def resumenKPI():
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    sql =  "SELECT COUNT(*) AS total,"
-                    sql += " SUM(estado='abierto') AS abiertos,"
-                    sql += " SUM(estado='en_progreso') AS en_progreso,"
-                    sql += " SUM(estado='resuelto') AS resueltos,"
-                    sql += " SUM(estado='cerrado') AS cerrados,"
-                    sql += " SUM(fecha_resolucion IS NOT NULL AND"
-                    sql += " TIMESTAMPDIFF(HOUR, fecha_apertura, fecha_resolucion) <= sla_horas) AS sla_ok,"
-                    sql += " SUM(fecha_resolucion IS NOT NULL) AS total_con_fecha,"
-                    sql += " ROUND(AVG(CASE WHEN fecha_resolucion IS NOT NULL"
-                    sql += " THEN TIMESTAMPDIFF(HOUR, fecha_apertura, fecha_resolucion) END), 1)"
-                    sql += " AS promedio_horas_resolucion"
-                    sql += " FROM tickets"
-                    cursor.execute(sql)
-                    row = cursor.fetchone()
-                    if row:
-                        row = dict(row)
-                        if row.get('total_con_fecha'):
-                            row['pct_sla'] = round(row['sla_ok'] / row['total_con_fecha'] * 100, 1)
-                        else:
-                            row['pct_sla'] = 0
-                        return row
-        return {}
-    except Exception as e:
-        print("ERROR resumenKPI:", e)
-        return {}
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(*) AS total,
+                       SUM(estado='abierto') AS abiertos,
+                       SUM(estado='en_progreso') AS en_progreso,
+                       SUM(estado='resuelto') AS resueltos,
+                       SUM(estado='cerrado') AS cerrados,
+                       SUM(fecha_resolucion IS NOT NULL AND
+                           TIMESTAMPDIFF(HOUR, fecha_apertura, fecha_resolucion) <= sla_horas) AS sla_ok,
+                       SUM(fecha_resolucion IS NOT NULL) AS total_con_fecha,
+                       ROUND(AVG(CASE WHEN fecha_resolucion IS NOT NULL
+                           THEN TIMESTAMPDIFF(HOUR, fecha_apertura, fecha_resolucion) END), 1)
+                           AS promedio_horas_resolucion
+                FROM tickets
+            """)
+            row = dict(cursor.fetchone())
+            if row.get('total_con_fecha'):
+                row['pct_sla'] = round(row['sla_ok'] / row['total_con_fecha'] * 100, 1)
+            else:
+                row['pct_sla'] = 0
+            return row
+
 
 def kpiPorAplicacion():
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    sql =  "SELECT aplicacion, COUNT(*) AS total"
-                    sql += " FROM tickets"
-                    sql += " GROUP BY aplicacion"
-                    sql += " ORDER BY total DESC"
-                    sql += " LIMIT 10"
-                    cursor.execute(sql)
-                    return [dict(r) for r in cursor.fetchall()]
-        return []
-    except Exception as e:
-        print("ERROR kpiPorAplicacion:", e)
-        return []
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT aplicacion, COUNT(*) AS total
+                FROM tickets
+                GROUP BY aplicacion
+                ORDER BY total DESC
+                LIMIT 10
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
 
 def kpiPorPrioridad():
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    sql =  "SELECT prioridad, COUNT(*) AS total"
-                    sql += " FROM tickets"
-                    sql += " GROUP BY prioridad"
-                    sql += " ORDER BY FIELD(prioridad,'critica','alta','media','baja')"
-                    cursor.execute(sql)
-                    return [dict(r) for r in cursor.fetchall()]
-        return []
-    except Exception as e:
-        print("ERROR kpiPorPrioridad:", e)
-        return []
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT prioridad, COUNT(*) AS total
+                FROM tickets
+                GROUP BY prioridad
+                ORDER BY FIELD(prioridad,'critica','alta','media','baja')
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
 
 def kpiPorAgente():
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    sql =  "SELECT u.nombre_completo AS agente,"
-                    sql += " COUNT(*) AS total_atendidos,"
-                    sql += " SUM(t.estado IN ('resuelto','cerrado')) AS resueltos,"
-                    sql += " ROUND(AVG(CASE WHEN t.fecha_resolucion IS NOT NULL"
-                    sql += " THEN TIMESTAMPDIFF(HOUR, t.fecha_apertura, t.fecha_resolucion)"
-                    sql += " END), 1) AS promedio_horas"
-                    sql += " FROM tickets t"
-                    sql += " JOIN usuarios u ON t.id_agente = u.id_usuario"
-                    sql += " WHERE t.id_agente IS NOT NULL"
-                    sql += " GROUP BY t.id_agente"
-                    sql += " ORDER BY total_atendidos DESC"
-                    cursor.execute(sql)
-                    return [dict(r) for r in cursor.fetchall()]
-        return []
-    except Exception as e:
-        print("ERROR kpiPorAgente:", e)
-        return []
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT u.nombre_completo AS agente,
+                       COUNT(*) AS total_atendidos,
+                       SUM(t.estado IN ('resuelto','cerrado')) AS resueltos,
+                       ROUND(AVG(CASE WHEN t.fecha_resolucion IS NOT NULL
+                           THEN TIMESTAMPDIFF(HOUR, t.fecha_apertura, t.fecha_resolucion)
+                           END), 1) AS promedio_horas
+                FROM tickets t
+                JOIN usuarios u ON t.id_agente = u.id_usuario
+                WHERE t.id_agente IS NOT NULL
+                GROUP BY t.id_agente
+                ORDER BY total_atendidos DESC
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
 
 def kpiPorMes():
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    sql =  "SELECT DATE_FORMAT(fecha_apertura, '%Y-%m') AS mes,"
-                    sql += " MONTH(fecha_apertura) AS num_mes,"
-                    sql += " YEAR(fecha_apertura) AS anio,"
-                    sql += " COUNT(*) AS total,"
-                    sql += " SUM(estado IN ('resuelto','cerrado')) AS resueltos"
-                    sql += " FROM tickets"
-                    sql += " WHERE fecha_apertura >= DATE_SUB(NOW(), INTERVAL 6 MONTH)"
-                    sql += " GROUP BY mes, num_mes, anio"
-                    sql += " ORDER BY mes ASC"
-                    cursor.execute(sql)
-                    filas = cursor.fetchall()
-                    resultado = []
-                    for f in filas:
-                        f = dict(f)
-                        f['mes_label'] = MESES_CORTO.get(f['num_mes'], '?') + ' ' + str(f['anio'])
-                        resultado.append(f)
-                    return resultado
-        return []
-    except Exception as e:
-        print("ERROR kpiPorMes:", e)
-        return []
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT DATE_FORMAT(fecha_apertura, '%Y-%m') AS mes,
+                       MONTH(fecha_apertura) AS num_mes,
+                       YEAR(fecha_apertura) AS anio,
+                       COUNT(*) AS total,
+                       SUM(estado IN ('resuelto','cerrado')) AS resueltos
+                FROM tickets
+                WHERE fecha_apertura >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                GROUP BY mes, num_mes, anio
+                ORDER BY mes ASC
+            """)
+            resultado = []
+            for f in cursor.fetchall():
+                f = dict(f)
+                f['mes_label'] = MESES_CORTO.get(f['num_mes'], '?') + ' ' + str(f['anio'])
+                resultado.append(f)
+            return resultado
+
 
 def kpiSprintsActivos():
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    sql =  "SELECT s.nombre AS sprint, p.nombre AS proyecto,"
-                    sql += " s.capacidad_pts,"
-                    sql += " COALESCE(SUM(CASE WHEN h.estado='completada'"
-                    sql += " THEN h.story_points ELSE 0 END),0) AS pts_completados,"
-                    sql += " COALESCE(SUM(CASE WHEN h.estado='en_progreso'"
-                    sql += " THEN h.story_points ELSE 0 END),0) AS pts_en_progreso,"
-                    sql += " DATEDIFF(s.fecha_fin, CURDATE()) AS dias_restantes"
-                    sql += " FROM sprints s"
-                    sql += " JOIN proyectos p ON s.id_proyecto = p.id_proyecto"
-                    sql += " LEFT JOIN historias h ON h.id_sprint = s.id_sprint"
-                    sql += " WHERE s.estado = 'activo'"
-                    sql += " GROUP BY s.id_sprint"
-                    cursor.execute(sql)
-                    return [dict(r) for r in cursor.fetchall()]
-        return []
-    except Exception as e:
-        print("ERROR kpiSprintsActivos:", e)
-        return []
-    
-    
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT s.nombre AS sprint, p.nombre AS proyecto,
+                       s.capacidad_pts,
+                       COALESCE(SUM(CASE WHEN h.estado='completada'
+                           THEN h.story_points ELSE 0 END),0) AS pts_completados,
+                       COALESCE(SUM(CASE WHEN h.estado='en_progreso'
+                           THEN h.story_points ELSE 0 END),0) AS pts_en_progreso,
+                       DATEDIFF(s.fecha_fin, CURDATE()) AS dias_restantes
+                FROM sprints s
+                JOIN proyectos p ON s.id_proyecto = p.id_proyecto
+                LEFT JOIN historias h ON h.id_sprint = s.id_sprint
+                WHERE s.estado = 'activo'
+                GROUP BY s.id_sprint
+            """)
+            return [dict(r) for r in cursor.fetchall()]

@@ -184,8 +184,7 @@
                     <select id="id_agente" name="id_agente" required>
                         <option value="">— Selecciona el agente —</option>
                         {% for u in usuarios %}
-                        <option value="{{ u.id_usuario }}"
-                            {{ 'selected' if session.get('usuario', {}).get('id_usuario') == u.id_usuario }}>
+                        <option value="{{ u.id_usuario }}">
                             {{ u.nombre_completo }}
                         </option>
                         {% endfor %}

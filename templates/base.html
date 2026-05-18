@@ -16,25 +16,11 @@
         <span class="topbar-badge">Sistemas</span>
     </a>
     <div class="topbar-spacer"></div>
-    {% if session.get('usuario') and session['usuario'].get('nombre_completo') %}
     <div class="topbar-user">
-        <span>{{ session['usuario']['nombre_completo'] }}</span>
-        <div class="avatar-menu">
-            <div class="avatar" onclick="toggleMenu()" title="Opciones de cuenta">
-                {{ session['usuario']['nombre_completo'].split()[0][0] }}{{ session['usuario']['nombre_completo'].split()[-1][0] }}
-            </div>
-            <div class="dropdown" id="dropdown-menu">
-                <div class="dropdown-info">
-                    <strong>{{ session['usuario']['nombre_completo'] }}</strong>
-                    <span>{{ session['usuario']['correo'] }}</span>
-                </div>
-                <a href="{{ url_for('logout') }}" class="dropdown-item">
-                    🚪 Cerrar sesión
-                </a>
-            </div>
-        </div>
+        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline" style="color:#fff; border-color:rgba(255,255,255,0.4);">
+            🚪 Cerrar sesión
+        </a>
     </div>
-    {% endif %}
 </header>
 
 <div class="layout">
@@ -55,14 +41,11 @@
            class="{{ 'activo' if request.endpoint == 'listar_tickets' else '' }}">
             <span class="ico">📨</span> Ver tickets
         </a>
-        {% if session.get('usuario') and session['usuario'].get('rol') in ('admin', 'soporte', 'programador') %}
         <a href="{{ url_for('resolver_tickets') }}"
            class="{{ 'activo' if request.endpoint in ('resolver_tickets', 'form_resolver_ticket') else '' }}">
             <span class="ico">🔧</span> Resolver tickets
         </a>
-        {% endif %}
 
-        {% if session.get('usuario') and session['usuario'].get('rol') in ('admin', 'soporte', 'programador') %}
         <div class="sidebar-section">Proyectos</div>
         <a href="{{ url_for('form_proyecto') }}"
            class="{{ 'activo' if request.endpoint == 'form_proyecto' else '' }}">
@@ -76,7 +59,6 @@
            class="{{ 'activo' if request.endpoint == 'gestion_proyecto' else '' }}">
             <span class="ico">⚙️</span> Gestión proyecto
         </a>
-        {% endif %}
 
         <div class="sidebar-section">Historias</div>
         <a href="{{ url_for('form_historia') }}"

@@ -2,7 +2,7 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from flask import Flask, render_template, request, redirect, url_for, session, abort
+from flask import Flask, render_template, request, redirect, url_for, abort
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket)
@@ -10,19 +10,15 @@ from historiasAD import (Historia, listarHistorias, insertarHistoria,
                          actualizarEstadoHistoria, listarTodosSprints)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
-                        resumenHistoriasPorProyecto)
+                        resumenHistoriasPorProyecto,
+                        listarAvances, insertarAvance, eliminarAvance)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos)
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
                          reporteTicketsFiltrados, obtenerAplicaciones)
 
-from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
-                        obtenerProyecto, actualizarProyecto,
-                        resumenHistoriasPorProyecto, 
-                        listarAvances, insertarAvance, eliminarAvance) 
 app = Flask(__name__)
-app.secret_key = 'agrovision-clave-secreta-2024'  # necesario para usar session de Flask
 
 # ──────────────────────────────────────────────────────────────
 #  MANEJADORES DE ERROR
@@ -61,9 +57,13 @@ def login():
         correo   = request.form.get('correo', '').strip()
         password = request.form.get('password', '')
 
-        ok, mensaje, datos = autenticarUsuario(correo, password)
+        try:
+            ok, mensaje, datos = autenticarUsuario(correo, password)
+        except Exception as e:
+            print(f'Error de conexión al autenticar: {e}')
+            abort(500)
+
         if ok:
-            session['usuario'] = datos
             return redirect(url_for('index'))
         else:
             error = mensaje
@@ -78,11 +78,17 @@ def login():
 @app.route('/olvide-contrasena', methods=['GET', 'POST'])
 def olvide_contrasena():
     mensaje = None
-    tipo    = None   # 'exito' o 'error' (para el color del mensaje)
+    tipo    = None
 
     if request.method == 'POST':
         correo = request.form.get('correo', '').strip()
-        if buscarUsuarioPorCorreo(correo):
+        try:
+            encontrado = buscarUsuarioPorCorreo(correo)
+        except Exception as e:
+            print(f'Error de conexión al buscar correo: {e}')
+            abort(500)
+
+        if encontrado:
             mensaje = ('Si el correo está registrado, recibirás un enlace '
                        'para restablecer tu contraseña.')
             tipo = 'exito'
@@ -99,7 +105,6 @@ def olvide_contrasena():
 
 @app.route('/logout')
 def logout():
-    session.pop('usuario', None)
     return redirect(url_for('login'))
 
 
@@ -212,14 +217,13 @@ def listar_proyectos():
 
 @app.route('/proyecto/<int:id_proyecto>/gestion')
 def gestion_proyecto(id_proyecto):
-    proyecto     = obtenerProyecto(id_proyecto)
+    proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
         abort(404)
 
     responsables = obtenerUsuarios()
     resumen      = resumenHistoriasPorProyecto()
 
-    # Progreso del proyecto actual
     fila_actual = None
     for r in resumen:
         if r['id_proyecto'] == id_proyecto:
@@ -230,7 +234,6 @@ def gestion_proyecto(id_proyecto):
     historias_completadas = int(fila_actual['completadas'] or 0) if fila_actual else 0
     pct_completado = round(historias_completadas * 100 / historias_total) if historias_total else 0
 
-    # Badge de riesgo: fecha de fin pasada y no está completado
     fecha_fin = proyecto['fecha_fin_plan']
     from datetime import date
     hoy       = date.today()
@@ -295,15 +298,16 @@ def actualizar_proyecto(id_proyecto):
         mensaje               = mensaje,
         tipo                  = tipo,
     )
-    
+
+
 @app.route('/proyecto/<int:id_proyecto>/avances')
 def historial_avances(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
         abort(404)
-    
     avances = listarAvances(id_proyecto)
     return render_template('avancesProyecto.html', proyecto=proyecto, avances=avances)
+
 
 @app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['GET', 'POST'])
 def nuevo_avance(id_proyecto):
@@ -311,43 +315,38 @@ def nuevo_avance(id_proyecto):
     if not proyecto:
         abort(404)
 
-    # Mantenemos el cálculo solo para sugerirlo en el placeholder
     resumen = resumenHistoriasPorProyecto()
     fila_actual = next((r for r in resumen if r['id_proyecto'] == id_proyecto), None)
-    
+
     total = int(fila_actual['total'] or 0) if fila_actual else 0
     completadas = int(fila_actual['completadas'] or 0) if fila_actual else 0
     sugerencia_pct = round(completadas * 100 / total) if total > 0 else 0
 
     from datetime import date
-    hoy_db = date.today().strftime('%Y-%m-%d')
+    hoy_db      = date.today().strftime('%Y-%m-%d')
     hoy_mostrar = date.today().strftime('%d/%m/%Y')
 
     if request.method == 'POST':
-        # LEEMOS EL PORCENTAJE DEL FORMULARIO (MANUAL)
-        pct_manual = request.form['porcentaje_avance']
-        estado_salud = request.form['estado_salud']
-        logros_periodo = request.form['logros_periodo'].strip()
+        pct_manual      = request.form['porcentaje_avance']
+        estado_salud    = request.form['estado_salud']
+        logros_periodo  = request.form['logros_periodo'].strip()
         pendientes_next = request.form.get('pendientes_next', '').strip()
-        
-        id_autor = session.get('usuario', {}).get('id_usuario')
 
-        if id_autor:
-            # Guardamos el pct_manual que ingresó el usuario
-            insertarAvance(id_proyecto, id_autor, hoy_db, pct_manual, estado_salud, logros_periodo, pendientes_next)
-        
+        insertarAvance(id_proyecto, None, hoy_db, pct_manual, estado_salud, logros_periodo, pendientes_next)
         return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
 
-    return render_template('nuevoAvance.html', 
-                           proyecto=proyecto, 
-                           hoy_mostrar=hoy_mostrar, 
+    return render_template('nuevoAvance.html',
+                           proyecto=proyecto,
+                           hoy_mostrar=hoy_mostrar,
                            sugerencia_pct=sugerencia_pct)
-    
+
+
 @app.route('/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
 def eliminar_avance_ruta(id_proyecto, id_avance):
-    # Aquí podríamos verificar si el usuario tiene permisos, pero por ahora lo dejamos directo
     eliminarAvance(id_avance)
     return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
+
+
 # ──────────────────────────────────────────────────────────────
 #  INDICADORES DE SOPORTE
 # ──────────────────────────────────────────────────────────────
@@ -358,14 +357,14 @@ def indicadores_soporte():
     anio_inicio = request.args.get('anio_inicio', '') or None
     mes_fin     = request.args.get('mes_fin', '')     or None
     anio_fin    = request.args.get('anio_fin', '')    or None
- 
+
     resumen       = resumenKPI()
     por_app       = kpiPorAplicacion()
     por_prioridad = kpiPorPrioridad()
     por_agente    = kpiPorAgente()
     por_mes       = kpiPorMes()
     sprint_activo = kpiSprintsActivos()
- 
+
     return render_template('indicadores.html',
                            resumen=resumen,
                            por_app=por_app,
@@ -389,6 +388,7 @@ def limpiar(valor):
         return None
     valor = valor.strip()
     return valor if valor else None
+
 
 @app.route('/reportes')
 def gestion_reportes():
@@ -422,6 +422,10 @@ def gestion_reportes():
                            estado=estado             or '',
                            prioridad=prioridad       or '')
 
+
+# ──────────────────────────────────────────────────────────────
+#  HISTORIAS DE USUARIO
+# ──────────────────────────────────────────────────────────────
 
 @app.route('/historias')
 def listar_historias():
@@ -475,6 +479,7 @@ def cambiar_estado_historia(id_historia):
     nuevo_estado = request.form.get('estado')
     actualizarEstadoHistoria(id_historia, nuevo_estado)
     return redirect(request.referrer or url_for('listar_historias'))
+
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE

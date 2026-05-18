@@ -27,51 +27,44 @@ def autenticarUsuario(correo, password):
     Busca al usuario por correo y verifica la contraseña.
     Retorna:
       (True,  '',        dict_sesion)   si las credenciales son correctas
-      (False, 'mensaje', None)          si son incorrectas o hay error
+      (False, 'mensaje', None)          si son incorrectas
+    Lanza excepción si hay error de conexión o de BD.
     """
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    sql = """
-                        SELECT id_usuario, nombre_completo, correo,
-                               rol, password_hash, activo
-                        FROM usuarios
-                        WHERE correo = %s
-                    """
-                    cursor.execute(sql, (correo.lower(),))
-                    usuario = cursor.fetchone()
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT id_usuario, nombre_completo, correo,
+                       rol, password_hash, activo
+                FROM usuarios
+                WHERE correo = %s
+            """
+            cursor.execute(sql, (correo.lower(),))
+            usuario = cursor.fetchone()
 
-            if not usuario:
-                return False, 'Correo o contraseña incorrectos.', None
+    if not usuario:
+        return False, 'Correo o contraseña incorrectos.', None
 
-            if not usuario['activo']:
-                return False, 'Tu cuenta está desactivada. Contacta al administrador.', None
+    if not usuario['activo']:
+        return False, 'Tu cuenta está desactivada. Contacta al administrador.', None
 
-            # Verificar contraseña (hash werkzeug o texto plano para pruebas)
-            hash_bd = usuario['password_hash']
-            if hash_bd.startswith(('pbkdf2:', 'scrypt:', 'argon2')):
-                ok = check_password_hash(hash_bd, password)
-            else:
-                ok = (hash_bd == password)
+    # Verificar contraseña (hash werkzeug o texto plano para pruebas)
+    hash_bd = usuario['password_hash']
+    if hash_bd.startswith(('pbkdf2:', 'scrypt:', 'argon2')):
+        ok = check_password_hash(hash_bd, password)
+    else:
+        ok = (hash_bd == password)
 
-            if not ok:
-                return False, 'Correo o contraseña incorrectos.', None
+    if not ok:
+        return False, 'Correo o contraseña incorrectos.', None
 
-            datos_sesion = {
-                'id_usuario':      usuario['id_usuario'],
-                'nombre_completo': usuario['nombre_completo'],
-                'correo':          usuario['correo'],
-                'rol':             usuario['rol'],
-            }
-            return True, '', datos_sesion
-
-    except Exception as e:
-        print(f"[ERROR autenticarUsuario] {e}")
-        return False, f'Error al autenticar: {e}', None
-
-    return False, 'No se pudo conectar a la base de datos.', None
+    datos_sesion = {
+        'id_usuario':      usuario['id_usuario'],
+        'nombre_completo': usuario['nombre_completo'],
+        'correo':          usuario['correo'],
+        'rol':             usuario['rol'],
+    }
+    return True, '', datos_sesion
 
 
 # ──────────────────────────────────────────────────────────────
@@ -82,43 +75,34 @@ def buscarUsuarioPorCorreo(correo):
     """
     Verifica si existe un usuario activo con ese correo.
     Retorna True si existe, False si no.
-    (En un sistema real aquí se enviaría un correo de recuperación.)
+    Lanza excepción si hay error de conexión.
     """
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    sql = """
-                        SELECT id_usuario
-                        FROM usuarios
-                        WHERE correo = %s AND activo = 1
-                    """
-                    cursor.execute(sql, (correo.lower(),))
-                    return cursor.fetchone() is not None
-    except Exception as e:
-        print(f"[ERROR buscarUsuarioPorCorreo] {e}")
-    return False
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT id_usuario
+                FROM usuarios
+                WHERE correo = %s AND activo = 1
+            """
+            cursor.execute(sql, (correo.lower(),))
+            return cursor.fetchone() is not None
+
 
 def obtenerUsuarios(rol=None):
     """Retorna usuarios activos. Si se pasa rol, filtra por él."""
-    try:
-        conn = obtenerconexion()
-        if conn:
-            with conn:
-                with conn.cursor() as cursor:
-                    if rol:
-                        cursor.execute(
-                            "SELECT id_usuario, nombre_completo, rol "
-                            "FROM usuarios WHERE activo=1 AND rol=%s ORDER BY nombre_completo",
-                            (rol,)
-                        )
-                    else:
-                        cursor.execute(
-                            "SELECT id_usuario, nombre_completo, rol "
-                            "FROM usuarios WHERE activo=1 ORDER BY nombre_completo"
-                        )
-                    return cursor.fetchall()
-    except Exception as e:
-        print(f"[ERROR obtenerUsuarios] {e}")
-    return []
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            if rol:
+                cursor.execute(
+                    "SELECT id_usuario, nombre_completo, rol "
+                    "FROM usuarios WHERE activo=1 AND rol=%s ORDER BY nombre_completo",
+                    (rol,)
+                )
+            else:
+                cursor.execute(
+                    "SELECT id_usuario, nombre_completo, rol "
+                    "FROM usuarios WHERE activo=1 ORDER BY nombre_completo"
+                )
+            return cursor.fetchall()

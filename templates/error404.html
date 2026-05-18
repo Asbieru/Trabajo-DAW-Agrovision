@@ -1,35 +1,41 @@
-{% extends "base.html" %}
-{% block title %}Error 404{% endblock %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 404 · AgroVisión</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
 
-{% block content %}
+<header class="topbar">
+    <a class="topbar-logo" href="{{ url_for('index') }}">
+        🌿 Agro<em>visión</em>
+        <span class="topbar-badge">Sistemas</span>
+    </a>
+</header>
+
 <div class="error-page-wrap">
     <div class="error-page-box">
-
         <div class="error-page-banner error-page-banner--azul">
             <span class="error-page-icon">🔍</span>
             <div class="error-page-code error-page-code--azul">404</div>
             <div class="error-page-title">Página no encontrada</div>
         </div>
-
         <div class="error-page-body">
             <p class="error-page-desc">
                 El recurso que buscas no existe o fue eliminado.
                 Verifica la URL o regresa al Dashboard.
             </p>
             <div class="error-page-actions">
-                <a href="javascript:history.back()" class="btn btn-outline">
-                    ← Volver atrás
-                </a>
-                <a href="{{ url_for('index') }}" class="btn btn-verde">
-                    🏠 Ir al Dashboard
-                </a>
+                <a href="javascript:history.back()" class="btn btn-outline">← Volver atrás</a>
             </div>
         </div>
-
         <div class="error-page-footer">
             🌿 AgroVisión Sistemas &nbsp;·&nbsp; Error 404 Not Found
         </div>
-
     </div>
 </div>
-{% endblock %}
+
+</body>
+</html>
