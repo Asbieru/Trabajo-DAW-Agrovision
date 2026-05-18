@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Error 400{% endblock %}
+
+{% block content %}
+<div class="error-page-wrap">
+    <div class="error-page-box">
+
+        <div class="error-page-banner error-page-banner--amarillo">
+            <span class="error-page-icon">⚠️</span>
+            <div class="error-page-code error-page-code--amarillo">400</div>
+            <div class="error-page-title">Solicitud incorrecta</div>
+        </div>
+
+        <div class="error-page-body">
+            <p class="error-page-desc">
+                Los datos enviados no son válidos o están incompletos.
+                Por favor, revisa el formulario e inténtalo de nuevo.
+            </p>
+            <div class="error-page-actions">
+                <a href="javascript:history.back()" class="btn btn-outline">
+                    ← Volver atrás
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-verde">
+                    🏠 Ir al Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="error-page-footer">
+            🌿 AgroVisión Sistemas &nbsp;·&nbsp; Error 400 Bad Request
+        </div>
+
+    </div>
+</div>
+{% endblock %}

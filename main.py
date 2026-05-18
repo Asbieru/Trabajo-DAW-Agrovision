@@ -2,7 +2,7 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from flask import Flask, render_template, request, redirect, url_for,session
+from flask import Flask, render_template, request, redirect, url_for, session, abort
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket)
@@ -23,6 +23,22 @@ from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         listarAvances, insertarAvance, eliminarAvance) 
 app = Flask(__name__)
 app.secret_key = 'agrovision-clave-secreta-2024'  # necesario para usar session de Flask
+
+# ──────────────────────────────────────────────────────────────
+#  MANEJADORES DE ERROR
+# ──────────────────────────────────────────────────────────────
+
+@app.errorhandler(400)
+def error_400(e):
+    return render_template('error400.html'), 400
+
+@app.errorhandler(404)
+def error_404(e):
+    return render_template('error404.html'), 404
+
+@app.errorhandler(500)
+def error_500(e):
+    return render_template('error500.html'), 500
 
 # ──────────────────────────────────────────────────────────────
 #  RUTA RAIZ
@@ -119,8 +135,11 @@ def guardar_ticket():
             descripcion    = request.form['descripcion'],
         )
         insertarTicket(obj)
+    except KeyError:
+        abort(400)
     except Exception as e:
-        print(f'Error al procesar el formulario: {e}')
+        print(f'Error al guardar ticket: {e}')
+        abort(500)
     return redirect(url_for('form_ticket'))
 
 
@@ -141,7 +160,7 @@ def resolver_tickets():
 def form_resolver_ticket(id_ticket):
     ticket   = obtenerTicket(id_ticket)
     if not ticket:
-        return redirect(url_for('listar_tickets'))
+        abort(404)
     usuarios = obtenerUsuarios()
     return render_template('resolverTicket.html', ticket=ticket, usuarios=usuarios)
 
@@ -177,8 +196,11 @@ def guardar_proyecto():
             descripcion    = request.form['descripcion'],
         )
         insertarProyecto(obj)
+    except KeyError:
+        abort(400)
     except Exception as e:
-        print(f'Error al procesar el formulario: {e}')
+        print(f'Error al guardar proyecto: {e}')
+        abort(500)
     return redirect(url_for('form_proyecto'))
 
 
@@ -192,7 +214,7 @@ def listar_proyectos():
 def gestion_proyecto(id_proyecto):
     proyecto     = obtenerProyecto(id_proyecto)
     if not proyecto:
-        return redirect(url_for('listar_proyectos'))
+        abort(404)
 
     responsables = obtenerUsuarios()
     resumen      = resumenHistoriasPorProyecto()
@@ -278,7 +300,7 @@ def actualizar_proyecto(id_proyecto):
 def historial_avances(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
-        return redirect(url_for('listar_proyectos'))
+        abort(404)
     
     avances = listarAvances(id_proyecto)
     return render_template('avancesProyecto.html', proyecto=proyecto, avances=avances)
@@ -287,7 +309,7 @@ def historial_avances(id_proyecto):
 def nuevo_avance(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
-        return redirect(url_for('listar_proyectos'))
+        abort(404)
 
     # Mantenemos el cálculo solo para sugerirlo en el placeholder
     resumen = resumenHistoriasPorProyecto()
@@ -440,8 +462,11 @@ def guardar_historia():
             story_points = request.form.get('story_points') or 0,
         )
         insertarHistoria(obj)
+    except KeyError:
+        abort(400)
     except Exception as e:
         print(f'Error al guardar historia: {e}')
+        abort(500)
     return redirect(url_for('listar_historias'))
 
 

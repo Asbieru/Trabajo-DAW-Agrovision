@@ -10,6 +10,10 @@
     
     pip install Flask
     flask --app main run --debug
+
+Se usa esto
+
+    py main.py
     
 # Crea la base de datos y las tablas o si no, no corre 
     pip install pymysql 

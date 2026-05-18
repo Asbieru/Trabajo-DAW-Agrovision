@@ -1438,3 +1438,108 @@ body {
 .gp-canvas {
     max-height: 220px;
 }
+
+/* ════════════════════════════════════════════════════
+   PÁGINAS DE ERROR · error400.html / error500.html
+   ════════════════════════════════════════════════════ */
+
+.error-page-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 60px - 48px); /* descuenta topbar y padding del main */
+    padding: 40px 16px;
+}
+
+.error-page-box {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.09);
+    width: 100%;
+    max-width: 460px;
+    overflow: hidden;
+    text-align: center;
+}
+
+.error-page-banner {
+    padding: 36px 40px 28px;
+    border-bottom: 1px solid var(--gris-borde);
+}
+
+.error-page-banner--amarillo {
+    background: var(--acento-claro);
+    border-bottom-color: var(--acento);
+    border-bottom-width: 4px;
+    border-bottom-style: solid;
+}
+
+.error-page-banner--rojo {
+    background: var(--rojo-claro);
+    border-bottom-color: var(--rojo);
+    border-bottom-width: 4px;
+    border-bottom-style: solid;
+}
+
+.error-page-icon {
+    font-size: 3.2rem;
+    display: block;
+    margin-bottom: 14px;
+}
+
+.error-page-code {
+    font-family: var(--fuente-titulo);
+    font-size: 4rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.error-page-code--amarillo { color: var(--acento); }
+.error-page-code--rojo     { color: var(--rojo); }
+
+.error-page-title {
+    font-family: var(--fuente-titulo);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--negro);
+}
+
+.error-page-body {
+    padding: 28px 40px 32px;
+}
+
+.error-page-desc {
+    font-size: 0.89rem;
+    color: var(--gris-texto);
+    line-height: 1.65;
+    margin-bottom: 26px;
+}
+
+.error-page-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.error-page-footer {
+    background: #f7faf7;
+    border-top: 1px solid var(--gris-borde);
+    padding: 13px 40px;
+    font-size: 0.76rem;
+    color: var(--gris-texto);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* ── Error 404 (azul) ── */
+.error-page-banner--azul {
+    background: var(--azul-claro);
+    border-bottom-color: var(--azul);
+    border-bottom-width: 4px;
+    border-bottom-style: solid;
+}
+.error-page-code--azul { color: var(--azul); }

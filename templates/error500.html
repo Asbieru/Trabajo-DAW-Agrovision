@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Error 500{% endblock %}
+
+{% block content %}
+<div class="error-page-wrap">
+    <div class="error-page-box">
+
+        <div class="error-page-banner error-page-banner--rojo">
+            <span class="error-page-icon">🔴</span>
+            <div class="error-page-code error-page-code--rojo">500</div>
+            <div class="error-page-title">Error interno del servidor</div>
+        </div>
+
+        <div class="error-page-body">
+            <p class="error-page-desc">
+                Algo falló en el servidor al procesar tu solicitud.
+                El equipo técnico ya está al tanto. Inténtalo de nuevo en unos minutos.
+            </p>
+            <div class="error-page-actions">
+                <a href="javascript:location.reload()" class="btn btn-outline">
+                    ↺ Reintentar
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-verde">
+                    🏠 Ir al Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="error-page-footer">
+            🌿 AgroVisión Sistemas &nbsp;·&nbsp; Error 500 Internal Server Error
+        </div>
+
+    </div>
+</div>
+{% endblock %}
