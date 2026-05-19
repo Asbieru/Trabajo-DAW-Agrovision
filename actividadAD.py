@@ -122,25 +122,31 @@ def listarAsignadosPorProyecto(id_proyecto):
 
 
 def resumenActividadesPorProyecto():
-    """KPI: total de actividades agrupadas por proyecto y estado."""
-    conn = obtenerconexion()
-    with conn:
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT p.id_proyecto,
-                       p.nombre AS nombre_proyecto,
-                       COUNT(a.id_actividad)                         AS total,
-                       SUM(a.estado = 'completada')                  AS completadas,
-                       SUM(a.estado = 'en_progreso')                 AS en_progreso,
-                       SUM(a.estado IN ('backlog','por_hacer'))      AS pendientes,
-                       COALESCE(SUM(a.story_points),0)               AS puntos_totales
-                FROM proyectos p
-                LEFT JOIN actividades a ON p.id_proyecto = a.id_proyecto
-                GROUP BY p.id_proyecto, p.nombre
-                ORDER BY p.created_at DESC
-            """)
-            return cursor.fetchall()
-
+    try:
+        conn = obtenerconexion()
+        if conn:
+            with conn:
+                with conn.cursor() as cursor:
+                    # CORREGIDO: LEFT JOIN actividades (plural)
+                    sql = """
+                        SELECT p.id_proyecto,
+                               p.nombre AS nombre_proyecto,
+                               COUNT(a.id_actividad) AS total,
+                               SUM(CASE
+                                   WHEN a.estado = 'completada' THEN 100
+                                   WHEN a.estado = 'en_progreso' THEN 50
+                                   WHEN a.estado = 'por_hacer' THEN 10
+                                   ELSE 0
+                               END) / NULLIF(COUNT(a.id_actividad), 0) AS porcentaje_avance_real
+                        FROM proyectos p
+                        LEFT JOIN actividades a ON p.id_proyecto = a.id_proyecto AND a.estado != 'cancelada'
+                        GROUP BY p.id_proyecto, p.nombre
+                    """
+                    cursor.execute(sql)
+                    return cursor.fetchall()
+    except Exception as e:
+        print(f"[ERROR resumenActividadesPorProyecto] {e}")
+    return []
 
 def proximoCodigo():
     """Devuelve el próximo código que se generaría (para mostrar en formulario)."""

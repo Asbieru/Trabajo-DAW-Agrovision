@@ -1,65 +1,193 @@
 {% extends "base.html" %}
 {% block title %}Avances · {{ proyecto.nombre }}{% endblock %}
 
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
+<div class="page-header reporte-no-print">
     <div>
-        <h1>📊 Historial de Avances</h1>
+        <h1>📊 Bitácora Ejecutiva de Proyecto</h1>
         <p>PR-{{ proyecto.id_proyecto }} · {{ proyecto.nombre }}</p>
     </div>
     <div style="display: flex; gap: 10px;">
         <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Volver</a>
-        <button class="btn btn-exportar-pdf" onclick="window.print()">📄 Exportar PDF</button>
+        <button class="btn btn-exportar-pdf" onclick="exportarPDF()">📄 Exportar PDF</button>
         <a class="btn btn-verde" href="{{ url_for('nuevo_avance', id_proyecto=proyecto.id_proyecto) }}">+ Nuevo Reporte</a>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header">Bitácora de revisiones</div>
-    <div class="card-body">
-        {% if avances %}
-        <div class="tabla-wrap">
-            <table class="tabla tabla-tickets">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Autor</th>
-                        <th>% Avance</th>
-                        <th>Salud</th>
-                        <th>Logros del periodo</th>
-                        <th>Acción</th> </tr>
-                </thead>
-                <tbody>
-                    {% for av in avances %}
-                    <tr>
-                        <td data-label="Fecha" style="font-weight: 600;">{{ av.fecha_reporte.strftime('%d/%m/%Y') }}</td>
-                        <td data-label="Autor" class="ticket-agente">{{ av.autor }}</td>
-                        <td data-label="% Avance"><span class="badge badge-verde">{{ av.porcentaje_avance }}%</span></td>
-                        <td data-label="Salud">
-                            {% if av.estado_salud == 'a_tiempo' %}
-                                <span style="color: var(--verde); font-weight: 600;">A tiempo</span>
-                            {% elif av.estado_salud == 'en_riesgo' %}
-                                <span style="color: var(--acento); font-weight: 600;">En riesgo</span>
-                            {% else %}
-                                <span style="color: var(--rojo); font-weight: 600;">Retrasado</span>
-                            {% endif %}
-                        </td>
-                        <td data-label="Logros" style="font-size: 0.85rem; max-width: 300px;">{{ av.logros_periodo }}</td>
-                        <td data-label="Acción" class="td-accion">
-                            <form action="{{ url_for('eliminar_avance_ruta', id_proyecto=proyecto.id_proyecto, id_avance=av.id_avance) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este reporte de avance? Esta acción no se puede deshacer.');">
-                                <button type="submit" class="btn btn-sm btn-rojo" style="padding: 5px 10px; font-size: 0.75rem;">🗑️ Eliminar</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<div id="documento-pdf" style="background: white; padding: 20px; border-radius: 10px;">
+    
+    <div class="solo-pdf" style="display: none; text-align: center; margin-bottom: 20px;">
+        <h2>Reporte de Avance: {{ proyecto.nombre }}</h2>
+        <p style="color: #666; font-size: 0.9rem;">Generado el: <span id="fecha-hoy"></span></p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+    </div>
+
+    <div class="stats-grid" style="margin-bottom: 24px;">
+        <div class="stat-card" style="border-left: 4px solid var(--azul);">
+            <div class="stat-label">Total de Reportes</div>
+            <div class="stat-num">{{ avances|length }}</div>
         </div>
-        {% else %}
-        <div class="sin-resultados" style="display: block;">
-            No hay reportes de avance registrados para este proyecto todavía.
+        <div class="stat-card" style="border-left: 4px solid var(--verde);">
+            <div class="stat-label">Avance Actual</div>
+            <div class="stat-num">
+                {% if avances %}
+                    {{ avances[0].porcentaje_avance }}%
+                {% else %}
+                    0%
+                {% endif %}
+            </div>
         </div>
-        {% endif %}
+        <div class="stat-card" style="border-left: 4px solid var(--acento);">
+            <div class="stat-label">Salud Último Reporte</div>
+            <div class="stat-num" style="font-size: 1.4rem; padding-top: 5px;">
+                {% if avances %}
+                    {% set ultima_salud = avances[0].estado_salud %}
+                    {% if ultima_salud == 'a_tiempo' %} <span style="color: var(--verde);">🟢 A tiempo</span>
+                    {% elif ultima_salud == 'en_riesgo' %} <span style="color: var(--acento);">🟡 En riesgo</span>
+                    {% else %} <span style="color: var(--rojo);">🔴 Retrasado</span> {% endif %}
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">📈 Curva de Avance del Proyecto</div>
+        <div class="card-body">
+            {% if avances %}
+                <canvas id="graficoAvance" style="max-height: 250px;"></canvas>
+            {% else %}
+                <p class="sin-resultados" style="display: block;">No hay datos suficientes para graficar.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">📋 Detalle de Revisiones</div>
+        <div class="card-body">
+            {% if avances %}
+            <div class="tabla-wrap">
+                <table class="tabla tabla-tickets">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Autor</th>
+                            <th>% Avance</th>
+                            <th>Salud</th>
+                            <th>Logros del periodo</th>
+                            <th class="reporte-no-print">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for av in avances %}
+                        <tr>
+                            <td data-label="Fecha" style="font-weight: 600;">
+                                {{ av.fecha_reporte.strftime('%d/%m/%Y') }}
+                            </td>
+                            <td data-label="Autor" class="ticket-agente">{{ av.autor }}</td>
+                            <td data-label="% Avance"><span class="badge badge-verde">{{ av.porcentaje_avance }}%</span></td>
+                            <td data-label="Salud">
+                                {% if av.estado_salud == 'a_tiempo' %}
+                                    <span style="color: var(--verde); font-weight: 600;">A tiempo</span>
+                                {% elif av.estado_salud == 'en_riesgo' %}
+                                    <span style="color: var(--acento); font-weight: 600;">En riesgo</span>
+                                {% else %}
+                                    <span style="color: var(--rojo); font-weight: 600;">Retrasado</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Logros" style="font-size: 0.85rem; max-width: 300px;">
+                                {{ av.logros_periodo }}
+                            </td>
+                            <td data-label="Acción" class="td-accion reporte-no-print">
+                                <form action="{{ url_for('eliminar_avance_ruta', id_proyecto=proyecto.id_proyecto, id_avance=av.id_avance) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este reporte de avance? Esta acción no se puede deshacer.');">
+                                    <button type="submit" class="btn btn-sm btn-rojo" style="padding: 5px 10px; font-size: 0.75rem;">🗑️ Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="sin-resultados" style="display: block;">No hay reportes de avance registrados para este proyecto todavía.</div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+<script>
+    // 1. DIBUJAR EL GRÁFICO (Se ejecuta solo si hay avances)
+        {% if avances %}
+        document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('graficoAvance').getContext('2d');
+        const etiquetas = {{ fechas_grafico | safe }};
+        const datos = {{ porcentajes_grafico | safe }};
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: etiquetas,
+                datasets: [{
+                    label: '% de Avance',
+                    data: datos,
+                    borderColor: '#1a7a4a', // var(--verde)
+                    backgroundColor: 'rgba(26, 122, 74, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#f0a500', // var(--acento)
+                    pointRadius: 5,
+                    fill: true,
+                    tension: 0.3 // Hace que la curva sea suave
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: function(value) { return value + "%" } } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    });
+        {% endif %}
+
+    // 2. EXPORTAR A PDF USANDO html2pdf
+    function exportarPDF() {
+        // Ponemos la fecha de hoy en la cabecera oculta
+        document.getElementById('fecha-hoy').innerText = new Date().toLocaleDateString();
+        
+        const elemento = document.getElementById('documento-pdf');
+        
+        // Configuramos opciones para html2pdf
+        const opt = {
+            margin:       0.5,
+            filename:     'Avance_PR-{{ proyecto.id_proyecto }}.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        // Mostramos cosas ocultas solo para el PDF y ocultamos botones
+        const cabeceraPDF = document.querySelector('.solo-pdf');
+        cabeceraPDF.style.display = 'block';
+        
+        const elementosNoPrint = document.querySelectorAll('.reporte-no-print');
+        elementosNoPrint.forEach(el => el.style.display = 'none');
+
+        // Generamos el PDF
+        html2pdf().set(opt).from(elemento).save().then(() => {
+            // Restauramos la vista web normal tras descargar
+            cabeceraPDF.style.display = 'none';
+            elementosNoPrint.forEach(el => el.style.display = '');
+        });
+    }
+</script>
 {% endblock %}

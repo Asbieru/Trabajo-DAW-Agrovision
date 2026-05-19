@@ -2,7 +2,8 @@
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 """
 
-from flask import Flask, render_template, request, redirect, url_for, abort
+from flask import Flask, render_template, request, redirect, url_for, abort, session
+import json
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios,
                        listarUsuariosCompleto, obtenerPerfilUsuario,
@@ -25,6 +26,7 @@ from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorT
                          reporteTicketsFiltrados, obtenerAplicaciones)
 
 app = Flask(__name__)
+app.secret_key = 'agrovision-clave-secreta-2024'
 
 # ──────────────────────────────────────────────────────────────
 #  MANEJADORES DE ERROR
@@ -70,6 +72,7 @@ def login():
             abort(500)
 
         if ok:
+            session['usuario'] = datos
             return redirect(url_for('index'))
         else:
             error = mensaje
@@ -111,6 +114,7 @@ def olvide_contrasena():
 
 @app.route('/logout')
 def logout():
+    session.pop('usuario', None)
     return redirect(url_for('login'))
 
 
@@ -290,7 +294,18 @@ def historial_avances(id_proyecto):
     if not proyecto:
         abort(404)
     avances = listarAvances(id_proyecto)
-    return render_template('avancesProyecto.html', proyecto=proyecto, avances=avances)
+    
+    # Preparar datos cronológicos para el gráfico
+    avances_cronologicos = list(reversed(avances))
+    
+    fechas_grafico = [av['fecha_reporte'].strftime('%d/%m') for av in avances_cronologicos] if avances else []
+    porcentajes_grafico = [float(av['porcentaje_avance']) for av in avances_cronologicos] if avances else []
+
+    return render_template('avancesProyecto.html', 
+                           proyecto=proyecto, 
+                           avances=avances,
+                           fechas_grafico=json.dumps(fechas_grafico),
+                           porcentajes_grafico=json.dumps(porcentajes_grafico))
 
 
 @app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['GET', 'POST'])
@@ -299,31 +314,47 @@ def nuevo_avance(id_proyecto):
     if not proyecto:
         abort(404)
 
+    # Cálculo del porcentaje (Calculado siempre)
     resumen = resumenActividadesPorProyecto()
-    fila_actual = next((r for r in resumen if r['id_proyecto'] == id_proyecto), None)
+    fila_actual = next((r for r in resumen if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
 
-    total = int(fila_actual['total'] or 0) if fila_actual else 0
-    completadas = int(fila_actual['completadas'] or 0) if fila_actual else 0
-    sugerencia_pct = round(completadas * 100 / total) if total > 0 else 0
+    if fila_actual:
+        if isinstance(fila_actual, dict):
+            # Usamos un valor por defecto 0 si el campo es None
+            valor_raw = fila_actual.get('porcentaje_avance_real')
+            pct_calculado = round(float(valor_raw)) if valor_raw is not None else 0
+        else:
+            # Si es tupla (índice 3 según tu SQL)
+            valor_raw = fila_actual[3]
+            pct_calculado = round(float(valor_raw)) if valor_raw is not None else 0
+    else:
+        pct_calculado = 0
+
+    if proyecto.get('estado') == 'completado':
+        pct_calculado = 100
 
     from datetime import date
-    hoy_db      = date.today().strftime('%Y-%m-%d')
     hoy_mostrar = date.today().strftime('%d/%m/%Y')
-
+    
     if request.method == 'POST':
-        pct_manual      = request.form['porcentaje_avance']
+        hoy_db          = date.today().strftime('%Y-%m-%d')
         estado_salud    = request.form['estado_salud']
         logros_periodo  = request.form['logros_periodo'].strip()
         pendientes_next = request.form.get('pendientes_next', '').strip()
+        id_autor        = request.form.get('id_autor')
 
-        insertarAvance(id_proyecto, None, hoy_db, pct_manual, estado_salud, logros_periodo, pendientes_next)
+        if id_autor:
+            insertarAvance(id_proyecto, id_autor, hoy_db, pct_calculado, estado_salud, logros_periodo, pendientes_next)
+        
         return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
 
+    usuarios = obtenerUsuarios()
+    # Aquí nos aseguramos de que siempre exista pct_calculado antes de renderizar
     return render_template('nuevoAvance.html',
                            proyecto=proyecto,
                            hoy_mostrar=hoy_mostrar,
-                           sugerencia_pct=sugerencia_pct)
-
+                           pct_calculado=pct_calculado,
+                           usuarios=usuarios)
 
 @app.route('/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
 def eliminar_avance_ruta(id_proyecto, id_avance):
@@ -471,8 +502,6 @@ def cambiar_estado_actividad(id_actividad):
 # ──────────────────────────────────────────────────────────────
 #  USUARIOS · Lista, Perfil e Historial
 # ──────────────────────────────────────────────────────────────
-
-import json
 
 @app.route('/usuarios')
 def lista_usuarios():
