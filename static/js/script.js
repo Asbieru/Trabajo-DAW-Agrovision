@@ -374,5 +374,107 @@ function filtrarReportes() {
             }
         }
     });
+/* ============================================================
+   7. PERFIL DE USUARIO – perfilUsuario.html
+   ============================================================ */
 
+(function iniciarPerfilUsuario() {
+    var contenedor = document.getElementById('datos-perfil-usuario');
+    if (!contenedor) return;
+
+    var ticketsTipo  = JSON.parse(contenedor.getAttribute('data-tickets'));
+    var proyectosEst = JSON.parse(contenedor.getAttribute('data-proyectos'));
+
+    var coloresTicket = {
+        'incidencia': 'rgba(192,57,43,0.8)',
+        'peticion':   'rgba(26,122,74,0.8)',
+        'consulta':   'rgba(30,95,168,0.8)'
+    };
+    var coloresProyecto = {
+        'planificado':   'rgba(30,95,168,0.8)',
+        'en_desarrollo': 'rgba(240,165,0,0.8)',
+        'qa':            'rgba(26,122,74,0.5)',
+        'completado':    'rgba(26,122,74,0.9)',
+        'pausado':       'rgba(192,57,43,0.8)'
+    };
+
+    if (document.getElementById('grafico-perfil-tickets') && ticketsTipo.length) {
+        var c1 = document.getElementById('grafico-perfil-tickets');
+        c1.style.height = '220px';
+        new Chart(c1, {
+            type: 'doughnut',
+            data: {
+                labels: ticketsTipo.map(function(t){ return t.tipo; }),
+                datasets: [{
+                    data: ticketsTipo.map(function(t){ return t.total; }),
+                    backgroundColor: ticketsTipo.map(function(t){
+                        return coloresTicket[t.tipo] || 'rgba(108,117,125,0.7)';
+                    }),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }
+            }
+        });
+    }
+
+    if (document.getElementById('grafico-perfil-proyectos') && proyectosEst.length) {
+        var c2 = document.getElementById('grafico-perfil-proyectos');
+        c2.style.height = '220px';
+        new Chart(c2, {
+            type: 'doughnut',
+            data: {
+                labels: proyectosEst.map(function(p){ return p.estado; }),
+                datasets: [{
+                    data: proyectosEst.map(function(p){ return p.total; }),
+                    backgroundColor: proyectosEst.map(function(p){
+                        return coloresProyecto[p.estado] || 'rgba(108,117,125,0.7)';
+                    }),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }
+            }
+        });
+    }
+})();
+
+
+/* ============================================================
+   8. HISTORIAL DE USUARIO – historialUsuario.html
+   ============================================================ */
+
+var tipoActivo = 'todos';
+
+function filtrarHistorial() {
+    var texto = (document.getElementById('buscar-historial').value || '').toLowerCase().trim();
+    var cards = document.querySelectorAll('.historial-card');
+
+    cards.forEach(function(card) {
+        var okTipo  = tipoActivo === 'todos' || card.dataset.tipo === tipoActivo;
+        var okTexto = !texto || card.dataset.titulo.includes(texto);
+        card.style.display = (okTipo && okTexto) ? '' : 'none';
+    });
+
+    document.querySelectorAll('.columna-kanban').forEach(function(col) {
+        var visibles = col.querySelectorAll('.historial-card:not([style*="display: none"])').length;
+        var colVacia = col.querySelector('.col-vacia');
+        if (colVacia) colVacia.style.display = visibles === 0 ? 'block' : 'none';
+    });
+}
+
+function setTipo(btn, tipo) {
+    tipoActivo = tipo;
+    document.querySelectorAll('.filtro-tipo').forEach(function(b) {
+        b.classList.remove('btn-verde');
+        b.classList.add('btn-outline');
+    });
+    btn.classList.remove('btn-outline');
+    btn.classList.add('btn-verde');
+    filtrarHistorial();
+}
 })();

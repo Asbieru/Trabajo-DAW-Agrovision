@@ -1764,3 +1764,28 @@ body {
     cursor: pointer;
     flex-shrink: 0;
 }
+
+/* ── USUARIOS · listaUsuarios / perfilUsuario / historialUsuario ── */
+
+.badge-azul   { background: var(--azul-claro);   color: var(--azul); }
+.badge-acento { background: var(--acento-claro);  color: #7a5200; }
+.stat-num.acento { color: var(--acento); }
+.tabla tbody tr:hover td { background: var(--gris-bg); }
+.filtro-tipo { transition: all 0.15s; }
+
+.col-vacia {
+    text-align: center;
+    padding: 18px 8px;
+    color: var(--gris-texto);
+    font-size: 0.78rem;
+}
+
+@media (max-width: 1100px) {
+    #tablero-historial { grid-template-columns: repeat(3, 1fr) !important; }
+}
+@media (max-width: 720px) {
+    #tablero-historial { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 480px) {
+    #tablero-historial { grid-template-columns: 1fr !important; }
+}

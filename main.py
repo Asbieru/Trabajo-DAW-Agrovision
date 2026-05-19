@@ -4,7 +4,10 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 
 from flask import Flask, render_template, request, redirect, url_for, abort
 
-from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios)
+from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios,
+                       listarUsuariosCompleto, obtenerPerfilUsuario,
+                       estadisticasUsuario, historialParticipacionUsuario,
+                       resumenHistorialUsuario)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       resolverTicket, guardarCalificacionTicket)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
@@ -465,6 +468,50 @@ def cambiar_estado_actividad(id_actividad):
     actualizarEstadoActividad(id_actividad, nuevo_estado)
     return redirect(request.referrer or url_for('listar_proyectos'))
 
+# ──────────────────────────────────────────────────────────────
+#  USUARIOS · Lista, Perfil e Historial
+# ──────────────────────────────────────────────────────────────
+
+import json
+
+@app.route('/usuarios')
+def lista_usuarios():
+    nombre = request.args.get('nombre', '').strip()
+    usuarios = listarUsuariosCompleto()
+    if nombre:
+        nombre_lower = nombre.lower()
+        usuarios = [u for u in usuarios
+                    if nombre_lower in u['nombre_completo'].lower()
+                    or (u['apellido'] and nombre_lower in u['apellido'].lower())]
+    return render_template('listaUsuarios.html', usuarios=usuarios, nombre_busqueda=nombre)
+
+
+@app.route('/usuario/<int:id_usuario>/perfil')
+def perfil_usuario(id_usuario):
+    usuario = obtenerPerfilUsuario(id_usuario)
+    if not usuario:
+        abort(404)
+    stats = estadisticasUsuario(id_usuario)
+    tickets_json   = json.dumps([dict(t) for t in stats['tickets_por_tipo']])
+    proyectos_json = json.dumps([dict(p) for p in stats['proyectos_por_estado']])
+    return render_template('perfilUsuario.html',
+                           usuario=usuario,
+                           stats=stats,
+                           tickets_json=tickets_json,
+                           proyectos_json=proyectos_json)
+
+
+@app.route('/usuario/<int:id_usuario>/historial')
+def historial_usuario(id_usuario):
+    usuario = obtenerPerfilUsuario(id_usuario)
+    if not usuario:
+        abort(404)
+    items   = historialParticipacionUsuario(id_usuario)
+    resumen = resumenHistorialUsuario(id_usuario)
+    return render_template('historialUsuario.html',
+                           usuario=usuario,
+                           items=items,
+                           resumen=resumen)
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE

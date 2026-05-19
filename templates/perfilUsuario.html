@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Perfil · {{ usuario.nombre_completo }}{% endblock %}
+
+{% block content %}
+
+<!-- ENCABEZADO -->
+<div class="page-header">
+    <div>
+        <h1>👤 Perfil</h1>
+        <p>Información personal y estadísticas del usuario</p>
+    </div>
+    <a href="{{ url_for('lista_usuarios') }}" class="btn btn-outline btn-sm">← Volver a lista</a>
+</div>
+
+<!-- TARJETA DE DATOS -->
+<div class="card" style="margin-bottom:22px;">
+    <div class="card-body" style="padding:28px;">
+        <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
+
+            <!-- Foto o avatar -->
+            <div style="flex-shrink:0;">
+                {% if usuario.foto_url %}
+                <img src="{{ usuario.foto_url }}"
+                     alt="Foto de {{ usuario.nombre_completo }}"
+                     style="width:110px;height:110px;border-radius:14px;
+                            object-fit:cover;border:3px solid var(--gris-borde);
+                            box-shadow:var(--sombra);">
+                {% else %}
+                <div style="width:110px;height:110px;border-radius:14px;
+                            background:var(--verde-claro);color:var(--verde-oscuro);
+                            display:flex;align-items:center;justify-content:center;
+                            font-weight:800;font-size:2.2rem;
+                            border:3px solid var(--gris-borde);box-shadow:var(--sombra);">
+                    {{ usuario.nombre_completo[0]|upper }}{{ (usuario.apellido[0]|upper) if usuario.apellido else '' }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Campos -->
+            <div style="flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                                letter-spacing:0.8px;color:var(--gris-texto);margin-bottom:3px;">
+                        Nombre
+                    </div>
+                    <div style="font-weight:600;font-size:0.95rem;">
+                        {{ usuario.nombre_completo or '—' }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                                letter-spacing:0.8px;color:var(--gris-texto);margin-bottom:3px;">
+                        Apellido
+                    </div>
+                    <div style="font-weight:600;font-size:0.95rem;">
+                        {{ usuario.apellido or '—' }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                                letter-spacing:0.8px;color:var(--gris-texto);margin-bottom:3px;">
+                        Edad
+                    </div>
+                    <div style="font-weight:600;font-size:0.95rem;">
+                        {{ usuario.edad ~ ' años' if usuario.edad else '—' }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                                letter-spacing:0.8px;color:var(--gris-texto);margin-bottom:3px;">
+                        Cargo
+                    </div>
+                    <div style="font-weight:600;font-size:0.95rem;">
+                        {% if usuario.rol == 'admin' %}⚙️ Administrador
+                        {% elif usuario.rol == 'programador' %}💻 Programador
+                        {% else %}🎧 Soporte{% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                                letter-spacing:0.8px;color:var(--gris-texto);margin-bottom:3px;">
+                        Correo
+                    </div>
+                    <div style="font-weight:600;font-size:0.95rem;word-break:break-all;">
+                        {{ usuario.correo or '—' }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                                letter-spacing:0.8px;color:var(--gris-texto);margin-bottom:3px;">
+                        DNI
+                    </div>
+                    <div style="font-weight:600;font-size:0.95rem;">
+                        {{ usuario.dni or '—' }}
+                    </div>
+                </div>
+
+                <div style="grid-column:1/-1;">
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                                letter-spacing:0.8px;color:var(--gris-texto);margin-bottom:3px;">
+                        Dirección
+                    </div>
+                    <div style="font-weight:600;font-size:0.95rem;">
+                        {{ usuario.direccion or '—' }}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ESTADÍSTICAS -->
+<h2 style="font-size:1.15rem;font-weight:700;margin-bottom:16px;color:var(--negro);">
+    📊 Estadísticas
+</h2>
+
+<!-- Calificación -->
+{% if stats.total_agente > 0 and stats.calificacion is not none %}
+<div class="card" style="margin-bottom:18px;">
+    <div class="card-body" style="padding:20px 24px;">
+        <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;
+                    letter-spacing:0.8px;color:var(--gris-texto);margin-bottom:10px;">
+            Calificación del Usuario (como Agente)
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <!-- Estrellas -->
+            <div style="display:flex;gap:3px;" id="estrellas-perfil" data-cal="{{ stats.calificacion }}">
+                {% set cal = stats.calificacion %}
+                {% for i in range(1, 6) %}
+                    {% if cal >= i %}
+                    <span style="font-size:1.6rem;color:var(--acento);">★</span>
+                    {% elif cal >= i - 0.5 %}
+                    <span style="font-size:1.6rem;color:var(--acento);">★</span>
+                    {% else %}
+                    <span style="font-size:1.6rem;color:var(--gris-borde);">★</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div>
+                <span style="font-size:1.4rem;font-weight:800;color:var(--verde-oscuro);">
+                    {{ stats.calificacion }}<span style="font-size:0.9rem;color:var(--gris-texto);">/5</span>
+                </span>
+                <div style="font-size:0.78rem;color:var(--gris-texto);margin-top:2px;">
+                    Basado en {{ stats.total_agente }} ticket{{ 's' if stats.total_agente != 1 else '' }} asignados como agente
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Gráficos -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:20px;">
+
+    <!-- Donut Tickets -->
+    <div class="seccion">
+        <div class="seccion-titulo">🎫 Tickets por Tipo</div>
+        <div class="seccion-cuerpo" style="display:flex;align-items:center;justify-content:center;padding:20px;">
+            {% if stats.tickets_por_tipo %}
+            <canvas id="grafico-perfil-tickets" style="max-height:220px;"></canvas>
+            {% else %}
+            <div class="sin-datos">Sin tickets registrados para este usuario.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Donut Proyectos -->
+    <div class="seccion">
+        <div class="seccion-titulo">📁 Proyectos por Estado</div>
+        <div class="seccion-cuerpo" style="display:flex;align-items:center;justify-content:center;padding:20px;">
+            {% if stats.proyectos_por_estado %}
+            <canvas id="grafico-perfil-proyectos" style="max-height:220px;"></canvas>
+            {% else %}
+            <div class="sin-datos">Este usuario no es responsable de ningún proyecto.</div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Botón historial -->
+<div style="margin-top:8px;">
+    <a href="{{ url_for('historial_usuario', id_usuario=usuario.id_usuario) }}"
+       class="btn btn-verde">
+        📋 Ver Historial de Participación
+    </a>
+</div>
+
+<!-- Datos para Chart.js -->
+<div id="datos-perfil-usuario"
+     data-tickets="{{ tickets_json }}"
+     data-proyectos="{{ proyectos_json }}"
+     style="display:none;"></div>
+
+{% endblock %}

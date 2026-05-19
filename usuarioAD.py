@@ -106,3 +106,160 @@ def obtenerUsuarios(rol=None):
                     "FROM usuarios WHERE activo=1 ORDER BY nombre_completo"
                 )
             return cursor.fetchall()
+# ── NUEVAS FUNCIONES ───────────────────────────────────────────
+
+def listarUsuariosCompleto():
+    """Todos los usuarios activos con datos de perfil extendido."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id_usuario, nombre_completo, apellido,
+                       correo, rol, foto_url, created_at
+                FROM usuarios
+                WHERE activo = 1
+                ORDER BY nombre_completo
+            """)
+            return cursor.fetchall()
+
+
+def obtenerPerfilUsuario(id_usuario):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id_usuario, nombre_completo, apellido,
+                       edad, dni, direccion, correo, rol,
+                       foto_url, activo, created_at
+                FROM usuarios WHERE id_usuario = %s
+            """, (id_usuario,))
+            return cursor.fetchone()
+
+
+def estadisticasUsuario(id_usuario):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT tipo, COUNT(*) AS total
+                FROM tickets
+                WHERE id_solicitante = %s OR id_agente = %s
+                GROUP BY tipo ORDER BY total DESC
+            """, (id_usuario, id_usuario))
+            tickets_por_tipo = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT estado, COUNT(*) AS total
+                FROM proyectos
+                WHERE id_responsable = %s
+                GROUP BY estado ORDER BY total DESC
+            """, (id_usuario,))
+            proyectos_por_estado = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT COUNT(*) AS total_agente,
+                       SUM(CASE WHEN estado IN ('resuelto','cerrado') THEN 1 ELSE 0 END) AS resueltos
+                FROM tickets WHERE id_agente = %s
+            """, (id_usuario,))
+            fila = cursor.fetchone()
+            total_agente = int(fila['total_agente'] or 0)
+            resueltos    = int(fila['resueltos']    or 0)
+            calificacion = round((resueltos / total_agente) * 5, 1) if total_agente > 0 else None
+
+    return {
+        'tickets_por_tipo':     tickets_por_tipo,
+        'proyectos_por_estado': proyectos_por_estado,
+        'calificacion':         calificacion,
+        'total_agente':         total_agente,
+    }
+
+
+def historialParticipacionUsuario(id_usuario):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT 'ticket' AS tipo_item, t.id_ticket AS id_item,
+                       t.titulo, t.tipo AS subtipo, t.prioridad, t.estado,
+                       'solicitante' AS rol_usuario,
+                       NULL AS codigo, NULL AS nombre_proyecto,
+                       t.fecha_apertura AS fecha
+                FROM tickets t WHERE t.id_solicitante = %s
+            """, (id_usuario,))
+            como_solicitante = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT 'ticket' AS tipo_item, t.id_ticket AS id_item,
+                       t.titulo, t.tipo AS subtipo, t.prioridad, t.estado,
+                       'agente' AS rol_usuario,
+                       NULL AS codigo, NULL AS nombre_proyecto,
+                       t.fecha_apertura AS fecha
+                FROM tickets t
+                WHERE t.id_agente = %s
+                  AND (t.id_solicitante != %s OR t.id_solicitante IS NULL)
+            """, (id_usuario, id_usuario))
+            como_agente = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT 'historia' AS tipo_item, h.id_historia AS id_item,
+                       h.titulo, h.tipo AS subtipo, h.prioridad, h.estado,
+                       'asignado' AS rol_usuario,
+                       h.codigo, p.nombre AS nombre_proyecto,
+                       h.created_at AS fecha
+                FROM historias h
+                JOIN proyectos p ON h.id_proyecto = p.id_proyecto
+                WHERE h.id_asignado = %s
+            """, (id_usuario,))
+            como_asignado = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT 'historia' AS tipo_item, p.id_proyecto AS id_item,
+                       p.nombre AS titulo, p.estado AS subtipo,
+                       'media' AS prioridad,
+                       CASE p.estado
+                           WHEN 'completado'    THEN 'completada'
+                           WHEN 'pausado'       THEN 'cancelada'
+                           WHEN 'en_desarrollo' THEN 'en_progreso'
+                           WHEN 'qa'            THEN 'en_progreso'
+                           ELSE 'backlog'
+                       END AS estado,
+                       'responsable' AS rol_usuario,
+                       NULL AS codigo, p.nombre AS nombre_proyecto,
+                       p.created_at AS fecha
+                FROM proyectos p WHERE p.id_responsable = %s
+            """, (id_usuario,))
+            como_responsable = cursor.fetchall()
+
+    mapa = {
+        'abierto':       'backlog',
+        'en_progreso':   'en_progreso',
+        'resuelto':      'completada',
+        'cerrado':       'completada',
+        'base_proyecto': 'cancelada',
+    }
+    todos = []
+    for t in list(como_solicitante) + list(como_agente):
+        t = dict(t)
+        t['estado'] = mapa.get(t['estado'], 'backlog')
+        todos.append(t)
+    for h in list(como_asignado) + list(como_responsable):
+        todos.append(dict(h))
+    return todos
+
+
+def resumenHistorialUsuario(id_usuario):
+    items = historialParticipacionUsuario(id_usuario)
+    estados = {'backlog': 0, 'por_hacer': 0, 'en_progreso': 0, 'completada': 0, 'cancelada': 0}
+    tickets_total = historias_total = 0
+    for i in items:
+        estados[i['estado']] = estados.get(i['estado'], 0) + 1
+        if i['tipo_item'] == 'ticket':
+            tickets_total += 1
+        else:
+            historias_total += 1
+    return {
+        'estados':         estados,
+        'tickets_total':   tickets_total,
+        'historias_total': historias_total,
+        'total':           len(items),
+    }

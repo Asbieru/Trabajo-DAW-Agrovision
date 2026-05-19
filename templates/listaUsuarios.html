@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Lista de Usuarios{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>👥 Usuarios del Sistema</h1>
+        <p>Busca un usuario para ver su perfil o historial de participación</p>
+    </div>
+</div>
+
+<!-- BUSCADOR -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-body" style="padding:16px 22px;">
+        <form method="GET" action="{{ url_for('lista_usuarios') }}"
+              style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label style="font-weight:600;font-size:0.88rem;color:#444;white-space:nowrap;">
+                Buscar por Nombre:
+            </label>
+            <input
+                type="text"
+                name="nombre"
+                value="{{ nombre_busqueda }}"
+                placeholder="Escribe el nombre del usuario..."
+                class="buscador-input"
+                style="flex:1;min-width:260px;max-width:500px;"
+            >
+            <button type="submit" class="btn btn-verde btn-sm">🔍 Buscar</button>
+            {% if nombre_busqueda %}
+            <a href="{{ url_for('lista_usuarios') }}" class="btn btn-outline btn-sm">✕ Limpiar</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- TABLA DE USUARIOS -->
+<div class="card">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Resultados</span>
+        <span class="badge badge-verde" style="font-size:0.78rem;">
+            {{ usuarios|length }} usuario{{ 's' if usuarios|length != 1 else '' }}
+        </span>
+    </div>
+
+    {% if usuarios %}
+    <div class="tabla-wrap">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th style="width:52px;"></th>
+                    <th>Nombre Completo</th>
+                    <th>Cargo / Rol</th>
+                    <th>Correo</th>
+                    <th style="width:150px;text-align:center;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr style="transition:background 0.12s;">
+
+                    <!-- Avatar con foto o iniciales -->
+                    <td style="padding:10px 14px;">
+                        {% if u.foto_url %}
+                        <img src="{{ u.foto_url }}" alt="Foto de {{ u.nombre_completo }}"
+                             style="width:38px;height:38px;border-radius:50%;object-fit:cover;
+                                    border:2px solid var(--gris-borde);">
+                        {% else %}
+                        <div style="width:38px;height:38px;border-radius:50%;
+                                    background:var(--verde-claro);color:var(--verde-oscuro);
+                                    display:flex;align-items:center;justify-content:center;
+                                    font-weight:700;font-size:0.8rem;flex-shrink:0;">
+                            {{ u.nombre_completo[0]|upper }}{{ (u.apellido[0]|upper) if u.apellido else '' }}
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Nombre clicable → perfil -->
+                    <td>
+                        <a href="{{ url_for('perfil_usuario', id_usuario=u.id_usuario) }}"
+                           style="font-weight:600;color:var(--verde-oscuro);text-decoration:none;
+                                  font-size:0.92rem;transition:color 0.15s;"
+                           onmouseover="this.style.color='var(--verde)';this.style.textDecoration='underline';"
+                           onmouseout="this.style.color='var(--verde-oscuro)';this.style.textDecoration='none';">
+                            {{ u.nombre_completo }}{% if u.apellido %} {{ u.apellido }}{% endif %}
+                        </a>
+                    </td>
+
+                    <!-- Rol -->
+                    <td>
+                        <span class="badge
+                            {% if u.rol == 'admin' %}badge-rojo
+                            {% elif u.rol == 'programador' %}badge-verde
+                            {% else %}
+                            " style="background:var(--azul-claro);color:var(--azul);
+                            {% endif %}">
+                            {% if u.rol == 'admin' %}⚙️ Admin
+                            {% elif u.rol == 'programador' %}💻 Programador
+                            {% else %}🎧 Soporte{% endif %}
+                        </span>
+                    </td>
+
+                    <!-- Correo -->
+                    <td style="color:var(--gris-texto);font-size:0.85rem;">
+                        {{ u.correo }}
+                    </td>
+
+                    <!-- Acciones -->
+                    <td style="text-align:center;">
+                        <a href="{{ url_for('historial_usuario', id_usuario=u.id_usuario) }}"
+                           class="btn btn-outline btn-sm">
+                            📋 Ver Historial
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div style="text-align:center;padding:48px 20px;color:var(--gris-texto);">
+        <div style="font-size:2.5rem;margin-bottom:12px;">🔍</div>
+        <p style="font-size:0.95rem;font-weight:600;margin-bottom:6px;">
+            No se encontraron usuarios
+        </p>
+        <p style="font-size:0.84rem;">
+            {% if nombre_busqueda %}
+            No hay coincidencias para "<strong>{{ nombre_busqueda }}</strong>".
+            <a href="{{ url_for('lista_usuarios') }}" style="color:var(--verde);">Ver todos</a>
+            {% else %}
+            No hay usuarios registrados en el sistema.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

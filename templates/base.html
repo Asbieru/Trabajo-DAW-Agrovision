@@ -66,6 +66,11 @@
            class="{{ 'activo' if request.endpoint == 'indicadores_soporte' else '' }}">
             <span class="ico">📊</span> Indicadores
         </a>
+        <div class="sidebar-section">Usuarios</div>
+        <a href="{{ url_for('lista_usuarios') }}"
+           class="{{ 'activo' if request.endpoint in ('lista_usuarios','perfil_usuario','historial_usuario') else '' }}">
+            <span class="ico">👥</span> Lista de Usuarios
+        </a>
         <a href="{{ url_for('gestion_reportes') }}"
            class="{{ 'activo' if request.endpoint == 'gestion_reportes' else '' }}">
             <span class="ico">📈</span> Reportes
