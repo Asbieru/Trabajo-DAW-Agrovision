@@ -1,9 +1,9 @@
 """
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
+Sin uso de session ni import json.
 """
 
-from flask import Flask, render_template, request, redirect, url_for, abort, session
-import json
+from flask import Flask, render_template, request, redirect, url_for, abort
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios,
                        listarUsuariosCompleto, obtenerPerfilUsuario,
@@ -72,7 +72,6 @@ def login():
             abort(500)
 
         if ok:
-            session['usuario'] = datos
             return redirect(url_for('index'))
         else:
             error = mensaje
@@ -114,7 +113,6 @@ def olvide_contrasena():
 
 @app.route('/logout')
 def logout():
-    session.pop('usuario', None)
     return redirect(url_for('login'))
 
 
@@ -294,18 +292,17 @@ def historial_avances(id_proyecto):
     if not proyecto:
         abort(404)
     avances = listarAvances(id_proyecto)
-    
-    # Preparar datos cronológicos para el gráfico
-    avances_cronologicos = list(reversed(avances))
-    
-    fechas_grafico = [av['fecha_reporte'].strftime('%d/%m') for av in avances_cronologicos] if avances else []
-    porcentajes_grafico = [float(av['porcentaje_avance']) for av in avances_cronologicos] if avances else []
 
-    return render_template('avancesProyecto.html', 
-                           proyecto=proyecto, 
+    # Datos cronológicos para el gráfico (listas Python puras, sin json.dumps)
+    avances_cronologicos = list(reversed(avances))
+    fechas_grafico      = [av['fecha_reporte'].strftime('%d/%m') for av in avances_cronologicos] if avances else []
+    porcentajes_grafico = [float(av['porcentaje_avance']) for av in avances_cronologicos]         if avances else []
+
+    return render_template('avancesProyecto.html',
+                           proyecto=proyecto,
                            avances=avances,
-                           fechas_grafico=json.dumps(fechas_grafico),
-                           porcentajes_grafico=json.dumps(porcentajes_grafico))
+                           fechas_grafico=fechas_grafico,
+                           porcentajes_grafico=porcentajes_grafico)
 
 
 @app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['GET', 'POST'])
@@ -314,19 +311,16 @@ def nuevo_avance(id_proyecto):
     if not proyecto:
         abort(404)
 
-    # Cálculo del porcentaje (Calculado siempre)
-    resumen = resumenActividadesPorProyecto()
-    fila_actual = next((r for r in resumen if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
+    resumen     = resumenActividadesPorProyecto()
+    fila_actual = next((r for r in resumen
+                        if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
 
     if fila_actual:
         if isinstance(fila_actual, dict):
-            # Usamos un valor por defecto 0 si el campo es None
             valor_raw = fila_actual.get('porcentaje_avance_real')
-            pct_calculado = round(float(valor_raw)) if valor_raw is not None else 0
         else:
-            # Si es tupla (índice 3 según tu SQL)
             valor_raw = fila_actual[3]
-            pct_calculado = round(float(valor_raw)) if valor_raw is not None else 0
+        pct_calculado = round(float(valor_raw)) if valor_raw is not None else 0
     else:
         pct_calculado = 0
 
@@ -335,7 +329,7 @@ def nuevo_avance(id_proyecto):
 
     from datetime import date
     hoy_mostrar = date.today().strftime('%d/%m/%Y')
-    
+
     if request.method == 'POST':
         hoy_db          = date.today().strftime('%Y-%m-%d')
         estado_salud    = request.form['estado_salud']
@@ -344,17 +338,18 @@ def nuevo_avance(id_proyecto):
         id_autor        = request.form.get('id_autor')
 
         if id_autor:
-            insertarAvance(id_proyecto, id_autor, hoy_db, pct_calculado, estado_salud, logros_periodo, pendientes_next)
-        
+            insertarAvance(id_proyecto, id_autor, hoy_db, pct_calculado,
+                           estado_salud, logros_periodo, pendientes_next)
+
         return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
 
     usuarios = obtenerUsuarios()
-    # Aquí nos aseguramos de que siempre exista pct_calculado antes de renderizar
     return render_template('nuevoAvance.html',
                            proyecto=proyecto,
                            hoy_mostrar=hoy_mostrar,
                            pct_calculado=pct_calculado,
                            usuarios=usuarios)
+
 
 @app.route('/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
 def eliminar_avance_ruta(id_proyecto, id_avance):
@@ -402,7 +397,6 @@ def indicadores_soporte():
 # ──────────────────────────────────────────────────────────────
 
 def limpiar(valor):
-    """Convierte string vacío a None, limpia espacios."""
     if valor is None:
         return None
     valor = valor.strip()
@@ -423,9 +417,8 @@ def gestion_reportes():
     story_points      = reporteStoryPointsPorProgramador()
     carryover         = reporteCarryoverPorProgramador()
     aplicaciones      = obtenerAplicaciones()
-    tickets_filtrados = reporteTicketsFiltrados(
-        fecha_inicio, fecha_fin, aplicacion, estado, prioridad
-    )
+    tickets_filtrados = reporteTicketsFiltrados(fecha_inicio, fecha_fin,
+                                                aplicacion, estado, prioridad)
 
     return render_template('reportes.html',
                            resumen=resumen,
@@ -453,15 +446,14 @@ def form_actividad():
     sprints         = listarTodosSprints()
     proximo_codigo  = proximoCodigo()
 
-    # Construir dict {id_proyecto: [lista de asignados]} para el JS
-    import json
+    # Dict {id_proyecto: [lista de asignados]} — se pasa como dict Python normal
     asignados_json = {}
     for p in proyectos:
-        pid = p['id_proyecto']
+        pid   = p['id_proyecto']
         lista = listarAsignadosPorProyecto(pid)
         asignados_json[pid] = [{'id_usuario': u['id_usuario'],
-                                 'nombre_completo': u['nombre_completo']}
-                                for u in lista]
+                                'nombre_completo': u['nombre_completo']}
+                               for u in lista]
 
     return render_template('nuevaActividad.html',
                            proyectos=proyectos,
@@ -499,13 +491,14 @@ def cambiar_estado_actividad(id_actividad):
     actualizarEstadoActividad(id_actividad, nuevo_estado)
     return redirect(request.referrer or url_for('listar_proyectos'))
 
+
 # ──────────────────────────────────────────────────────────────
 #  USUARIOS · Lista, Perfil e Historial
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/usuarios')
 def lista_usuarios():
-    nombre = request.args.get('nombre', '').strip()
+    nombre   = request.args.get('nombre', '').strip()
     usuarios = listarUsuariosCompleto()
     if nombre:
         nombre_lower = nombre.lower()
@@ -521,8 +514,11 @@ def perfil_usuario(id_usuario):
     if not usuario:
         abort(404)
     stats = estadisticasUsuario(id_usuario)
-    tickets_json   = json.dumps([dict(t) for t in stats['tickets_por_tipo']])
-    proyectos_json = json.dumps([dict(p) for p in stats['proyectos_por_estado']])
+
+    # Listas Python puras — el template las serializa con el filtro tojson de Jinja2
+    tickets_json   = [dict(t) for t in stats['tickets_por_tipo']]
+    proyectos_json = [dict(p) for p in stats['proyectos_por_estado']]
+
     return render_template('perfilUsuario.html',
                            usuario=usuario,
                            stats=stats,
@@ -541,6 +537,7 @@ def historial_usuario(id_usuario):
                            usuario=usuario,
                            items=items,
                            resumen=resumen)
+
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE

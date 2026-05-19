@@ -122,12 +122,11 @@
 </div>
 
 <script>
-    // 1. DIBUJAR EL GRÁFICO (Se ejecuta solo si hay avances)
-        {% if avances %}
-        document.addEventListener("DOMContentLoaded", function() {
+    {% if avances %}
+    document.addEventListener("DOMContentLoaded", function() {
         const ctx = document.getElementById('graficoAvance').getContext('2d');
-        const etiquetas = {{ fechas_grafico | safe }};
-        const datos = {{ porcentajes_grafico | safe }};
+        const etiquetas = {{ fechas_grafico | tojson }};
+        const datos = {{ porcentajes_grafico | tojson }};
 
         new Chart(ctx, {
             type: 'line',
@@ -136,13 +135,13 @@
                 datasets: [{
                     label: '% de Avance',
                     data: datos,
-                    borderColor: '#1a7a4a', // var(--verde)
+                    borderColor: '#1a7a4a',
                     backgroundColor: 'rgba(26, 122, 74, 0.1)',
                     borderWidth: 3,
-                    pointBackgroundColor: '#f0a500', // var(--acento)
+                    pointBackgroundColor: '#f0a500',
                     pointRadius: 5,
                     fill: true,
-                    tension: 0.3 // Hace que la curva sea suave
+                    tension: 0.3
                 }]
             },
             options: {
@@ -157,16 +156,11 @@
             }
         });
     });
-        {% endif %}
+    {% endif %}
 
-    // 2. EXPORTAR A PDF USANDO html2pdf
     function exportarPDF() {
-        // Ponemos la fecha de hoy en la cabecera oculta
         document.getElementById('fecha-hoy').innerText = new Date().toLocaleDateString();
-        
         const elemento = document.getElementById('documento-pdf');
-        
-        // Configuramos opciones para html2pdf
         const opt = {
             margin:       0.5,
             filename:     'Avance_PR-{{ proyecto.id_proyecto }}.pdf',
@@ -174,17 +168,11 @@
             html2canvas:  { scale: 2 },
             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
         };
-
-        // Mostramos cosas ocultas solo para el PDF y ocultamos botones
         const cabeceraPDF = document.querySelector('.solo-pdf');
         cabeceraPDF.style.display = 'block';
-        
         const elementosNoPrint = document.querySelectorAll('.reporte-no-print');
         elementosNoPrint.forEach(el => el.style.display = 'none');
-
-        // Generamos el PDF
         html2pdf().set(opt).from(elemento).save().then(() => {
-            // Restauramos la vista web normal tras descargar
             cabeceraPDF.style.display = 'none';
             elementosNoPrint.forEach(el => el.style.display = '');
         });
