@@ -117,7 +117,7 @@ def kpiSprintsActivos():
                        DATEDIFF(s.fecha_fin, CURDATE()) AS dias_restantes
                 FROM sprints s
                 JOIN proyectos p ON s.id_proyecto = p.id_proyecto
-                LEFT JOIN historias h ON h.id_sprint = s.id_sprint
+                LEFT JOIN actividades h ON h.id_sprint = s.id_sprint
                 WHERE s.estado = 'activo'
                 GROUP BY s.id_sprint
             """)

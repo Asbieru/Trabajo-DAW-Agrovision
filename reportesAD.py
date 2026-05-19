@@ -57,7 +57,7 @@ def reporteStoryPointsPorProgramador():
                        COALESCE(SUM(CASE WHEN h.estado='completada'
                            THEN h.story_points ELSE 0 END), 0) AS pts_completados,
                        COALESCE(SUM(h.story_points), 0) AS pts_asignados
-                FROM historias h
+                FROM actividades h
                 JOIN usuarios u ON h.id_asignado = u.id_usuario
                 GROUP BY h.id_asignado, u.nombre_completo
                 ORDER BY pts_completados DESC
@@ -73,7 +73,7 @@ def reporteCarryoverPorProgramador():
                 SELECT u.nombre_completo AS programador,
                        COUNT(DISTINCT h.id_sprint) AS sprints_con_carryover,
                        COALESCE(SUM(h.story_points), 0) AS pts_carryover
-                FROM historias h
+                FROM actividades h
                 JOIN sprints s ON h.id_sprint = s.id_sprint
                 JOIN usuarios u ON h.id_asignado = u.id_usuario
                 WHERE s.estado = 'completado' AND h.estado != 'completada'
