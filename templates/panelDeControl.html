@@ -84,16 +84,16 @@
     </div>
 </div>
 <div class="card">
-        <div class="card-header">📖 Gestión de Historias</div>
-        <div class="card-body">
-            <p class="card-body-text">
-                Registra y sigue el avance de historias de usuario por sprint con un tablero Kanban visual.
-            </p>
-            <div class="card-actions-wrap">
-                <a class="btn btn-verde btn-sm" href="{{ url_for('form_historia') }}">+ Nueva historia</a>
-                <a class="btn btn-outline btn-sm" href="{{ url_for('listar_historias') }}">Ver tablero</a>
-            </div>
+    <div class="card-header">📋 Actividades</div>
+    <div class="card-body">
+        <p class="card-body-text">
+            Registra y sigue el avance de actividades por sprint con un tablero Kanban visual.
+        </p>
+        <div class="card-actions-wrap">
+            <a class="btn btn-verde btn-sm" href="{{ url_for('form_actividad') }}">+ Nueva actividad</a>
+            <a class="btn btn-outline btn-sm" href="{{ url_for('listar_proyectos') }}">Ver tablero</a>
         </div>
     </div>
+</div>
 </div>
 {% endblock %}

@@ -55,19 +55,10 @@
            class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}">
             <span class="ico">📁</span> Ver proyectos
         </a>
-        <a href="{{ url_for('listar_proyectos') }}"
-           class="{{ 'activo' if request.endpoint == 'gestion_proyecto' else '' }}">
-            <span class="ico">⚙️</span> Gestión proyecto
-        </a>
-
-        <div class="sidebar-section">Historias</div>
-        <a href="{{ url_for('form_historia') }}"
-           class="{{ 'activo' if request.endpoint == 'form_historia' else '' }}">
-            <span class="ico">📖</span> Nueva historia
-        </a>
-        <a href="{{ url_for('listar_historias') }}"
-           class="{{ 'activo' if request.endpoint == 'listar_historias' else '' }}">
-            <span class="ico">📋</span> Ver tablero
+        <div class="sidebar-section">Actividades</div>
+        <a href="{{ url_for('form_actividad') }}"
+           class="{{ 'activo' if request.endpoint == 'form_actividad' else '' }}">
+            <span class="ico">📋</span> Nueva actividad
         </a>
 
         <div class="sidebar-section">Métricas</div>

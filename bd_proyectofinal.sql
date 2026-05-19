@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS historias (
 CREATE TABLE IF NOT EXISTS avances_proyecto (
     id_avance         INT AUTO_INCREMENT PRIMARY KEY,
     id_proyecto       INT NOT NULL,
-    id_autor          INT NOT NULL, -- Quién registra el avance (Jefe TI)
+    id_autor          INT NOT, -- Quién registra el avance (Jefe TI)
     fecha_reporte     DATE NOT NULL, -- Fecha de la revisión
     porcentaje_avance DECIMAL(5,2) NOT NULL DEFAULT 0.00, -- Ej: 45.50%
     estado_salud      ENUM('a_tiempo', 'en_riesgo', 'retrasado') NOT NULL DEFAULT 'a_tiempo',
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS avances_proyecto (
 
 -- Registro de prueba para visualizarlo luego
 INSERT INTO avances_proyecto (id_proyecto, id_autor, fecha_reporte, porcentaje_avance, estado_salud, logros_periodo) 
-VALUES (1, 1, CURDATE(), 43.00, 'a_tiempo', 'Finalización del módulo de reportes base y conexión con la base de datos.');
+VALUES (1, NULL, CURDATE(), 43.00, 'a_tiempo', 'Finalización del módulo de reportes base y conexión con la base de datos.');
 
 INSERT INTO historias (id_proyecto, id_sprint, id_asignado, codigo, titulo, tipo, prioridad, estado, story_points) VALUES
 -- Sprint 1 – Dashboard KPIs (proyecto 1)
@@ -184,6 +184,39 @@ CREATE TABLE IF NOT EXISTS asignado (
 -- Poblar la tabla con los responsables ya existentes en proyectos
 INSERT IGNORE INTO asignado (id_proyecto, id_usuario)
 SELECT id_proyecto, id_responsable FROM proyectos;
+
+
+-- ============================================================
+--  TABLA ACTIVIDADES  (reemplaza historias en el flujo)
+--  Agregar a bd_proyectofinal – ejecutar en MySQL / MariaDB
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS actividades (
+    id_actividad  INT AUTO_INCREMENT PRIMARY KEY,
+    id_proyecto   INT NOT NULL,
+    id_sprint     INT NULL,
+    id_asignado   INT NULL,
+    codigo        VARCHAR(30) NOT NULL UNIQUE,
+    titulo        VARCHAR(200) NOT NULL,
+    prioridad     ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
+    estado        ENUM('backlog','por_hacer','en_progreso','completada','cancelada') NOT NULL DEFAULT 'backlog',
+    story_points  SMALLINT DEFAULT 0,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_act_proy   FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto),
+    CONSTRAINT fk_act_sprint FOREIGN KEY (id_sprint)   REFERENCES sprints(id_sprint),
+    CONSTRAINT fk_act_asig   FOREIGN KEY (id_asignado) REFERENCES usuarios(id_usuario)
+) ENGINE=InnoDB;
+
+-- Datos de ejemplo (opcionales)
+INSERT INTO actividades (id_proyecto, id_sprint, id_asignado, codigo, titulo, prioridad, estado, story_points) VALUES
+(1, 1, 3, 'ACT-001', 'Implementar panel de KPIs en tiempo real',    'alta',   'completada',  8),
+(1, 1, 3, 'ACT-002', 'Gráfico de tendencia mensual de tickets',     'alta',   'completada',  5),
+(1, 1, 2, 'ACT-003', 'Filtro de indicadores por fecha',              'media',  'en_progreso', 3),
+(1, 1, 2, 'ACT-004', 'Exportar reporte PDF de indicadores',          'baja',   'por_hacer',   5),
+(2, 2, 3, 'ACT-005', 'Login móvil con cuenta corporativa',           'critica','completada',  8),
+(2, 2, 2, 'ACT-006', 'Ver tickets asignados desde móvil',            'alta',   'en_progreso', 8),
+(3, 3, 2, 'ACT-007', 'Dashboard ejecutivo con KPIs soporte',         'alta',   'por_hacer',   8);
 
 -- ============================================================
 --  FIN DEL SCRIPT

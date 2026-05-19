@@ -125,24 +125,6 @@ def actualizarProyecto(id_proyecto, nombre, id_responsable, estado, descripcion)
     return True
 
 
-def resumenHistoriasPorProyecto():
-    """Devuelve para cada proyecto: total de historias y cuantas estan completadas."""
-    conn = obtenerconexion()
-    with conn:
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT p.id_proyecto,
-                       p.nombre AS nombre_proyecto,
-                       COUNT(h.id_historia)         AS total,
-                       SUM(h.estado = 'completada') AS completadas
-                FROM proyectos p
-                LEFT JOIN historias h ON p.id_proyecto = h.id_proyecto
-                GROUP BY p.id_proyecto, p.nombre
-                ORDER BY p.created_at DESC
-            """)
-            return cursor.fetchall()
-
-
 def listarAvances(id_proyecto):
     """Retorna el historial de avances de un proyecto especifico."""
     conn = obtenerconexion()

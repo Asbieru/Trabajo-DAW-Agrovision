@@ -7,11 +7,12 @@ from flask import Flask, render_template, request, redirect, url_for, abort
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       resolverTicket, guardarCalificacionTicket)
-from historiasAD import (Historia, listarHistorias, insertarHistoria,
-                         actualizarEstadoHistoria, listarTodosSprints)
+from actividadAD import (Actividad, listarActividades, insertarActividad,
+                         actualizarEstadoActividad, listarTodosSprints,
+                         listarAsignadosPorProyecto, resumenActividadesPorProyecto,
+                         proximoCodigo)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
-                        resumenHistoriasPorProyecto,
                         listarAvances, insertarAvance, eliminarAvance)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos,
@@ -263,18 +264,8 @@ def gestion_proyecto(id_proyecto):
     if not proyecto:
         abort(404)
 
-    responsables = obtenerUsuarios()
-    resumen      = resumenHistoriasPorProyecto()
-
-    fila_actual = None
-    for r in resumen:
-        if r['id_proyecto'] == id_proyecto:
-            fila_actual = r
-            break
-
-    historias_total       = int(fila_actual['total']       or 0) if fila_actual else 0
-    historias_completadas = int(fila_actual['completadas'] or 0) if fila_actual else 0
-    pct_completado = round(historias_completadas * 100 / historias_total) if historias_total else 0
+    actividades     = listarActividades(id_proyecto)
+    todos_proyectos = listarProyectos()
 
     fecha_fin = proyecto['fecha_fin_plan']
     from datetime import date
@@ -283,62 +274,10 @@ def gestion_proyecto(id_proyecto):
 
     return render_template(
         'gestionProyecto.html',
-        proyecto              = proyecto,
-        responsables          = responsables,
-        resumen               = resumen,
-        historias_total       = historias_total,
-        historias_completadas = historias_completadas,
-        pct_completado        = pct_completado,
-        en_riesgo             = en_riesgo,
-    )
-
-
-@app.route('/proyecto/<int:id_proyecto>/actualizar', methods=['POST'])
-def actualizar_proyecto(id_proyecto):
-    nombre         = request.form.get('nombre', '').strip()
-    id_responsable = request.form.get('id_responsable')
-    estado         = request.form.get('estado')
-    descripcion    = request.form.get('descripcion', '').strip()
-
-    ok = actualizarProyecto(id_proyecto, nombre, id_responsable, estado, descripcion)
-
-    if ok:
-        mensaje = '✅ Proyecto actualizado correctamente. Los cambios ya se reflejan en Ver proyectos.'
-        tipo    = 'exito'
-    else:
-        mensaje = '❌ Ocurrió un error al actualizar. Intenta de nuevo.'
-        tipo    = 'error'
-
-    proyecto     = obtenerProyecto(id_proyecto)
-    responsables = obtenerUsuarios()
-    resumen      = resumenHistoriasPorProyecto()
-
-    fila_actual = None
-    for r in resumen:
-        if r['id_proyecto'] == id_proyecto:
-            fila_actual = r
-            break
-
-    historias_total       = int(fila_actual['total']       or 0) if fila_actual else 0
-    historias_completadas = int(fila_actual['completadas'] or 0) if fila_actual else 0
-    pct_completado = round(historias_completadas * 100 / historias_total) if historias_total else 0
-
-    fecha_fin = proyecto['fecha_fin_plan']
-    from datetime import date
-    hoy       = date.today()
-    en_riesgo = (fecha_fin < hoy) and (proyecto['estado'] != 'completado')
-
-    return render_template(
-        'gestionProyecto.html',
-        proyecto              = proyecto,
-        responsables          = responsables,
-        resumen               = resumen,
-        historias_total       = historias_total,
-        historias_completadas = historias_completadas,
-        pct_completado        = pct_completado,
-        en_riesgo             = en_riesgo,
-        mensaje               = mensaje,
-        tipo                  = tipo,
+        proyecto        = proyecto,
+        actividades     = actividades,
+        todos_proyectos = todos_proyectos,
+        en_riesgo       = en_riesgo,
     )
 
 
@@ -357,7 +296,7 @@ def nuevo_avance(id_proyecto):
     if not proyecto:
         abort(404)
 
-    resumen = resumenHistoriasPorProyecto()
+    resumen = resumenActividadesPorProyecto()
     fila_actual = next((r for r in resumen if r['id_proyecto'] == id_proyecto), None)
 
     total = int(fila_actual['total'] or 0) if fila_actual else 0
@@ -470,61 +409,61 @@ def gestion_reportes():
 
 
 # ──────────────────────────────────────────────────────────────
-#  HISTORIAS DE USUARIO
+#  ACTIVIDADES
 # ──────────────────────────────────────────────────────────────
 
-@app.route('/historias')
-def listar_historias():
-    id_proyecto = request.args.get('id_proyecto', type=int)
-    historias   = listarHistorias(id_proyecto)
-    proyectos   = listarProyectos()
-    return render_template('gestionHistorias.html',
-                           historias=historias,
-                           proyectos=proyectos,
-                           id_proyecto_sel=id_proyecto)
-
-
-@app.route('/historia/nueva')
-def form_historia():
+@app.route('/actividad/nueva')
+def form_actividad():
     id_proyecto_pre = request.args.get('id_proyecto', type=int)
     proyectos       = listarProyectos()
     sprints         = listarTodosSprints()
-    usuarios        = obtenerUsuarios()
-    return render_template('nuevaHistoria.html',
+    proximo_codigo  = proximoCodigo()
+
+    # Construir dict {id_proyecto: [lista de asignados]} para el JS
+    import json
+    asignados_json = {}
+    for p in proyectos:
+        pid = p['id_proyecto']
+        lista = listarAsignadosPorProyecto(pid)
+        asignados_json[pid] = [{'id_usuario': u['id_usuario'],
+                                 'nombre_completo': u['nombre_completo']}
+                                for u in lista]
+
+    return render_template('nuevaActividad.html',
                            proyectos=proyectos,
                            sprints=sprints,
-                           usuarios=usuarios,
+                           proximo_codigo=proximo_codigo,
+                           asignados_json=asignados_json,
                            id_proyecto_pre=id_proyecto_pre)
 
 
-@app.route('/historia/guardar', methods=['POST'])
-def guardar_historia():
+@app.route('/actividad/guardar', methods=['POST'])
+def guardar_actividad():
     try:
-        obj = Historia(
-            id_proyecto  = request.form['id_proyecto'],
+        id_proyecto = request.form['id_proyecto']
+        obj = Actividad(
+            id_proyecto  = id_proyecto,
             id_sprint    = request.form.get('id_sprint') or None,
             id_asignado  = request.form.get('id_asignado') or None,
-            codigo       = request.form['codigo'],
             titulo       = request.form['titulo'],
-            tipo         = request.form['tipo'],
             prioridad    = request.form['prioridad'],
             estado       = request.form['estado'],
             story_points = request.form.get('story_points') or 0,
         )
-        insertarHistoria(obj)
+        insertarActividad(obj)
     except KeyError:
         abort(400)
     except Exception as e:
-        print(f'Error al guardar historia: {e}')
+        print(f'Error al guardar actividad: {e}')
         abort(500)
-    return redirect(url_for('listar_historias'))
+    return redirect(url_for('gestion_proyecto', id_proyecto=id_proyecto))
 
 
-@app.route('/historia/<int:id_historia>/estado', methods=['POST'])
-def cambiar_estado_historia(id_historia):
+@app.route('/actividad/<int:id_actividad>/estado', methods=['POST'])
+def cambiar_estado_actividad(id_actividad):
     nuevo_estado = request.form.get('estado')
-    actualizarEstadoHistoria(id_historia, nuevo_estado)
-    return redirect(request.referrer or url_for('listar_historias'))
+    actualizarEstadoActividad(id_actividad, nuevo_estado)
+    return redirect(request.referrer or url_for('listar_proyectos'))
 
 
 # ──────────────────────────────────────────────────────────────

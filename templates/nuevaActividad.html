@@ -1,31 +1,33 @@
 {% extends "base.html" %}
-{% block title %}Nueva Historia de Usuario{% endblock %}
+{% block title %}Nueva Actividad{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h1>📖 Nueva historia de usuario</h1>
-        <p>Registra una historia o tarea dentro de un sprint</p>
+        <h1>📋 Nueva actividad</h1>
+        <p>Registra una actividad dentro de un sprint</p>
     </div>
-    <a class="btn btn-outline" href="{{ url_for('listar_historias') }}">← Ver tablero</a>
+    <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Ver proyectos</a>
 </div>
 
 <div class="card">
-    <div class="card-header">Datos de la historia</div>
+    <div class="card-header">Datos de la actividad</div>
     <div class="card-body">
-        <form action="{{ url_for('guardar_historia') }}" method="POST">
+        <form action="{{ url_for('guardar_actividad') }}" method="POST">
 
-            <!-- Código y Título -->
+            <!-- Código (automático) y Título -->
             <div class="form-grid form-section-spacing">
                 <div class="form-group">
-                    <label for="codigo">Código * <span style="font-weight:400;color:var(--gris-texto)">(ej. HU-017)</span></label>
-                    <input type="text" id="codigo" name="codigo"
-                           placeholder="HU-017" required maxlength="30">
+                    <label for="codigo">Código</label>
+                    <input type="text" id="codigo" name="codigo_display"
+                           value="{{ proximo_codigo }}" disabled
+                           style="background:var(--gris-fondo);color:var(--gris-texto);cursor:not-allowed;">
+                    <span class="form-hint">Generado automáticamente</span>
                 </div>
                 <div class="form-group">
-                    <label for="titulo">Título de la historia *</label>
+                    <label for="titulo">Título de la actividad *</label>
                     <input type="text" id="titulo" name="titulo"
-                           placeholder="Ej. Ver KPIs en tiempo real" required>
+                           placeholder="Ej. Implementar módulo de KPIs" required>
                 </div>
             </div>
 
@@ -33,7 +35,8 @@
             <div class="form-grid form-section-spacing">
                 <div class="form-group">
                     <label for="id_proyecto">Proyecto *</label>
-                    <select id="id_proyecto" name="id_proyecto" required onchange="filtrarSprints()">
+                    <select id="id_proyecto" name="id_proyecto" required
+                            onchange="filtrarSprints(); cargarAsignados();">
                         <option value="">— Selecciona proyecto —</option>
                         {% for p in proyectos %}
                         <option value="{{ p.id_proyecto }}"
@@ -57,16 +60,8 @@
                 </div>
             </div>
 
-            <!-- Tipo, Prioridad y Estado -->
-            <div class="form-grid tres form-section-spacing">
-                <div class="form-group">
-                    <label for="tipo">Tipo *</label>
-                    <select id="tipo" name="tipo" required>
-                        <option value="funcional">📋 Funcional</option>
-                        <option value="tecnica">⚙️ Técnica</option>
-                        <option value="bug">🐛 Bug</option>
-                    </select>
-                </div>
+            <!-- Prioridad y Estado -->
+            <div class="form-grid form-section-spacing">
                 <div class="form-group">
                     <label for="prioridad">Prioridad *</label>
                     <select id="prioridad" name="prioridad" required>
@@ -90,13 +85,11 @@
             <!-- Asignado y Story Points -->
             <div class="form-grid form-section-spacing">
                 <div class="form-group">
-                    <label for="id_asignado">Asignar a (opcional)</label>
-                    <select id="id_asignado" name="id_asignado">
-                        <option value="">— Sin asignar —</option>
-                        {% for u in usuarios %}
-                        <option value="{{ u.id_usuario }}">{{ u.nombre_completo }}</option>
-                        {% endfor %}
+                    <label for="id_asignado">Asignar a *</label>
+                    <select id="id_asignado" name="id_asignado" required>
+                        <option value="">— Selecciona primero un proyecto —</option>
                     </select>
+                    <span class="form-hint">Solo responsables asignados a ese proyecto</span>
                 </div>
                 <div class="form-group">
                     <label for="story_points">Story Points</label>
@@ -108,8 +101,8 @@
 
             <!-- Acciones -->
             <div class="form-actions">
-                <button type="submit" class="btn btn-verde">📖 Guardar historia</button>
-                <a href="{{ url_for('listar_historias') }}" class="btn btn-outline">Cancelar</a>
+                <button type="submit" class="btn btn-verde">📋 Guardar actividad</button>
+                <a href="{{ url_for('listar_proyectos') }}" class="btn btn-outline">Cancelar</a>
             </div>
 
         </form>
@@ -117,18 +110,53 @@
 </div>
 
 <script>
+// Datos de asignados por proyecto (cargados desde el servidor)
+const asignadosPorProyecto = {{ asignados_json | tojson }};
+
 function filtrarSprints() {
     const proyectoId = document.getElementById('id_proyecto').value;
     const sprintSel  = document.getElementById('id_sprint');
     const opciones   = sprintSel.querySelectorAll('option');
 
     opciones.forEach(op => {
-        if (!op.value) return; // "Sin sprint" siempre visible
+        if (!op.value) return;
         op.style.display = (op.dataset.proyecto === proyectoId) ? '' : 'none';
     });
-    sprintSel.value = ''; // resetear selección
+    sprintSel.value = '';
 }
-// Ejecutar al cargar si hay proyecto pre-seleccionado
-document.addEventListener('DOMContentLoaded', filtrarSprints);
+
+function cargarAsignados() {
+    const proyectoId = document.getElementById('id_proyecto').value;
+    const sel = document.getElementById('id_asignado');
+    sel.innerHTML = '';
+
+    if (!proyectoId) {
+        sel.innerHTML = '<option value="">— Selecciona primero un proyecto —</option>';
+        return;
+    }
+
+    const lista = asignadosPorProyecto[proyectoId] || [];
+    if (lista.length === 0) {
+        sel.innerHTML = '<option value="">— Sin responsables asignados —</option>';
+        return;
+    }
+
+    const opDefault = document.createElement('option');
+    opDefault.value = '';
+    opDefault.textContent = '— Selecciona encargado —';
+    sel.appendChild(opDefault);
+
+    lista.forEach(u => {
+        const op = document.createElement('option');
+        op.value = u.id_usuario;
+        op.textContent = u.nombre_completo;
+        sel.appendChild(op);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    filtrarSprints();
+    cargarAsignados();
+});
 </script>
 {% endblock %}
