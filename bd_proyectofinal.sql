@@ -171,6 +171,20 @@ INSERT INTO historias (id_proyecto, id_sprint, id_asignado, codigo, titulo, tipo
 (3, 3, 2, 'HU-015', 'Reporte semanal automático por correo',    'funcional', 'media',  'backlog',     5),
 (3, 3, 3, 'HU-016', 'Comparativo SLA vs año anterior',          'funcional', 'alta',   'backlog',     8);
 
+
+-- ── TABLA INTERMEDIA: ASIGNADOS A PROYECTO (muchos a muchos) ─
+CREATE TABLE IF NOT EXISTS asignado (
+    id_proyecto INT NOT NULL,
+    id_usuario  INT NOT NULL,
+    PRIMARY KEY (id_proyecto, id_usuario),
+    CONSTRAINT fk_asig_proyecto FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto) ON DELETE CASCADE,
+    CONSTRAINT fk_asig_usuario  FOREIGN KEY (id_usuario)  REFERENCES usuarios(id_usuario)   ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Poblar la tabla con los responsables ya existentes en proyectos
+INSERT IGNORE INTO asignado (id_proyecto, id_usuario)
+SELECT id_proyecto, id_responsable FROM proyectos;
+
 -- ============================================================
 --  FIN DEL SCRIPT
 -- ============================================================

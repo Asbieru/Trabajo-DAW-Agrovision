@@ -23,6 +23,9 @@
     <div class="card-body">
         <form action="{{ url_for('guardar_proyecto') }}" method="POST">
 
+            <!-- Estado oculto: siempre planificado al crear -->
+            <input type="hidden" name="estado" value="planificado">
+
             <!-- Nombre del proyecto -->
             <div class="form-group form-section-spacing">
                 <label for="nombre">Nombre del proyecto *</label>
@@ -32,42 +35,25 @@
                        required>
             </div>
 
-            <!-- Responsable y Estado -->
-            <div class="form-grid form-section-spacing">
-                <div class="form-group">
-                    <label for="id_responsable">Responsable del proyecto *</label>
-                    <select id="id_responsable" name="id_responsable" required>
-                        <option value="">— Selecciona responsable —</option>
-                        {% for r in responsables %}
-                        <option value="{{ r.id_usuario }}">{{ r.nombre_completo }}</option>
-                        {% endfor %}
-                    </select>
+            <!-- Responsables: checkboxes -->
+            <div class="form-group form-section-spacing">
+                <label>Responsables del proyecto *</label>
+                <div class="checkbox-lista">
+                    {% for r in responsables %}
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="responsables" value="{{ r.id_usuario }}">
+                        <span>{{ r.nombre_completo }}</span>
+                    </label>
+                    {% endfor %}
                 </div>
-
-                <div class="form-group">
-                    <label for="estado">Estado inicial *</label>
-                    <select id="estado" name="estado" required>
-                        <option value="planificado" selected>📝 Planificado</option>
-                        <option value="en_desarrollo">⚙️ En desarrollo</option>
-                        <option value="qa">🧪 QA / Pruebas</option>
-                        <option value="completado">✅ Completado</option>
-                        <option value="pausado">⏸️ Pausado</option>
-                    </select>
-                </div>
+                <span class="form-hint">Marca uno o más responsables para este proyecto</span>
             </div>
 
-            <!-- Fechas -->
-            <div class="form-grid form-section-spacing">
-                <div class="form-group">
-                    <label for="fecha_inicio">Fecha de inicio *</label>
-                    <input type="date" id="fecha_inicio" name="fecha_inicio" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="fecha_fin_plan">Fecha de fin planificada *</label>
-                    <input type="date" id="fecha_fin_plan" name="fecha_fin_plan" required>
-                    <span class="form-hint">Fecha objetivo de entrega en producción</span>
-                </div>
+            <!-- Fecha de fin planificada -->
+            <div class="form-group form-section-spacing">
+                <label for="fecha_fin_plan">Fecha de fin planificada *</label>
+                <input type="date" id="fecha_fin_plan" name="fecha_fin_plan" required>
+                <span class="form-hint">Fecha objetivo de entrega en producción. La fecha de inicio se asigna automáticamente al día de hoy.</span>
             </div>
 
             <!-- Descripción / Alcance -->

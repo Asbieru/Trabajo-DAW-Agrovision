@@ -230,13 +230,17 @@ def form_proyecto():
 @app.route('/proyecto/guardar', methods=['POST'])
 def guardar_proyecto():
     try:
+        from datetime import date
+        ids_responsables = request.form.getlist('responsables')
+        if not ids_responsables:
+            abort(400)
         obj = Proyecto(
-            nombre         = request.form['nombre'],
-            id_responsable = request.form['id_responsable'],
-            estado         = request.form['estado'],
-            fecha_inicio   = request.form['fecha_inicio'],
-            fecha_fin_plan = request.form['fecha_fin_plan'],
-            descripcion    = request.form['descripcion'],
+            nombre           = request.form['nombre'],
+            ids_responsables = ids_responsables,
+            estado           = 'planificado',
+            fecha_inicio     = date.today().strftime('%Y-%m-%d'),
+            fecha_fin_plan   = request.form['fecha_fin_plan'],
+            descripcion      = request.form['descripcion'],
         )
         insertarProyecto(obj)
     except KeyError:

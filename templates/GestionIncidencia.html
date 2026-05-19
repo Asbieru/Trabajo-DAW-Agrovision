@@ -192,7 +192,15 @@
                     <tr>
                         <td class="proyecto-id">PR-{{ p.id_proyecto }}</td>
                         <td><strong>{{ p.nombre }}</strong></td>
-                        <td>{{ p.nombre_responsable }}</td>
+                        <td>
+                            {% if p.responsables %}
+                                {% for nombre in p.responsables %}
+                                    <span class="badge badge-verde" style="margin:2px 2px 2px 0;">{{ nombre }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="badge badge-gris">—</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if p.estado == 'completado' %}
                                 <span class="badge badge-verde">✅ Completado</span>
