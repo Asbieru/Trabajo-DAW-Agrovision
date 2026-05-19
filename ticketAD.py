@@ -1,5 +1,25 @@
 from conexion import obtenerconexion
 
+
+def asegurarTablaCalificacionesTicket():
+    """Crea la tabla de calificaciones si aún no existe."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS calificaciones_ticket (
+                    id_calificacion INT AUTO_INCREMENT PRIMARY KEY,
+                    id_ticket INT NOT NULL UNIQUE,
+                    estrellas TINYINT NOT NULL,
+                    observacion TEXT NULL,
+                    fecha_calificacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_calif_ticket
+                        FOREIGN KEY (id_ticket) REFERENCES tickets(id_ticket)
+                        ON DELETE CASCADE
+                ) ENGINE=InnoDB
+            """)
+        conn.commit()
+
 class Ticket:
     def __init__(self, titulo, tipo, prioridad, aplicacion, id_solicitante, sla_horas, descripcion):
         self.titulo          = titulo
@@ -13,13 +33,18 @@ class Ticket:
 
 def obtenerTicket(id_ticket):
     """Retorna un ticket por su ID con datos del solicitante."""
+    asegurarTablaCalificacionesTicket()
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT t.*, u.nombre_completo AS nombre_solicitante
+                SELECT t.*, u.nombre_completo AS nombre_solicitante,
+                       c.estrellas AS calificacion_estrellas,
+                       c.observacion AS calificacion_observacion,
+                       c.fecha_calificacion
                 FROM tickets t
                 JOIN usuarios u ON t.id_solicitante = u.id_usuario
+                LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
                 WHERE t.id_ticket = %s
             """, (id_ticket,))
             return cursor.fetchone()
@@ -44,6 +69,23 @@ def resolverTicket(id_ticket, id_agente, estado, notas):
         conn.commit()
 
 
+def guardarCalificacionTicket(id_ticket, estrellas, observacion):
+    """Guarda o actualiza la calificación del solicitante para un ticket atendido."""
+    asegurarTablaCalificacionesTicket()
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO calificaciones_ticket (id_ticket, estrellas, observacion)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    estrellas = VALUES(estrellas),
+                    observacion = VALUES(observacion),
+                    fecha_calificacion = CURRENT_TIMESTAMP
+            """, (id_ticket, estrellas, observacion))
+        conn.commit()
+
+
 def insertarTicket(obj):
     """Inserta un ticket de soporte."""
     conn = obtenerconexion()
@@ -64,6 +106,7 @@ def insertarTicket(obj):
 
 def listarTickets():
     """Retorna tickets con nombre del solicitante y agente asignado."""
+    asegurarTablaCalificacionesTicket()
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -72,10 +115,14 @@ def listarTickets():
                        t.aplicacion, t.estado, t.fecha_apertura, t.sla_horas,
                        t.notas_resolucion, t.fecha_resolucion,
                        u.nombre_completo AS nombre_solicitante,
-                       a.nombre_completo AS nombre_agente
+                       a.nombre_completo AS nombre_agente,
+                       c.estrellas AS calificacion_estrellas,
+                       c.observacion AS calificacion_observacion,
+                       c.fecha_calificacion
                 FROM tickets t
                 JOIN usuarios u ON t.id_solicitante = u.id_usuario
                 LEFT JOIN usuarios a ON t.id_agente = a.id_usuario
+                LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
                 ORDER BY
                     FIELD(t.prioridad,'critica','alta','media','baja'),
                     t.fecha_apertura DESC

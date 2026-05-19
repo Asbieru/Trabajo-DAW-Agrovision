@@ -1,4 +1,5 @@
 from conexion import obtenerconexion
+from ticketAD import asegurarTablaCalificacionesTicket
 
 MESES_CORTO = {
     1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr',
@@ -120,4 +121,47 @@ def kpiSprintsActivos():
                 WHERE s.estado = 'activo'
                 GROUP BY s.id_sprint
             """)
+            return [dict(r) for r in cursor.fetchall()]
+
+
+def kpiSatisfaccion():
+    asegurarTablaCalificacionesTicket()
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(*) AS total_atendidos,
+                       SUM(c.id_calificacion IS NOT NULL) AS total_calificados,
+                       ROUND(AVG(c.estrellas), 1) AS promedio_estrellas,
+                       SUM(c.estrellas >= 4) AS valoraciones_positivas
+                FROM tickets t
+                LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
+                WHERE t.estado IN ('resuelto', 'cerrado', 'base_proyecto')
+            """)
+            row = dict(cursor.fetchone())
+            total_calificados = row.get('total_calificados') or 0
+            if total_calificados:
+                row['pct_positivas'] = round((row.get('valoraciones_positivas') or 0) / total_calificados * 100, 1)
+            else:
+                row['pct_positivas'] = 0
+            return row
+
+
+def comentariosCalificacionesRecientes(limit=6):
+    asegurarTablaCalificacionesTicket()
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT c.estrellas, c.observacion, c.fecha_calificacion,
+                       t.id_ticket, t.titulo,
+                       u.nombre_completo AS solicitante,
+                       a.nombre_completo AS agente
+                FROM calificaciones_ticket c
+                JOIN tickets t ON t.id_ticket = c.id_ticket
+                JOIN usuarios u ON u.id_usuario = t.id_solicitante
+                LEFT JOIN usuarios a ON a.id_usuario = t.id_agente
+                ORDER BY c.fecha_calificacion DESC, c.id_calificacion DESC
+                LIMIT %s
+            """, (limit,))
             return [dict(r) for r in cursor.fetchall()]

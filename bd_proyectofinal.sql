@@ -44,6 +44,16 @@ CREATE TABLE IF NOT EXISTS tickets (
     CONSTRAINT fk_ticket_agente FOREIGN KEY (id_agente)      REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS calificaciones_ticket (
+    id_calificacion     INT AUTO_INCREMENT PRIMARY KEY,
+    id_ticket           INT NOT NULL UNIQUE,
+    estrellas           TINYINT NOT NULL,
+    observacion         TEXT NULL,
+    fecha_calificacion  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_calif_ticket FOREIGN KEY (id_ticket)
+        REFERENCES tickets(id_ticket) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 INSERT INTO tickets (titulo, tipo, prioridad, aplicacion, estado, sla_horas, descripcion, id_solicitante, id_agente, fecha_apertura, fecha_resolucion) VALUES
 ('Error al exportar PDF de reportes',           'incidencia', 'alta',   'Módulo Reportes',  'resuelto',    8,  'El botón exportar no responde al hacer clic.',        1, 2, NOW() - INTERVAL 25 DAY, NOW() - INTERVAL 24 DAY),
 ('Acceso denegado en panel de control',         'incidencia', 'critica','Panel Control',    'cerrado',     4,  'Usuario no puede ingresar al sistema.',               1, 5, NOW() - INTERVAL 22 DAY, NOW() - INTERVAL 22 DAY),
@@ -63,6 +73,7 @@ INSERT INTO tickets (titulo, tipo, prioridad, aplicacion, estado, sla_horas, des
 ('Solicitud acceso módulo reportes',            'peticion',   'baja',   'Gestión Usuarios', 'abierto',     48, 'Usuario necesita acceso al módulo de reportes.',       1, NULL, NOW() - INTERVAL 1 DAY, NULL),
 ('App móvil no sincroniza con servidor',        'incidencia', 'alta',   'App Móvil',        'abierto',     8,  'Los datos no se sincronizan tras reconectar wifi.',    1, NULL, NOW(),                  NULL),
 ('Consulta sobre proceso de cierre de sprint',  'consulta',   'baja',   'Mesa de Ayuda',    'abierto',     48, '¿Cómo se realiza el cierre formal de un sprint?',     1, NULL, NOW(),                  NULL);
+
 
 -- ── 3. PROYECTOS DE SOFTWARE ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS proyectos (

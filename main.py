@@ -5,7 +5,8 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 from flask import Flask, render_template, request, redirect, url_for, abort
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios)
-from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket, resolverTicket)
+from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
+                      resolverTicket, guardarCalificacionTicket)
 from historiasAD import (Historia, listarHistorias, insertarHistoria,
                          actualizarEstadoHistoria, listarTodosSprints)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
@@ -13,7 +14,8 @@ from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         resumenHistoriasPorProyecto,
                         listarAvances, insertarAvance, eliminarAvance)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
-                            kpiPorAgente, kpiPorMes, kpiSprintsActivos)
+                            kpiPorAgente, kpiPorMes, kpiSprintsActivos,
+                            kpiSatisfaccion, comentariosCalificacionesRecientes)
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
                          reporteTicketsFiltrados, obtenerAplicaciones)
@@ -177,6 +179,42 @@ def guardar_resolucion(id_ticket):
     notas     = request.form.get('notas_resolucion', '').strip()
     resolverTicket(id_ticket, id_agente, estado, notas)
     return redirect(url_for('listar_tickets'))
+
+
+@app.route('/ticket/<int:id_ticket>/calificar', methods=['GET', 'POST'])
+def calificar_ticket(id_ticket):
+    ticket = obtenerTicket(id_ticket)
+    if not ticket:
+        abort(404)
+
+    if ticket['estado'] not in ('resuelto', 'cerrado', 'base_proyecto'):
+        abort(400)
+
+    mensaje = None
+    tipo = None
+
+    if request.method == 'POST':
+        estrellas_raw = request.form.get('estrellas', '').strip()
+        observacion = request.form.get('observacion', '').strip()
+
+        try:
+            estrellas = int(estrellas_raw)
+        except (TypeError, ValueError):
+            estrellas = None
+
+        if estrellas not in (1, 2, 3, 4, 5):
+            mensaje = 'Selecciona una calificación válida entre 1 y 5 estrellas.'
+            tipo = 'error'
+        else:
+            guardarCalificacionTicket(id_ticket, estrellas, observacion)
+            ticket = obtenerTicket(id_ticket)
+            mensaje = 'Gracias. Tu calificación fue registrada correctamente.'
+            tipo = 'exito'
+
+    return render_template('calificarTicket.html',
+                           ticket=ticket,
+                           mensaje=mensaje,
+                           tipo=tipo)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -364,6 +402,8 @@ def indicadores_soporte():
     por_agente    = kpiPorAgente()
     por_mes       = kpiPorMes()
     sprint_activo = kpiSprintsActivos()
+    satisfaccion  = kpiSatisfaccion()
+    comentarios   = comentariosCalificacionesRecientes()
 
     return render_template('indicadores.html',
                            resumen=resumen,
@@ -372,6 +412,8 @@ def indicadores_soporte():
                            por_agente=por_agente,
                            por_mes=por_mes,
                            sprint_activo=sprint_activo,
+                           satisfaccion=satisfaccion,
+                           comentarios=comentarios,
                            mes_inicio=mes_inicio   or '',
                            anio_inicio=anio_inicio or '',
                            mes_fin=mes_fin         or '',

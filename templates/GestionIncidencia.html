@@ -112,12 +112,30 @@
                                 <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
                                    class="btn btn-sm btn-verde">🔧 Resolver</a>
                             {% elif t.estado == 'resuelto' %}
-                                <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
+                                <div class="ticket-actions">
+                                    <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
+                                    <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
+                                       class="btn btn-sm btn-outline">
+                                        ⭐ {% if t.calificacion_estrellas %}{{ t.calificacion_estrellas }}/5{% else %}Calificar{% endif %}
+                                    </a>
+                                </div>
                             {% elif t.estado == 'base_proyecto' %}
-                                <a href="{{ url_for('form_proyecto') }}"
-                                   class="btn btn-sm btn-azul">🚀 Ver proyecto</a>
+                                <div class="ticket-actions">
+                                    <a href="{{ url_for('form_proyecto') }}"
+                                       class="btn btn-sm btn-azul">🚀 Ver proyecto</a>
+                                    <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
+                                       class="btn btn-sm btn-outline">
+                                        ⭐ {% if t.calificacion_estrellas %}{{ t.calificacion_estrellas }}/5{% else %}Calificar{% endif %}
+                                    </a>
+                                </div>
                             {% else %}
-                                <span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>
+                                <div class="ticket-actions">
+                                    <span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>
+                                    <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
+                                       class="btn btn-sm btn-outline">
+                                        ⭐ {% if t.calificacion_estrellas %}{{ t.calificacion_estrellas }}/5{% else %}Calificar{% endif %}
+                                    </a>
+                                </div>
                             {% endif %}
                         </td>
                     </tr>

@@ -43,6 +43,25 @@
     </div>
 </div>
 
+<div class="kpi-fila kpi-fila-secundaria">
+    <div class="kpi-card satisfaccion">
+        <div class="etiqueta">Satisfacción promedio</div>
+        <div class="numero">
+            {{ satisfaccion.promedio_estrellas or '—' }}{% if satisfaccion.promedio_estrellas %}<span class="numero-sufijo">/5</span>{% endif %}
+        </div>
+    </div>
+    <div class="kpi-card cobertura">
+        <div class="etiqueta">Tickets calificados</div>
+        <div class="numero">{{ satisfaccion.total_calificados or 0 }}</div>
+        <div class="kpi-subtexto">de {{ satisfaccion.total_atendidos or 0 }} tickets atendidos</div>
+    </div>
+    <div class="kpi-card favorabilidad">
+        <div class="etiqueta">Valoraciones positivas</div>
+        <div class="numero">{{ satisfaccion.pct_positivas or 0 }}%</div>
+        <div class="kpi-subtexto">4 y 5 estrellas</div>
+    </div>
+</div>
+
 <div class="fila-dos">
     <div class="seccion">
         <div class="seccion-titulo">🖥 Tickets por aplicación</div>
@@ -135,6 +154,56 @@
             <canvas id="grafico-tendencia"></canvas>
             {% else %}
             <div class="sin-datos">Sin datos de tendencia aún.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="fila-dos">
+    <div class="seccion">
+        <div class="seccion-titulo">⭐ Satisfacción del servicio</div>
+        <div class="seccion-cuerpo">
+            <div class="satisfaccion-resumen">
+                <div class="satisfaccion-item">
+                    <span class="satisfaccion-valor">{{ satisfaccion.promedio_estrellas or '—' }}</span>
+                    <span class="satisfaccion-texto">promedio general</span>
+                </div>
+                <div class="satisfaccion-item">
+                    <span class="satisfaccion-valor">{{ satisfaccion.total_calificados or 0 }}</span>
+                    <span class="satisfaccion-texto">respuestas de usuarios</span>
+                </div>
+                <div class="satisfaccion-item">
+                    <span class="satisfaccion-valor">{{ (satisfaccion.total_atendidos or 0) - (satisfaccion.total_calificados or 0) }}</span>
+                    <span class="satisfaccion-texto">tickets sin feedback</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="seccion">
+        <div class="seccion-titulo">💬 Comentarios recientes de atención</div>
+        <div class="seccion-cuerpo comentarios-lista">
+            {% if comentarios %}
+                {% for c in comentarios %}
+                <div class="comentario-item">
+                    <div class="comentario-cabecera">
+                        <div>
+                            <div class="comentario-ticket">SD-{{ c.id_ticket }} · {{ c.titulo }}</div>
+                            <div class="comentario-meta">
+                                {{ c.solicitante }} · {{ c.agente or 'Sin agente asignado' }}
+                                {% if c.fecha_calificacion %}
+                                · {{ c.fecha_calificacion.strftime('%d/%m/%Y') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="comentario-stars">
+                            {% for n in range(1, 6) %}{% if n <= c.estrellas %}★{% else %}☆{% endif %}{% endfor %}
+                        </div>
+                    </div>
+                    <div class="comentario-texto">{{ c.observacion or 'Sin observación adicional.' }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="sin-datos">Aún no se registran comentarios de satisfacción.</div>
             {% endif %}
         </div>
     </div>

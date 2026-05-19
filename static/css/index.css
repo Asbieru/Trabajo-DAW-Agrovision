@@ -250,6 +250,17 @@ body {
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
     outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px rgba(26,122,74,0.12);
 }
+.form-hint {
+    font-size: 0.76rem;
+    color: var(--gris-texto);
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
 
 /* ── BADGES ─────────────────────────── */
 .badge {
@@ -450,6 +461,12 @@ body {
 .ticket-aplicacion, .ticket-agente, .ticket-apertura { color: var(--gris-texto); font-size: 0.84rem; }
 .ticket-apertura { font-size: 0.8rem; }
 .badge-opacity-80 { opacity: 0.8; }
+.ticket-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
 
 /* Estilos específicos para celdas de evaluaciones */
 .eval-id { color: var(--verde); font-weight: 600; font-size: 0.8rem; }
@@ -913,6 +930,18 @@ body {
 .kpi-card.resuelto  .numero { color: var(--verde-oscuro); }
 .kpi-card.promedio  .numero { color: var(--azul); }
 .kpi-card.sla       .numero { color: var(--verde-oscuro); }
+.kpi-card.satisfaccion .numero { color: var(--acento); }
+.kpi-card.cobertura .numero { color: var(--azul); }
+.kpi-card.favorabilidad .numero { color: var(--verde-oscuro); }
+.numero-sufijo {
+    font-size: 1rem;
+    font-weight: 600;
+}
+.kpi-subtexto {
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: var(--gris-texto);
+}
 
 .fila-dos {
     display: grid;
@@ -1016,6 +1045,164 @@ body {
     font-size: 0.73rem;
     color: var(--azul);
     margin-top: 4px;
+}
+
+.satisfaccion-resumen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+}
+
+.satisfaccion-item {
+    border: 1px solid var(--gris-borde);
+    border-radius: 10px;
+    background: var(--gris-bg);
+    padding: 16px;
+    text-align: center;
+}
+
+.satisfaccion-valor {
+    display: block;
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--verde-oscuro);
+    line-height: 1;
+}
+
+.satisfaccion-texto {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: var(--gris-texto);
+}
+
+.comentarios-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.comentario-item {
+    border: 1px solid var(--gris-borde);
+    border-radius: 10px;
+    padding: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+}
+
+.comentario-cabecera {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.comentario-ticket {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--negro);
+}
+
+.comentario-meta {
+    font-size: 0.76rem;
+    color: var(--gris-texto);
+    margin-top: 4px;
+}
+
+.comentario-stars {
+    color: var(--acento);
+    font-size: 1rem;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.comentario-texto {
+    font-size: 0.86rem;
+    line-height: 1.6;
+    color: #36404a;
+    white-space: pre-wrap;
+}
+
+.calificacion-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 20px;
+}
+
+.calificacion-alerta {
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+}
+
+.calificacion-alerta.exito {
+    background: var(--verde-claro);
+    color: var(--verde-oscuro);
+    border-color: rgba(26, 122, 74, 0.15);
+}
+
+.calificacion-alerta.error {
+    background: var(--rojo-claro);
+    color: var(--rojo);
+    border-color: rgba(192, 57, 43, 0.15);
+}
+
+.calificacion-bloque {
+    margin-bottom: 18px;
+}
+
+.calificacion-label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.calificacion-actual {
+    margin-top: 12px;
+    font-size: 0.84rem;
+    color: var(--gris-texto);
+}
+
+.rating-stars {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: 4px;
+}
+
+.rating-stars input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.rating-stars label {
+    font-size: 2rem;
+    color: #cfd6dd;
+    cursor: pointer;
+    transition: transform 0.12s ease, color 0.12s ease;
+    line-height: 1;
+}
+
+.rating-stars label:hover,
+.rating-stars label:hover ~ label,
+.rating-stars input:checked ~ label {
+    color: var(--acento);
+}
+
+.rating-stars label:hover {
+    transform: translateY(-1px) scale(1.04);
+}
+
+@media (max-width: 640px) {
+    .ticket-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .comentario-cabecera {
+        flex-direction: column;
+    }
 }
 
 .reporte-fila {

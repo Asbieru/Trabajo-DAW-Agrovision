@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Calificar Ticket SD-{{ ticket.id_ticket }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>⭐ Calificar atención del ticket <span class="ticket-id-header">SD-{{ ticket.id_ticket }}</span></h1>
+        <p>Tu opinión alimenta los indicadores de satisfacción del soporte</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
+</div>
+
+{% if mensaje %}
+<div class="calificacion-alerta {{ tipo }}">{{ mensaje }}</div>
+{% endif %}
+
+<div class="calificacion-layout">
+    <div class="card ticket-summary-card">
+        <div class="card-header">📋 Resumen del ticket</div>
+        <div class="card-body">
+            <div class="form-grid ticket-summary-grid">
+                <div>
+                    <div class="ticket-summary-label">Título</div>
+                    <div class="ticket-summary-value">{{ ticket.titulo }}</div>
+                </div>
+                <div>
+                    <div class="ticket-summary-label">Solicitante</div>
+                    <div>{{ ticket.nombre_solicitante }}</div>
+                </div>
+            </div>
+
+            <div class="form-grid tres ticket-summary-grid">
+                <div>
+                    <div class="ticket-summary-label">Aplicación</div>
+                    <div>{{ ticket.aplicacion }}</div>
+                </div>
+                <div>
+                    <div class="ticket-summary-label">Estado final</div>
+                    <div>{{ ticket.estado | replace('_', ' ') | title }}</div>
+                </div>
+                <div>
+                    <div class="ticket-summary-label">Agente</div>
+                    <div>{{ ticket.nombre_agente or 'No asignado' }}</div>
+                </div>
+            </div>
+
+            <div class="ticket-description-container calificacion-bloque">
+                <div class="ticket-description-label">Resolución registrada</div>
+                <div class="ticket-description-text">{{ ticket.notas_resolucion or 'Sin notas de resolución.' }}</div>
+            </div>
+
+            {% if ticket.calificacion_estrellas %}
+            <div class="calificacion-actual">
+                Calificación actual: <strong>{{ ticket.calificacion_estrellas }}/5</strong>
+                {% if ticket.fecha_calificacion %}
+                <span>· {{ ticket.fecha_calificacion.strftime('%d/%m/%Y %H:%M') }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">🗣 Tu experiencia con la atención</div>
+        <div class="card-body">
+            <form action="{{ url_for('calificar_ticket', id_ticket=ticket.id_ticket) }}" method="POST">
+                <div class="calificacion-bloque">
+                    <label class="ticket-summary-label calificacion-label">Selecciona una calificación</label>
+                    <div class="rating-stars">
+                        {% set estrellas_actuales = ticket.calificacion_estrellas or 0 %}
+                        {% for valor in [5, 4, 3, 2, 1] %}
+                        <input type="radio"
+                               id="estrella-{{ valor }}"
+                               name="estrellas"
+                               value="{{ valor }}"
+                               {% if estrellas_actuales == valor %}checked{% endif %}
+                               required>
+                        <label for="estrella-{{ valor }}" aria-label="{{ valor }} estrellas">★</label>
+                        {% endfor %}
+                    </div>
+                    <div class="form-hint">1 estrella = atención deficiente · 5 estrellas = atención excelente</div>
+                </div>
+
+                <div class="form-group form-section-spacing">
+                    <label for="observacion">Observación</label>
+                    <textarea id="observacion" name="observacion" rows="5"
+                              placeholder="Cuéntanos qué salió bien, qué faltó o qué debería mejorar el equipo de soporte...">{{ ticket.calificacion_observacion or '' }}</textarea>
+                    <span class="form-hint">Opcional, pero útil para enriquecer los indicadores cualitativos.</span>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-verde">💾 Guardar calificación</button>
+                    <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
