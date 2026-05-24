@@ -1789,3 +1789,34 @@ body {
 @media (max-width: 480px) {
     #tablero-historial { grid-template-columns: 1fr !important; }
 }
+
+/* ════════════════════════════════════════════════════
+   TOPBAR · datos de usuario (localStorage)
+   ════════════════════════════════════════════════════ */
+
+.topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.topbar-nombre {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.topbar-rol {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.65);
+    background: rgba(255,255,255,0.12);
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: capitalize;
+}
+
+.topbar-logout {
+    color: #fff !important;
+    border-color: rgba(255,255,255,0.35) !important;
+    font-size: 0.8rem !important;
+}

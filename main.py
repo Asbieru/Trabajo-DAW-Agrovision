@@ -3,7 +3,7 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 Sin uso de session ni import json.
 """
 
-from flask import Flask, render_template, request, redirect, url_for, abort
+from flask import Flask, render_template, request, redirect, url_for, abort, jsonify
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios,
                        listarUsuariosCompleto, obtenerPerfilUsuario,
@@ -42,6 +42,11 @@ def error_404(e):
 
 @app.errorhandler(500)
 def error_500(e):
+    return render_template('error500.html'), 500
+
+@app.route('/error-500')
+def pagina_error_500():
+    """Ruta directa para redirigir a la página de error 500 desde JS."""
     return render_template('error500.html'), 500
 
 # ──────────────────────────────────────────────────────────────
@@ -159,7 +164,7 @@ def guardar_ticket():
 @app.route('/tickets')
 def listar_tickets():
     tickets = listarTickets()
-    return render_template('GestionIncidencia.html', tickets=tickets)
+    return render_template('gestionTicket.html', tickets=tickets)
 
 
 @app.route('/tickets/resolver')
@@ -260,7 +265,7 @@ def guardar_proyecto():
 @app.route('/proyectos')
 def listar_proyectos():
     proyectos = listarProyectos()
-    return render_template('GestionIncidencia.html', proyectos=proyectos)
+    return render_template('listaProyectos.html', proyectos=proyectos)
 
 
 @app.route('/proyecto/<int:id_proyecto>/gestion')
@@ -537,6 +542,64 @@ def historial_usuario(id_usuario):
                            usuario=usuario,
                            items=items,
                            resumen=resumen)
+
+
+# ──────────────────────────────────────────────────────────────
+#  API JSON  (jsonify)
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    correo   = request.form.get('correo', '').strip()
+    password = request.form.get('password', '')
+    try:
+        ok, mensaje, datos = autenticarUsuario(correo, password)
+    except Exception as e:
+        print(f'Error de conexión al autenticar: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error de conexión con la base de datos.',
+                        'error_servidor': True}), 500
+    if ok:
+        return jsonify({'ok': True, 'usuario': datos})
+    return jsonify({'ok': False, 'mensaje': mensaje})
+
+
+@app.route('/api/indicadores')
+def api_indicadores():
+    return jsonify({
+        'por_app':       kpiPorAplicacion(),
+        'por_prioridad': kpiPorPrioridad(),
+        'por_mes':       kpiPorMes(),
+    })
+
+
+@app.route('/api/tickets')
+def api_tickets():
+    estado = request.args.get('estado', '') or None
+    texto  = request.args.get('texto',  '') or None
+    todos  = listarTickets()
+    if estado:
+        todos = [t for t in todos if t['estado'] == estado]
+    if texto:
+        texto = texto.lower()
+        todos = [t for t in todos if texto in (t['titulo'] or '').lower()
+                                  or texto in (t['aplicacion'] or '').lower()
+                                  or texto in (t['nombre_solicitante'] or '').lower()]
+    # Convertir fechas a string para que jsonify las serialice
+    for t in todos:
+        for k, v in t.items():
+            if hasattr(v, 'isoformat'):
+                t[k] = v.isoformat()
+    return jsonify(todos)
+
+
+@app.route('/api/actividad/<int:id_actividad>/estado', methods=['POST'])
+def api_estado_actividad(id_actividad):
+    data         = request.get_json()
+    nuevo_estado = data.get('estado') if data else None
+    if not nuevo_estado:
+        return jsonify({'ok': False, 'mensaje': 'Estado no enviado'}), 400
+    actualizarEstadoActividad(id_actividad, nuevo_estado)
+    return jsonify({'ok': True, 'estado': nuevo_estado})
 
 
 # ──────────────────────────────────────────────────────────────

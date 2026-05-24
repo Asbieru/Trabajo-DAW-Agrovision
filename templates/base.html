@@ -17,8 +17,11 @@
     </a>
     <div class="topbar-spacer"></div>
     <div class="topbar-user">
-        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline" style="color:#fff; border-color:rgba(255,255,255,0.4);">
-            🚪 Cerrar sesión
+        <span class="topbar-nombre" id="topbar-nombre">—</span>
+        <span class="topbar-rol"    id="topbar-rol"></span>
+        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline topbar-logout"
+           onclick="localStorage.removeItem('usuario')">
+            🚪 Salir
         </a>
     </div>
 </header>
@@ -84,5 +87,18 @@
 </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        // Leer usuario de localStorage y mostrarlo en el topbar
+        (function() {
+            var raw = localStorage.getItem('usuario');
+            if (!raw) {
+                window.location.href = '{{ url_for("login") }}';
+                return;
+            }
+            var u = JSON.parse(raw);
+            document.getElementById('topbar-nombre').textContent = u.nombre_completo || '—';
+            document.getElementById('topbar-rol').textContent    = u.rol             || '';
+        })();
+    </script>
 </body>
 </html>

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Proyectos de Software{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>📁 Proyectos de software</h1>
+        <p>Gestión ágil de proyectos en curso</p>
+    </div>
+    <a class="btn btn-verde" href="{{ url_for('form_proyecto') }}">+ Nuevo proyecto</a>
+</div>
+
+<div class="card">
+    <div class="tabla-wrap">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Responsable</th>
+                    <th>Estado</th>
+                    <th>Inicio</th>
+                    <th>Fin planificado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if proyectos %}
+                    {% for p in proyectos %}
+                    <tr>
+                        <td class="proyecto-id">PR-{{ p.id_proyecto }}</td>
+                        <td><strong>{{ p.nombre }}</strong></td>
+                        <td>
+                            {% if p.responsables %}
+                                {% for nombre in p.responsables %}
+                                    <span class="badge badge-verde" style="margin:2px 2px 2px 0;">{{ nombre }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="badge badge-gris">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.estado == 'completado' %}
+                                <span class="badge badge-verde">✅ Completado</span>
+                            {% elif p.estado == 'en_desarrollo' %}
+                                <span class="badge badge-azul">⚙️ En desarrollo</span>
+                            {% elif p.estado == 'qa' %}
+                                <span class="badge badge-acento">🧪 QA</span>
+                            {% elif p.estado == 'pausado' %}
+                                <span class="badge badge-gris">⏸️ Pausado</span>
+                            {% else %}
+                                <span class="badge badge-gris">📝 Planificado</span>
+                            {% endif %}
+                        </td>
+                        <td class="proyecto-fecha">
+                            {{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}
+                        </td>
+                        <td class="proyecto-fecha">
+                            {{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                <a href="{{ url_for('gestion_proyecto', id_proyecto=p.id_proyecto) }}"
+                                   class="btn btn-sm btn-outline">⚙️ Ver gestión</a>
+                                <a href="{{ url_for('historial_avances', id_proyecto=p.id_proyecto) }}"
+                                   class="btn btn-sm btn-outline">📊 Historial</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="tabla-empty">
+                            No hay proyectos registrados.
+                            <a href="{{ url_for('form_proyecto') }}">Crea el primero →</a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

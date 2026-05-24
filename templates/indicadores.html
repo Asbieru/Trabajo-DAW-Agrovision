@@ -4,12 +4,6 @@
 
 {% block content %}
 
-<div id="datos-graficos"
-     data-app='{{ por_app | tojson if por_app else "[]" }}'
-     data-prioridad='{{ por_prioridad | tojson if por_prioridad else "[]" }}'
-     data-mes='{{ por_mes | tojson if por_mes else "[]" }}'>
-</div>
-
 <div class="page-header">
     <div>
         <h1>📊 Indicadores de Soporte</h1>
@@ -208,5 +202,75 @@
         </div>
     </div>
 </div>
+
+<script>
+// Barras de sprints (animación CSS)
+document.querySelectorAll('.sprint-barra-relleno').forEach(function(el) {
+    el.style.width = el.getAttribute('data-ancho') + '%';
+});
+
+// Pedir datos de gráficos via fetch → /api/indicadores
+fetch('{{ url_for("api_indicadores") }}')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var porApp       = data.por_app;
+        var porPrioridad = data.por_prioridad;
+        var porMes       = data.por_mes;
+
+        if (porApp.length && document.getElementById('grafico-app')) {
+            var c = document.getElementById('grafico-app');
+            c.style.height = '400px';
+            new Chart(c, {
+                type: 'bar',
+                data: {
+                    labels: porApp.map(function(a) { return a.aplicacion; }),
+                    datasets: [{ label: 'Tickets', data: porApp.map(function(a) { return a.total; }),
+                        backgroundColor: 'rgba(30,95,168,0.7)', borderColor: 'rgba(30,95,168,1)',
+                        borderWidth: 1, borderRadius: 4 }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+
+        if (porPrioridad.length && document.getElementById('grafico-prioridad')) {
+            var c = document.getElementById('grafico-prioridad');
+            c.style.height = '400px';
+            new Chart(c, {
+                type: 'doughnut',
+                data: {
+                    labels: porPrioridad.map(function(p) { return p.prioridad; }),
+                    datasets: [{ data: porPrioridad.map(function(p) { return p.total; }),
+                        backgroundColor: ['rgba(192,57,43,0.8)','rgba(230,126,34,0.8)',
+                                         'rgba(241,196,15,0.8)','rgba(26,122,74,0.8)'],
+                        borderWidth: 2 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
+            });
+        }
+
+        if (porMes.length && document.getElementById('grafico-tendencia')) {
+            var c = document.getElementById('grafico-tendencia');
+            c.style.height = '600px';
+            new Chart(c, {
+                type: 'bar',
+                data: {
+                    labels: porMes.map(function(m) { return m.mes_label; }),
+                    datasets: [
+                        { label: 'Apertura',  data: porMes.map(function(m) { return m.total; }),
+                          backgroundColor: 'rgba(30,95,168,0.7)', borderRadius: 4 },
+                        { label: 'Resueltos', data: porMes.map(function(m) { return m.resueltos; }),
+                          backgroundColor: 'rgba(26,122,74,0.7)', borderRadius: 4 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { font: { size: 12 } } } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+    });
+</script>
 
 {% endblock %}

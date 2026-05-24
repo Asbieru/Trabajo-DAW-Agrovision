@@ -84,14 +84,17 @@
                 <div style="margin-top:10px;border-top:1px solid var(--gris-borde);padding-top:8px;">
                     <form method="POST" action="{{ url_for('cambiar_estado_actividad', id_actividad=a.id_actividad) }}">
                         <div style="display:flex;gap:6px;align-items:center;">
-                            <select name="estado" style="font-size:0.72rem;padding:3px 6px;flex:1;">
+                            <select id="estado-act-{{ a.id_actividad }}" name="estado" style="font-size:0.72rem;padding:3px 6px;flex:1;">
                                 <option value="backlog"     {% if a.estado=='backlog' %}selected{% endif %}>📥 Backlog</option>
                                 <option value="por_hacer"  {% if a.estado=='por_hacer' %}selected{% endif %}>📝 Por hacer</option>
                                 <option value="en_progreso"{% if a.estado=='en_progreso' %}selected{% endif %}>⚙️ En progreso</option>
                                 <option value="completada" {% if a.estado=='completada' %}selected{% endif %}>✅ Completada</option>
                                 <option value="cancelada"  {% if a.estado=='cancelada' %}selected{% endif %}>🚫 Cancelada</option>
                             </select>
-                            <button type="submit" class="btn btn-verde btn-sm" style="padding:3px 8px;font-size:0.7rem;">→</button>
+                            <button type="button"
+                                    onclick="cambiarEstadoActividad({{ a.id_actividad }}, this)"
+                                    class="btn btn-verde btn-sm"
+                                    style="padding:3px 8px;font-size:0.7rem;">→</button>
                         </div>
                     </form>
                 </div>
@@ -170,5 +173,37 @@
         </div>
     </div>
 </div>
+
+<script>
+// ── Cambiar estado de actividad via fetch → /api/actividad/<id>/estado ──
+function cambiarEstadoActividad(idActividad, btn) {
+    var select      = document.getElementById('estado-act-' + idActividad);
+    var nuevoEstado = select.value;
+
+    btn.textContent = '…';
+    btn.disabled    = true;
+
+    fetch('/api/actividad/' + idActividad + '/estado', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ estado: nuevoEstado })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert('Error al cambiar estado.');
+            btn.textContent = '→';
+            btn.disabled    = false;
+        }
+    })
+    .catch(function() {
+        alert('Error de conexión.');
+        btn.textContent = '→';
+        btn.disabled    = false;
+    });
+}
+</script>
 
 {% endblock %}

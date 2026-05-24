@@ -1,15 +1,7 @@
 {% extends "base.html" %}
-{% block title %}
-    {% if tickets is defined %}Tickets de Soporte
-    {% else %}Proyectos de Software
-    {% endif %}
-{% endblock %}
+{% block title %}Tickets de Soporte{% endblock %}
 
 {% block content %}
-<!-- ══════════════════════════════════════════════════════
-     TICKETS
-     ══════════════════════════════════════════════════════ -->
-{% if tickets is defined %}
 <div class="page-header">
     <div>
         <h1>📨 Mesa de ayuda</h1>
@@ -22,8 +14,8 @@
     <div class="buscador-wrap">
         <input type="text" id="buscar-ticket" class="buscador-input"
                placeholder="Buscar por ID, título, solicitante, aplicación…"
-               oninput="filtrarTickets()" autocomplete="off">
-        <select class="filtro-estado" id="filtro-estado" onchange="filtrarTickets()">
+               oninput="filtrarTicketsAPI()" autocomplete="off">
+        <select class="filtro-estado" id="filtro-estado" onchange="filtrarTicketsAPI()">
             <option value="">Todos los estados</option>
             <option value="abierto">Abierto</option>
             <option value="en_progreso">En progreso</option>
@@ -158,95 +150,74 @@
     </div>
 </div>
 
+<script>
+// ── Filtro de tickets via fetch → /api/tickets ──
+var _timerFiltro = null;
 
+function filtrarTicketsAPI() {
+    clearTimeout(_timerFiltro);
+    _timerFiltro = setTimeout(function() {
+        var texto  = document.getElementById('buscar-ticket').value.trim();
+        var estado = document.getElementById('filtro-estado').value;
 
-<!-- ══════════════════════════════════════════════════════
-     PROYECTOS
-     ══════════════════════════════════════════════════════ -->
-{% else %}
-<div class="page-header">
-    <div>
-        <h1>📁 Proyectos de software</h1>
-        <p>Gestión ágil de proyectos en curso</p>
-    </div>
-    <a class="btn btn-verde" href="{{ url_for('form_proyecto') }}">+ Nuevo proyecto</a>
-</div>
+        var params = new URLSearchParams();
+        if (texto)  params.append('texto',  texto);
+        if (estado) params.append('estado', estado);
 
-<div class="card">
-    <div class="tabla-wrap">
-        <table class="tabla">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Nombre</th>
-                    <th>Responsable</th>
-                    <th>Estado</th>
-                    <th>Inicio</th>
-                    <th>Fin planificado</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if proyectos %}
-                    {% for p in proyectos %}
-                    <tr>
-                        <td class="proyecto-id">PR-{{ p.id_proyecto }}</td>
-                        <td><strong>{{ p.nombre }}</strong></td>
-                        <td>
-                            {% if p.responsables %}
-                                {% for nombre in p.responsables %}
-                                    <span class="badge badge-verde" style="margin:2px 2px 2px 0;">{{ nombre }}</span>
-                                {% endfor %}
-                            {% else %}
-                                <span class="badge badge-gris">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if p.estado == 'completado' %}
-                                <span class="badge badge-verde">✅ Completado</span>
-                            {% elif p.estado == 'en_desarrollo' %}
-                                <span class="badge badge-azul">⚙️ En desarrollo</span>
-                            {% elif p.estado == 'qa' %}
-                                <span class="badge badge-acento">🧪 QA</span>
-                            {% elif p.estado == 'pausado' %}
-                                <span class="badge badge-gris">⏸️ Pausado</span>
-                            {% else %}
-                                <span class="badge badge-gris">📝 Planificado</span>
-                            {% endif %}
-                        </td>
-                        <td class="proyecto-fecha">
-                            {{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}
-                        </td>
-                        <td class="proyecto-fecha">
-                            {{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}
-                        </td>
-                        <!-- BOTÓN VER GESTIÓN (nuevo) -->
-                        <td>
-                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                                <a href="{{ url_for('gestion_proyecto', id_proyecto=p.id_proyecto) }}"
-                                class="btn btn-sm btn-outline">
-                                    ⚙️ Ver gestión
-                                </a>
-                                <a href="{{ url_for('historial_avances', id_proyecto=p.id_proyecto) }}"
-                                class="btn btn-sm btn-outline">
-                                    📊 Historial
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="7" class="tabla-empty">
-                            No hay proyectos registrados.
-                            <a href="{{ url_for('form_proyecto') }}">Crea el primero →</a>
-                        </td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
+        fetch('/api/tickets?' + params.toString())
+            .then(function(r) { return r.json(); })
+            .then(function(tickets) { renderizarFilas(tickets); });
+    }, 300);
+}
+
+function renderizarFilas(tickets) {
+    var tbody         = document.getElementById('tbody-tickets');
+    var sinResultados = document.getElementById('sin-resultados');
+    if (!tbody) return;
+
+    if (tickets.length === 0) {
+        tbody.innerHTML = '';
+        sinResultados.style.display = 'block';
+        return;
+    }
+    sinResultados.style.display = 'none';
+
+    var badgeTipo = { incidencia: 'rojo', peticion: 'azul', consulta: 'gris' };
+    var badgePrio = { critica: 'rojo', alta: 'rojo', media: 'acento', baja: 'verde' };
+    var labelPrio = { critica: '🚨 Crítica', alta: 'Alta', media: 'Media', baja: 'Baja' };
+    var badgeEst  = { abierto: 'rojo', en_progreso: 'acento', resuelto: 'verde',
+                      base_proyecto: 'azul', cerrado: 'gris' };
+    var labelEst  = { abierto: 'Abierto', en_progreso: 'En progreso', resuelto: 'Resuelto',
+                      base_proyecto: '🚀 Base proyecto', cerrado: 'Cerrado' };
+
+    tbody.innerHTML = tickets.map(function(t) {
+        var fecha = t.fecha_apertura ? t.fecha_apertura.replace('T', ' ').slice(0, 16) : '—';
+
+        var accion = '';
+        if (t.estado === 'abierto' || t.estado === 'en_progreso') {
+            accion = '<a href="/ticket/' + t.id_ticket + '/resolver" class="btn btn-sm btn-verde">🔧 Resolver</a>';
+        } else if (t.estado === 'resuelto') {
+            accion = '<span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>';
+        } else if (t.estado === 'base_proyecto') {
+            accion = '<a href="/proyecto/nuevo" class="btn btn-sm btn-azul">🚀 Ver proyecto</a>';
+        } else {
+            accion = '<span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>';
+        }
+
+        return '<tr>' +
+            '<td class="td-id ticket-id" data-label="ID">SD-' + t.id_ticket + '</td>' +
+            '<td class="td-titulo" data-label="Título"><strong>' + (t.titulo || '') + '</strong></td>' +
+            '<td data-label="Tipo"><span class="badge badge-' + (badgeTipo[t.tipo] || 'gris') + '">' + (t.tipo || '—') + '</span></td>' +
+            '<td data-label="Prioridad"><span class="badge badge-' + (badgePrio[t.prioridad] || 'gris') + '">' + (labelPrio[t.prioridad] || t.prioridad) + '</span></td>' +
+            '<td class="col-aplicacion" data-label="Aplicación" style="color:var(--gris-texto);font-size:0.84rem;">' + (t.aplicacion || '—') + '</td>' +
+            '<td data-label="Estado"><span class="badge badge-' + (badgeEst[t.estado] || 'gris') + '">' + (labelEst[t.estado] || t.estado) + '</span></td>' +
+            '<td data-label="Solicitante">' + (t.nombre_solicitante || '—') + '</td>' +
+            '<td class="col-agente" data-label="Agente" style="font-size:0.84rem;color:var(--gris-texto);">' + (t.nombre_agente || '—') + '</td>' +
+            '<td class="col-apertura" data-label="Apertura" style="font-size:0.8rem;color:var(--gris-texto);">' + fecha + '</td>' +
+            '<td class="td-accion">' + accion + '</td>' +
+        '</tr>';
+    }).join('');
+}
+</script>
 
 {% endblock %}

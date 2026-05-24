@@ -19,7 +19,6 @@
 <!-- CAJA DE AUTH -->
 <div class="auth-wrap">
     <div class="auth-box">
-
         <div class="auth-content">
 
             <p class="auth-title">Bienvenido al sistema</p>
@@ -27,58 +26,93 @@
                 Ingresa con tus credenciales de <strong>AgroVisión Sistemas</strong>.
             </p>
 
-            <!-- Mensaje de error si las credenciales son incorrectas -->
-            {% if error %}
-            <div class="error-msg">⚠️ {{ error }}</div>
-            {% endif %}
+            <!-- Mensaje de error -->
+            <div class="error-msg" id="msg-error" style="display:none;"></div>
 
-            <!-- FORMULARIO LOGIN -->
-            <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="correo">Correo corporativo</label>
+                <input type="email" id="correo" placeholder="usuario@agrovision.pe"
+                       required autocomplete="email">
+            </div>
 
-                <div class="form-group">
-                    <label for="correo">Correo corporativo</label>
-                    <input
-                        type="email"
-                        id="correo"
-                        name="correo"
-                        placeholder="usuario@agrovision.pe"
-                        required
-                        autocomplete="email"
-                    >
-                </div>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" placeholder="••••••••"
+                       required autocomplete="current-password">
+            </div>
 
-                <div class="form-group">
-                    <label for="password">Contraseña</label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        placeholder="••••••••"
-                        required
-                        autocomplete="current-password"
-                    >
-                </div>
+            <a href="{{ url_for('olvide_contrasena') }}" class="forgot-link">
+                ¿Olvidaste tu contraseña?
+            </a>
 
-                <!-- Enlace de recuperación debajo del campo contraseña -->
-                <a href="{{ url_for('olvide_contrasena') }}" class="forgot-link">
-                    ¿Olvidaste tu contraseña?
-                </a>
-
-                <button type="submit" class="btn-full">Ingresar al sistema</button>
-
-            </form>
+            <button id="btn-ingresar" class="btn-full" onclick="hacerLogin()">
+                Ingresar al sistema
+            </button>
 
         </div>
 
-        <!-- PIE -->
         <div class="auth-footer">
             🔒 Acceso restringido · Solo personal autorizado de AgroVisión
         </div>
-
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script>
+    // Si ya hay sesión guardada, ir directo al dashboard
+    if (localStorage.getItem('usuario')) {
+        window.location.href = '{{ url_for("index") }}';
+    }
 
+    function hacerLogin() {
+        var correo   = document.getElementById('correo').value.trim();
+        var password = document.getElementById('password').value;
+        var msgError = document.getElementById('msg-error');
+        var btn      = document.getElementById('btn-ingresar');
+
+        msgError.style.display = 'none';
+
+        if (!correo || !password) {
+            msgError.textContent   = '⚠️ Completa todos los campos.';
+            msgError.style.display = 'block';
+            return;
+        }
+
+        btn.textContent = 'Verificando…';
+        btn.disabled    = true;
+
+        var formData = new FormData();
+        formData.append('correo',   correo);
+        formData.append('password', password);
+
+        fetch('{{ url_for("api_login") }}', { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    localStorage.setItem('usuario', JSON.stringify(data.usuario));
+                    window.location.href = '{{ url_for("index") }}';
+                } else if (data.error_servidor) {
+                    window.location.href = '{{ url_for("pagina_error_500") }}';
+                } else {
+                    msgError.textContent   = '⚠️ ' + data.mensaje;
+                    msgError.style.display = 'block';
+                    btn.textContent = 'Ingresar al sistema';
+                    btn.disabled    = false;
+                }
+            })
+            .catch(function() {
+                window.location.href = '{{ url_for("pagina_error_500") }}';
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        ['correo', 'password'].forEach(function(id) {
+            document.getElementById(id).addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') hacerLogin();
+            });
+        });
+    });
+</script>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
