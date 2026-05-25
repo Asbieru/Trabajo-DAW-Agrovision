@@ -109,54 +109,9 @@
     </div>
 </div>
 
+<!-- Datos de asignados por proyecto para script.js -->
 <script>
-// Datos de asignados por proyecto (cargados desde el servidor)
-const asignadosPorProyecto = {{ asignados_json | tojson }};
-
-function filtrarSprints() {
-    const proyectoId = document.getElementById('id_proyecto').value;
-    const sprintSel  = document.getElementById('id_sprint');
-    const opciones   = sprintSel.querySelectorAll('option');
-
-    opciones.forEach(op => {
-        if (!op.value) return;
-        op.style.display = (op.dataset.proyecto === proyectoId) ? '' : 'none';
-    });
-    sprintSel.value = '';
-}
-
-function cargarAsignados() {
-    const proyectoId = document.getElementById('id_proyecto').value;
-    const sel = document.getElementById('id_asignado');
-    sel.innerHTML = '';
-
-    if (!proyectoId) {
-        sel.innerHTML = '<option value="">— Selecciona primero un proyecto —</option>';
-        return;
-    }
-
-    const lista = asignadosPorProyecto[proyectoId] || [];
-    if (lista.length === 0) {
-        sel.innerHTML = '<option value="">— Sin responsables asignados —</option>';
-        return;
-    }
-
-    const opDefault = document.createElement('option');
-    opDefault.value = '';
-    opDefault.textContent = '— Selecciona encargado —';
-    sel.appendChild(opDefault);
-
-    lista.forEach(u => {
-        const op = document.createElement('option');
-        op.value = u.id_usuario;
-        op.textContent = u.nombre_completo;
-        sel.appendChild(op);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    filtrarSprints();
-    cargarAsignados();
-});
+var asignadosPorProyecto = {{ asignados_json | tojson }};
 </script>
+
 {% endblock %}

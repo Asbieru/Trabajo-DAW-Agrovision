@@ -1,15 +1,18 @@
 /* ============================================================
-   main.js  –  AgroVisión · Script unificado
+   script.js  –  AgroVisión · Script unificado
    ============================================================
    Organización por página:
-     1. GLOBAL      → base.html        (todas las páginas)
-     2. LOGIN       → login.html
-     3. INDICADORES → indicadores.html
-     4. GESTIÓN     → GestionIncidencia.html
-     5. REPORTES    → reportes.html
+     1. GLOBAL        → base.html              (todas las páginas)
+     2. LOGIN         → login.html
+     3. INDICADORES   → indicadores.html
+     4. GESTIÓN       → gestionTicket.html
+     5. REPORTES      → reportes.html
      6. GESTIÓN DE PROYECTO → gestionProyecto.html
-     7. PERFIL DE USUARIO  → perfilUsuario.html
-     8. HISTORIAL DE USUARIO → historialUsuario.html
+        6.1  Días restantes y gráfico de historias
+        6.2  Cambiar estado de actividad (Kanban)
+     7. NUEVA ACTIVIDAD → nuevaActividad.html
+     8. PERFIL DE USUARIO  → perfilUsuario.html
+     9. HISTORIAL DE USUARIO → historialUsuario.html
    ============================================================ */
 
 
@@ -33,6 +36,7 @@ document.addEventListener('click', function (e) {
    2. LOGIN – login.html
    ============================================================ */
 
+// 2.1  Tabs de la vista login (si existieran)
 function mostrarTab(tab, btn) {
     document.querySelectorAll('.tab-panel').forEach(function (p) {
         p.classList.remove('activo');
@@ -55,6 +59,76 @@ function mostrarTab(tab, btn) {
         }
     }
 })();
+
+// 2.2  Autenticación: hacerLogin() y chequeo de sesión
+(function iniciarLoginAuth() {
+    if (!document.getElementById('btn-ingresar')) return;
+
+    // Si ya hay sesión guardada, ir directo al dashboard
+    if (localStorage.getItem('usuario') && typeof URL_INDEX !== 'undefined') {
+        window.location.href = URL_INDEX;
+        return;
+    }
+
+    // Listener Enter en los campos correo y password
+    function attachEnter() {
+        ['correo', 'password'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') hacerLogin();
+                });
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attachEnter);
+    } else {
+        attachEnter();
+    }
+})();
+
+function hacerLogin() {
+    var correo   = document.getElementById('correo').value.trim();
+    var password = document.getElementById('password').value;
+    var msgError = document.getElementById('msg-error');
+    var btn      = document.getElementById('btn-ingresar');
+
+    msgError.style.display = 'none';
+
+    if (!correo || !password) {
+        msgError.textContent   = '⚠️ Completa todos los campos.';
+        msgError.style.display = 'block';
+        return;
+    }
+
+    btn.textContent = 'Verificando…';
+    btn.disabled    = true;
+
+    var formData = new FormData();
+    formData.append('correo',   correo);
+    formData.append('password', password);
+
+    fetch(URL_API_LOGIN, { method: 'POST', body: formData })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                localStorage.setItem('usuario', JSON.stringify(data.usuario));
+                window.location.href = URL_INDEX;
+            } else if (data.error_servidor) {
+                window.location.href = URL_ERROR_500;
+            } else {
+                msgError.textContent   = '⚠️ ' + data.mensaje;
+                msgError.style.display = 'block';
+                btn.textContent = 'Ingresar al sistema';
+                btn.disabled    = false;
+            }
+        })
+        .catch(function () {
+            window.location.href = URL_ERROR_500;
+        });
+}
 
 
 /* ============================================================
@@ -139,7 +213,6 @@ function mostrarTab(tab, btn) {
         });
     }
 
-    // NUEVO: Gráfico proyectos por estado (indicadores)
     if (document.getElementById('grafico-ind-proyectos') && proyectosEst.length) {
         var canvasProyInd = document.getElementById('grafico-ind-proyectos');
         canvasProyInd.style.height = '320px';
@@ -166,7 +239,6 @@ function mostrarTab(tab, btn) {
         });
     }
 
-    // NUEVO: Gráfico velocity por sprint (indicadores)
     if (document.getElementById('grafico-velocity') && velocity.length) {
         var canvasVel = document.getElementById('grafico-velocity');
         canvasVel.style.height = '350px';
@@ -198,6 +270,7 @@ function mostrarTab(tab, btn) {
     }
 
 })();
+
 
 /* ============================================================
    4. GESTIÓN DE INCIDENCIAS – gestionTicket.html
@@ -232,6 +305,7 @@ function limpiarFiltros() {
 function imprimirReporte() {
     window.print();
 }
+
 
 /* ============================================================
    5. REPORTES – reportes.html
@@ -314,7 +388,6 @@ function imprimirReporte() {
         });
     }
 
-    // NUEVO: Gráfico proyectos por estado (reportes)
     if (document.getElementById('grafico-proyectos-estado') && proyectosEstado.length) {
         var canvasProy = document.getElementById('grafico-proyectos-estado');
         canvasProy.style.height = '320px';
@@ -377,9 +450,56 @@ function filtrarReportes() {
 }
 
 /* ============================================================
+   SELECTOR DE SECCIÓN – reportes.html
+   ============================================================ */
+function mostrarSeccion(seccion) {
+    document.getElementById('seccion-tickets').style.display   = seccion === 'tickets'   ? '' : 'none';
+    document.getElementById('seccion-proyectos').style.display = seccion === 'proyectos' ? '' : 'none';
+    document.getElementById('tab-tickets').className   = seccion === 'tickets'   ? 'btn btn-verde' : 'btn btn-outline';
+    document.getElementById('tab-proyectos').className = seccion === 'proyectos' ? 'btn btn-verde' : 'btn btn-outline';
+
+    if (seccion === 'proyectos') {
+        renderGraficoProyectosReportes();
+    }
+}
+
+function renderGraficoProyectosReportes() {
+    var contenedor = document.getElementById('datos-reportes');
+    if (!contenedor) return;
+    var datosEstado = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
+    var canvas = document.getElementById('grafico-proyectos-estado');
+    if (canvas && datosEstado.length && !canvas._chartCreado) {
+        canvas._chartCreado = true;
+        canvas.style.height = '450px';
+        new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: datosEstado.map(function(e){ return e.estado.replace('_',' '); }),
+                datasets: [{ data: datosEstado.map(function(e){ return e.total; }),
+                    backgroundColor: ['rgba(30,95,168,0.8)','rgba(26,122,74,0.8)',
+                        'rgba(241,196,15,0.8)','rgba(192,57,43,0.8)','rgba(149,165,166,0.8)'],
+                    borderWidth: 2 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+}
+
+// Al cargar la página de reportes, leer _tab de la URL
+(function iniciarTabReportes() {
+    if (!document.getElementById('seccion-tickets')) return;
+    var params = new URLSearchParams(window.location.search);
+    var tab = params.get('_tab') || 'tickets';
+    mostrarSeccion(tab);
+})();
+
+
+/* ============================================================
    6. GESTIÓN DE PROYECTO – gestionProyecto.html
    ============================================================ */
 
+/* -- 6.1  Días restantes y gráfico de historias por proyecto -- */
 (function iniciarGestionProyecto() {
 
     var divDias = document.getElementById('dias-restantes');
@@ -461,8 +581,102 @@ function filtrarReportes() {
 
 })();
 
+/* -- 6.2  Cambiar estado de actividad via fetch (tablero Kanban) -- */
+function cambiarEstadoActividad(idActividad, btn) {
+    var select      = document.getElementById('estado-act-' + idActividad);
+    var nuevoEstado = select.value;
+
+    btn.textContent = '…';
+    btn.disabled    = true;
+
+    fetch('/api/actividad/' + idActividad + '/estado', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ estado: nuevoEstado })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert('Error al cambiar estado.');
+            btn.textContent = '→';
+            btn.disabled    = false;
+        }
+    })
+    .catch(function () {
+        alert('Error de conexión.');
+        btn.textContent = '→';
+        btn.disabled    = false;
+    });
+}
+
+
 /* ============================================================
-   7. PERFIL DE USUARIO – perfilUsuario.html
+   7. NUEVA ACTIVIDAD – nuevaActividad.html
+   ============================================================ */
+
+function filtrarSprints() {
+    var proyectoId = document.getElementById('id_proyecto').value;
+    var sprintSel  = document.getElementById('id_sprint');
+    if (!sprintSel) return;
+    var opciones   = sprintSel.querySelectorAll('option');
+
+    opciones.forEach(function (op) {
+        if (!op.value) return;
+        op.style.display = (op.dataset.proyecto === proyectoId) ? '' : 'none';
+    });
+    sprintSel.value = '';
+}
+
+function cargarAsignados() {
+    var proyectoId = document.getElementById('id_proyecto').value;
+    var sel = document.getElementById('id_asignado');
+    if (!sel) return;
+    sel.innerHTML = '';
+
+    if (!proyectoId) {
+        sel.innerHTML = '<option value="">— Selecciona primero un proyecto —</option>';
+        return;
+    }
+
+    var lista = (typeof asignadosPorProyecto !== 'undefined' && asignadosPorProyecto[proyectoId]) || [];
+    if (lista.length === 0) {
+        sel.innerHTML = '<option value="">— Sin responsables asignados —</option>';
+        return;
+    }
+
+    var opDefault = document.createElement('option');
+    opDefault.value = '';
+    opDefault.textContent = '— Selecciona encargado —';
+    sel.appendChild(opDefault);
+
+    lista.forEach(function (u) {
+        var op = document.createElement('option');
+        op.value = u.id_usuario;
+        op.textContent = u.nombre_completo;
+        sel.appendChild(op);
+    });
+}
+
+(function iniciarNuevaActividad() {
+    if (!document.getElementById('id_proyecto')) return;
+
+    function arrancar() {
+        filtrarSprints();
+        cargarAsignados();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', arrancar);
+    } else {
+        arrancar();
+    }
+})();
+
+
+/* ============================================================
+   8. PERFIL DE USUARIO – perfilUsuario.html
    ============================================================ */
 
 (function iniciarPerfilUsuario() {
@@ -532,7 +746,7 @@ function filtrarReportes() {
 
 
 /* ============================================================
-   8. HISTORIAL DE USUARIO – historialUsuario.html
+   9. HISTORIAL DE USUARIO – historialUsuario.html
    ============================================================ */
 
 var tipoActivo = 'todos';
@@ -565,50 +779,6 @@ function setTipo(btn, tipo) {
     filtrarHistorial();
 }
 
-/* ============================================================
-   SELECTOR DE SECCIÓN – reportes.html
-   ============================================================ */
-function mostrarSeccion(seccion) {
-    document.getElementById('seccion-tickets').style.display   = seccion === 'tickets'   ? '' : 'none';
-    document.getElementById('seccion-proyectos').style.display = seccion === 'proyectos' ? '' : 'none';
-    document.getElementById('tab-tickets').className   = seccion === 'tickets'   ? 'btn btn-verde' : 'btn btn-outline';
-    document.getElementById('tab-proyectos').className = seccion === 'proyectos' ? 'btn btn-verde' : 'btn btn-outline';
-
-    if (seccion === 'proyectos') {
-        renderGraficoProyectosReportes();
-    }
-}
-
-function renderGraficoProyectosReportes() {
-    var contenedor = document.getElementById('datos-reportes');
-    if (!contenedor) return;
-    var datosEstado = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
-    var canvas = document.getElementById('grafico-proyectos-estado');
-    if (canvas && datosEstado.length && !canvas._chartCreado) {
-        canvas._chartCreado = true;
-        canvas.style.height = '450px';
-        new Chart(canvas, {
-            type: 'doughnut',
-            data: {
-                labels: datosEstado.map(function(e){ return e.estado.replace('_',' '); }),
-                datasets: [{ data: datosEstado.map(function(e){ return e.total; }),
-                    backgroundColor: ['rgba(30,95,168,0.8)','rgba(26,122,74,0.8)',
-                        'rgba(241,196,15,0.8)','rgba(192,57,43,0.8)','rgba(149,165,166,0.8)'],
-                    borderWidth: 2 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } } }
-        });
-    }
-}
-
-// Al cargar la página de reportes, leer _tab de la URL
-(function iniciarTabReportes() {
-    if (!document.getElementById('seccion-tickets')) return;
-    var params = new URLSearchParams(window.location.search);
-    var tab = params.get('_tab') || 'tickets';
-    mostrarSeccion(tab);
-})();
 
 /* ============================================================
    SELECTOR DE SECCIÓN – indicadores.html
@@ -680,13 +850,10 @@ function renderGraficosIndicadoresProyectos() {
     mostrarSeccionInd(tab);
 })();
 
+
 /* ============================================================
-   LIMPIAR FILTROS PROYECTOS
+   FILTROS DE PROYECTOS – listaProyectos.html / indicadores.html
    ============================================================ */
-function limpiarFiltrosProyecto() {
-    var url = window.location.pathname + '?_tab=proyectos';
-    window.location.href = url;
-}
 
 function filtrarProyectos() {
     var estado      = document.getElementById('filtro-estado-proy');
@@ -704,7 +871,7 @@ function filtrarProyectos() {
         var fResponsable = (fila.dataset.responsable || '').toLowerCase();
 
         var ok = true;
-        if (valEstado      && fEstado !== valEstado)               ok = false;
+        if (valEstado      && fEstado !== valEstado)                  ok = false;
         if (valResponsable && !fResponsable.includes(valResponsable)) ok = false;
 
         fila.style.display = ok ? '' : 'none';

@@ -57,60 +57,11 @@
     </div>
 </div>
 
+<!-- URLs de Flask para script.js -->
 <script>
-    // Si ya hay sesión guardada, ir directo al dashboard
-    if (localStorage.getItem('usuario')) {
-        window.location.href = '{{ url_for("index") }}';
-    }
-
-    function hacerLogin() {
-        var correo   = document.getElementById('correo').value.trim();
-        var password = document.getElementById('password').value;
-        var msgError = document.getElementById('msg-error');
-        var btn      = document.getElementById('btn-ingresar');
-
-        msgError.style.display = 'none';
-
-        if (!correo || !password) {
-            msgError.textContent   = '⚠️ Completa todos los campos.';
-            msgError.style.display = 'block';
-            return;
-        }
-
-        btn.textContent = 'Verificando…';
-        btn.disabled    = true;
-
-        var formData = new FormData();
-        formData.append('correo',   correo);
-        formData.append('password', password);
-
-        fetch('{{ url_for("api_login") }}', { method: 'POST', body: formData })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.ok) {
-                    localStorage.setItem('usuario', JSON.stringify(data.usuario));
-                    window.location.href = '{{ url_for("index") }}';
-                } else if (data.error_servidor) {
-                    window.location.href = '{{ url_for("pagina_error_500") }}';
-                } else {
-                    msgError.textContent   = '⚠️ ' + data.mensaje;
-                    msgError.style.display = 'block';
-                    btn.textContent = 'Ingresar al sistema';
-                    btn.disabled    = false;
-                }
-            })
-            .catch(function() {
-                window.location.href = '{{ url_for("pagina_error_500") }}';
-            });
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        ['correo', 'password'].forEach(function(id) {
-            document.getElementById(id).addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') hacerLogin();
-            });
-        });
-    });
+var URL_INDEX        = '{{ url_for("index") }}';
+var URL_API_LOGIN    = '{{ url_for("api_login") }}';
+var URL_ERROR_500    = '{{ url_for("pagina_error_500") }}';
 </script>
 
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
