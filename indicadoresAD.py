@@ -165,3 +165,162 @@ def comentariosCalificacionesRecientes(limit=6):
                 LIMIT %s
             """, (limit,))
             return [dict(r) for r in cursor.fetchall()]
+        
+
+def kpiProyectosPorEstado():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT estado, COUNT(*) AS total
+                FROM proyectos
+                GROUP BY estado
+                ORDER BY FIELD(estado,'en_desarrollo','planificado','qa','pausado','completado')
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
+
+def kpiVelocityPorSprint():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT s.nombre AS sprint,
+                       p.nombre AS proyecto,
+                       s.capacidad_pts,
+                       COALESCE(SUM(CASE WHEN a.estado='completada'
+                           THEN a.story_points ELSE 0 END), 0) AS pts_completados
+                FROM sprints s
+                JOIN proyectos p ON s.id_proyecto = p.id_proyecto
+                LEFT JOIN actividades a ON a.id_sprint = s.id_sprint
+                WHERE s.estado IN ('activo','completado')
+                GROUP BY s.id_sprint
+                ORDER BY s.fecha_inicio ASC
+                LIMIT 8
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
+
+def kpiCargaPorProgramador():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT u.nombre_completo AS programador,
+                       COUNT(a.id_actividad) AS total_activas,
+                       SUM(CASE WHEN a.estado='en_progreso' THEN 1 ELSE 0 END) AS en_progreso,
+                       SUM(CASE WHEN a.estado='por_hacer'   THEN 1 ELSE 0 END) AS por_hacer,
+                       COALESCE(SUM(a.story_points), 0) AS pts_asignados
+                FROM usuarios u
+                JOIN actividades a ON a.id_asignado = u.id_usuario
+                WHERE a.estado IN ('en_progreso','por_hacer','backlog')
+                GROUP BY u.id_usuario
+                ORDER BY total_activas DESC
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
+def kpiProyectosPorEstado():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT estado, COUNT(*) AS total
+                FROM proyectos
+                GROUP BY estado
+                ORDER BY FIELD(estado,'en_desarrollo','planificado','qa','pausado','completado')
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
+
+def kpiVelocityPorSprint():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT s.nombre AS sprint,
+                       p.nombre AS proyecto,
+                       s.capacidad_pts,
+                       COALESCE(SUM(CASE WHEN a.estado='completada'
+                           THEN a.story_points ELSE 0 END), 0) AS pts_completados
+                FROM sprints s
+                JOIN proyectos p ON s.id_proyecto = p.id_proyecto
+                LEFT JOIN actividades a ON a.id_sprint = s.id_sprint
+                WHERE s.estado IN ('activo','completado')
+                GROUP BY s.id_sprint
+                ORDER BY s.fecha_inicio ASC
+                LIMIT 8
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
+
+def kpiCargaPorProgramador():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT u.nombre_completo AS programador,
+                       COUNT(a.id_actividad) AS total_activas,
+                       SUM(CASE WHEN a.estado='en_progreso' THEN 1 ELSE 0 END) AS en_progreso,
+                       SUM(CASE WHEN a.estado='por_hacer'   THEN 1 ELSE 0 END) AS por_hacer,
+                       COALESCE(SUM(a.story_points), 0) AS pts_asignados
+                FROM usuarios u
+                JOIN actividades a ON a.id_asignado = u.id_usuario
+                WHERE a.estado IN ('en_progreso','por_hacer','backlog')
+                GROUP BY u.id_usuario
+                ORDER BY total_activas DESC
+            """)
+            return [dict(r) for r in cursor.fetchall()]
+
+
+def kpiProyectosFiltrados(estado=None, id_responsable=None):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT p.id_proyecto, p.nombre, p.estado,
+                       p.fecha_inicio, p.fecha_fin_plan,
+                       u.nombre_completo AS responsable,
+                       DATEDIFF(p.fecha_fin_plan, CURDATE()) AS dias_restantes,
+                       COALESCE(
+                           ROUND(
+                               SUM(CASE WHEN a.estado='completada' THEN a.story_points ELSE 0 END)
+                               / NULLIF(SUM(a.story_points), 0) * 100
+                           ), 0
+                       ) AS pct_avance,
+                       CASE
+                           WHEN p.estado = 'completado' THEN 'completado'
+                           WHEN p.fecha_fin_plan < CURDATE() THEN 'vencido'
+                           WHEN DATEDIFF(p.fecha_fin_plan, CURDATE()) <= 7 THEN 'por_vencer'
+                           ELSE 'ok'
+                       END AS salud
+                FROM proyectos p
+                JOIN usuarios u ON p.id_responsable = u.id_usuario
+                LEFT JOIN actividades a ON a.id_proyecto = p.id_proyecto
+                    AND a.estado != 'cancelada'
+            """
+            condiciones = []
+            params = []
+            if estado:
+                condiciones.append("p.estado = %s")
+                params.append(estado)
+            if id_responsable:
+                condiciones.append("p.id_responsable = %s")
+                params.append(id_responsable)
+            if condiciones:
+                sql += " WHERE " + " AND ".join(condiciones)
+            sql += " GROUP BY p.id_proyecto ORDER BY p.fecha_fin_plan ASC"
+            cursor.execute(sql, tuple(params) if params else None)
+            return [dict(r) for r in cursor.fetchall()]
+
+
+def obtenerResponsablesProyecto():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT u.id_usuario, u.nombre_completo
+                FROM proyectos p
+                JOIN usuarios u ON p.id_responsable = u.id_usuario
+                ORDER BY u.nombre_completo
+            """)
+            return [dict(r) for r in cursor.fetchall()]

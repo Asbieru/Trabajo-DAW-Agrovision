@@ -20,10 +20,16 @@ from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         listarAvances, insertarAvance, eliminarAvance)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos,
-                            kpiSatisfaccion, comentariosCalificacionesRecientes)
+                            kpiSatisfaccion, comentariosCalificacionesRecientes,
+                            kpiProyectosPorEstado, kpiVelocityPorSprint,
+                            kpiCargaPorProgramador,
+                            kpiProyectosFiltrados, obtenerResponsablesProyecto)                         
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
-                         reporteTicketsFiltrados, obtenerAplicaciones)
+                         reporteTicketsFiltrados, obtenerAplicaciones,
+                         reporteProyectosPorEstado, reporteProyectosEnRiesgo,
+                         reporteRendimientoPorSprint,
+                         reporteProyectosFiltrados, obtenerResponsables)                        
 
 app = Flask(__name__)
 app.secret_key = 'agrovision-clave-secreta-2024'
@@ -368,20 +374,23 @@ def eliminar_avance_ruta(id_proyecto, id_avance):
 
 @app.route('/indicadores')
 def indicadores_soporte():
-    mes_inicio  = request.args.get('mes_inicio', '')  or None
-    anio_inicio = request.args.get('anio_inicio', '') or None
-    mes_fin     = request.args.get('mes_fin', '')     or None
-    anio_fin    = request.args.get('anio_fin', '')    or None
-
-    resumen       = resumenKPI()
-    por_app       = kpiPorAplicacion()
-    por_prioridad = kpiPorPrioridad()
-    por_agente    = kpiPorAgente()
-    por_mes       = kpiPorMes()
-    sprint_activo = kpiSprintsActivos()
-    satisfaccion  = kpiSatisfaccion()
-    comentarios   = comentariosCalificacionesRecientes()
-
+    estado_proy    = limpiar(request.args.get('estado_proy', ''))
+    id_responsable = limpiar(request.args.get('id_responsable', ''))
+ 
+    resumen           = resumenKPI()
+    por_app           = kpiPorAplicacion()
+    por_prioridad     = kpiPorPrioridad()
+    por_agente        = kpiPorAgente()
+    por_mes           = kpiPorMes()
+    sprint_activo     = kpiSprintsActivos()
+    satisfaccion      = kpiSatisfaccion()
+    comentarios       = comentariosCalificacionesRecientes()
+    proyectos_estado  = kpiProyectosPorEstado()
+    velocity_sprints  = kpiVelocityPorSprint()
+    carga_programador = kpiCargaPorProgramador()
+    proyectos_filtrados = kpiProyectosFiltrados(estado_proy, id_responsable)
+    responsables      = obtenerResponsablesProyecto()
+ 
     return render_template('indicadores.html',
                            resumen=resumen,
                            por_app=por_app,
@@ -391,10 +400,13 @@ def indicadores_soporte():
                            sprint_activo=sprint_activo,
                            satisfaccion=satisfaccion,
                            comentarios=comentarios,
-                           mes_inicio=mes_inicio   or '',
-                           anio_inicio=anio_inicio or '',
-                           mes_fin=mes_fin         or '',
-                           anio_fin=anio_fin       or '')
+                           proyectos_estado=proyectos_estado,
+                           velocity_sprints=velocity_sprints,
+                           carga_programador=carga_programador,
+                           proyectos_filtrados=proyectos_filtrados,
+                           responsables=responsables,
+                           estado_proy=estado_proy       or '',
+                           id_responsable=id_responsable or '')
 
 
 # ──────────────────────────────────────────────────────────────
@@ -410,21 +422,28 @@ def limpiar(valor):
 
 @app.route('/reportes')
 def gestion_reportes():
-    fecha_inicio = limpiar(request.args.get('fecha_inicio', ''))
-    fecha_fin    = limpiar(request.args.get('fecha_fin', ''))
-    aplicacion   = limpiar(request.args.get('aplicacion', ''))
-    estado       = limpiar(request.args.get('estado', ''))
-    prioridad    = limpiar(request.args.get('prioridad', ''))
-
-    resumen           = reporteResumen()
-    tickets_app       = reporteTicketsPorApp()
-    tickets_tipo      = reporteTicketsPorTipo()
-    story_points      = reporteStoryPointsPorProgramador()
-    carryover         = reporteCarryoverPorProgramador()
-    aplicaciones      = obtenerAplicaciones()
-    tickets_filtrados = reporteTicketsFiltrados(fecha_inicio, fecha_fin,
-                                                aplicacion, estado, prioridad)
-
+    fecha_inicio   = limpiar(request.args.get('fecha_inicio', ''))
+    fecha_fin      = limpiar(request.args.get('fecha_fin', ''))
+    aplicacion     = limpiar(request.args.get('aplicacion', ''))
+    estado         = limpiar(request.args.get('estado', ''))
+    prioridad      = limpiar(request.args.get('prioridad', ''))
+    estado_proy    = limpiar(request.args.get('estado_proy', ''))
+    id_responsable = limpiar(request.args.get('id_responsable', ''))
+ 
+    resumen            = reporteResumen()
+    tickets_app        = reporteTicketsPorApp()
+    tickets_tipo       = reporteTicketsPorTipo()
+    story_points       = reporteStoryPointsPorProgramador()
+    carryover          = reporteCarryoverPorProgramador()
+    aplicaciones       = obtenerAplicaciones()
+    tickets_filtrados  = reporteTicketsFiltrados(fecha_inicio, fecha_fin,
+                                                  aplicacion, estado, prioridad)
+    proyectos_estado   = reporteProyectosPorEstado()
+    proyectos_riesgo   = reporteProyectosEnRiesgo()
+    rendimiento_sprint = reporteRendimientoPorSprint()
+    proyectos_filtrados = reporteProyectosFiltrados(estado_proy, id_responsable)
+    responsables       = obtenerResponsables()
+ 
     return render_template('reportes.html',
                            resumen=resumen,
                            tickets_app=tickets_app,
@@ -433,11 +452,18 @@ def gestion_reportes():
                            carryover=carryover,
                            aplicaciones=aplicaciones,
                            tickets_filtrados=tickets_filtrados,
-                           fecha_inicio=fecha_inicio or '',
-                           fecha_fin=fecha_fin       or '',
-                           aplicacion=aplicacion     or '',
-                           estado=estado             or '',
-                           prioridad=prioridad       or '')
+                           fecha_inicio=fecha_inicio   or '',
+                           fecha_fin=fecha_fin         or '',
+                           aplicacion=aplicacion       or '',
+                           estado=estado               or '',
+                           prioridad=prioridad         or '',
+                           proyectos_estado=proyectos_estado,
+                           proyectos_riesgo=proyectos_riesgo,
+                           rendimiento_sprint=rendimiento_sprint,
+                           proyectos_filtrados=proyectos_filtrados,
+                           responsables=responsables,
+                           estado_proy=estado_proy     or '',
+                           id_responsable=id_responsable or '')
 
 
 # ──────────────────────────────────────────────────────────────

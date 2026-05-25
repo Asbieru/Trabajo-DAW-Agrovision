@@ -1820,3 +1820,8 @@ body {
     border-color: rgba(255,255,255,0.35) !important;
     font-size: 0.8rem !important;
 }
+ 
+/* ── SEPARACIÓN TABLA PROYECTOS ── */
+#seccion-proyectos .seccion + .seccion {
+    margin-top: 24px;
+}

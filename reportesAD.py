@@ -130,3 +130,102 @@ def reporteTicketsFiltrados(fecha_inicio=None, fecha_fin=None,
             sql += " ORDER BY t.fecha_apertura DESC"
             cursor.execute(sql, tuple(params) if params else None)
             return cursor.fetchall()
+
+
+def reporteProyectosPorEstado():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT estado, COUNT(*) AS total
+                FROM proyectos
+                GROUP BY estado
+                ORDER BY FIELD(estado,'en_desarrollo','planificado','qa','pausado','completado')
+            """)
+            return cursor.fetchall()
+
+
+def reporteProyectosEnRiesgo():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT p.id_proyecto, p.nombre, p.estado,
+                       p.fecha_fin_plan,
+                       u.nombre_completo AS responsable,
+                       DATEDIFF(CURDATE(), p.fecha_fin_plan) AS dias_vencido
+                FROM proyectos p
+                JOIN usuarios u ON p.id_responsable = u.id_usuario
+                WHERE p.fecha_fin_plan < CURDATE()
+                  AND p.estado != 'completado'
+                ORDER BY dias_vencido DESC
+            """)
+            return cursor.fetchall()
+
+
+def reporteRendimientoPorSprint():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT s.nombre AS sprint,
+                       p.nombre AS proyecto,
+                       s.capacidad_pts,
+                       COALESCE(SUM(CASE WHEN a.estado='completada'
+                           THEN a.story_points ELSE 0 END), 0) AS pts_completados,
+                       COALESCE(SUM(CASE WHEN a.estado != 'completada' AND a.estado != 'cancelada'
+                           THEN a.story_points ELSE 0 END), 0) AS pts_pendientes,
+                       s.estado AS estado_sprint
+                FROM sprints s
+                JOIN proyectos p ON s.id_proyecto = p.id_proyecto
+                LEFT JOIN actividades a ON a.id_sprint = s.id_sprint
+                GROUP BY s.id_sprint
+                ORDER BY s.fecha_inicio DESC
+            """)
+            return cursor.fetchall()
+
+
+def obtenerResponsables():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT u.id_usuario, u.nombre_completo
+                FROM proyectos p
+                JOIN usuarios u ON p.id_responsable = u.id_usuario
+                ORDER BY u.nombre_completo
+            """)
+            return cursor.fetchall()
+
+
+def reporteProyectosFiltrados(estado=None, id_responsable=None):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT p.id_proyecto, p.nombre, p.estado,
+                       p.fecha_inicio, p.fecha_fin_plan,
+                       u.nombre_completo AS responsable,
+                       DATEDIFF(p.fecha_fin_plan, CURDATE()) AS dias_restantes,
+                       CASE
+                           WHEN p.estado = 'completado' THEN 'completado'
+                           WHEN p.fecha_fin_plan < CURDATE() THEN 'vencido'
+                           WHEN DATEDIFF(p.fecha_fin_plan, CURDATE()) <= 7 THEN 'por_vencer'
+                           ELSE 'ok'
+                       END AS salud
+                FROM proyectos p
+                JOIN usuarios u ON p.id_responsable = u.id_usuario
+            """
+            condiciones = []
+            params = []
+            if estado:
+                condiciones.append("p.estado = %s")
+                params.append(estado)
+            if id_responsable:
+                condiciones.append("p.id_responsable = %s")
+                params.append(id_responsable)
+            if condiciones:
+                sql += " WHERE " + " AND ".join(condiciones)
+            sql += " ORDER BY p.fecha_fin_plan ASC"
+            cursor.execute(sql, tuple(params) if params else None)
+            return cursor.fetchall()

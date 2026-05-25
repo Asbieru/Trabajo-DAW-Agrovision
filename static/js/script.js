@@ -6,13 +6,15 @@
      2. LOGIN       → login.html
      3. INDICADORES → indicadores.html
      4. GESTIÓN     → GestionIncidencia.html
+     5. REPORTES    → reportes.html
+     6. GESTIÓN DE PROYECTO → gestionProyecto.html
+     7. PERFIL DE USUARIO  → perfilUsuario.html
+     8. HISTORIAL DE USUARIO → historialUsuario.html
    ============================================================ */
 
 
 /* ============================================================
    1. GLOBAL – base.html
-      Menú desplegable del avatar (aplica en todas las páginas
-      que extienden base.html).
    ============================================================ */
 
 function toggleMenu() {
@@ -29,29 +31,21 @@ document.addEventListener('click', function (e) {
 
 /* ============================================================
    2. LOGIN – login.html
-      Manejo de pestañas "Ingresar / Registrarse" y apertura
-      automática del panel de registro cuando Flask redirige
-      con ?tab=registro en la URL.
    ============================================================ */
 
 function mostrarTab(tab, btn) {
-    // Ocultar todos los paneles y desactivar todos los botones
     document.querySelectorAll('.tab-panel').forEach(function (p) {
         p.classList.remove('activo');
     });
     document.querySelectorAll('.tab-btn').forEach(function (b) {
         b.classList.remove('activo');
     });
-    // Mostrar el panel seleccionado y marcar el botón activo
     document.getElementById('panel-' + tab).classList.add('activo');
     btn.classList.add('activo');
 }
 
-// Inicialización de login: abrir pestaña de registro si Flask
-// redirigió con ?tab=registro (solo se ejecuta en login.html,
-// donde existe el elemento #panel-registro).
 (function iniciarLogin() {
-    if (!document.getElementById('panel-registro')) return; // no es login.html
+    if (!document.getElementById('panel-registro')) return;
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab') === 'registro') {
@@ -66,7 +60,7 @@ function mostrarTab(tab, btn) {
 /* ============================================================
    3. INDICADORES – indicadores.html
    ============================================================ */
-    (function iniciarIndicadores() {
+(function iniciarIndicadores() {
     var contenedor = document.getElementById('datos-graficos');
     if (!contenedor) return;
 
@@ -75,7 +69,6 @@ function mostrarTab(tab, btn) {
         el.style.width = el.getAttribute('data-ancho') + '%';
     });
 
-    // Barras horizontales .barra-w (si las usas en otro lugar)
     document.querySelectorAll('.barra-w').forEach(function (el) {
         el.style.height       = '100%';
         el.style.borderRadius = '20px';
@@ -89,8 +82,10 @@ function mostrarTab(tab, btn) {
     var porApp       = JSON.parse(contenedor.getAttribute('data-app'));
     var porPrioridad = JSON.parse(contenedor.getAttribute('data-prioridad'));
     var porMes       = JSON.parse(contenedor.getAttribute('data-mes'));
+    var proyectosEst = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
+    var velocity     = JSON.parse(contenedor.getAttribute('data-velocity') || '[]');
 
-        if (document.getElementById('grafico-app') && porApp.length) {
+    if (document.getElementById('grafico-app') && porApp.length) {
         var canvasApp = document.getElementById('grafico-app');
         canvasApp.style.height = '400px';
         new Chart(canvasApp, {
@@ -125,32 +120,90 @@ function mostrarTab(tab, btn) {
     }
 
     if (document.getElementById('grafico-tendencia') && porMes.length) {
-    var canvasTendencia = document.getElementById('grafico-tendencia');
-    canvasTendencia.style.height = '600px';
-    new Chart(canvasTendencia, {
-        type: 'bar',
-        data: {
-            labels: porMes.map(function (m) { return m.mes_label; }),
-            datasets: [
-                { label: 'Apertura',  data: porMes.map(function (m) { return m.total; }),
-                  backgroundColor: 'rgba(30,95,168,0.7)', borderRadius: 4 },
-                { label: 'Resueltos', data: porMes.map(function (m) { return m.resueltos; }),
-                  backgroundColor: 'rgba(26,122,74,0.7)', borderRadius: 4 }
-            ]
-        },
-        options: { responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', labels: { font: { size: 12 } } } },
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-    });
-}
+        var canvasTendencia = document.getElementById('grafico-tendencia');
+        canvasTendencia.style.height = '600px';
+        new Chart(canvasTendencia, {
+            type: 'bar',
+            data: {
+                labels: porMes.map(function (m) { return m.mes_label; }),
+                datasets: [
+                    { label: 'Apertura',  data: porMes.map(function (m) { return m.total; }),
+                      backgroundColor: 'rgba(30,95,168,0.7)', borderRadius: 4 },
+                    { label: 'Resueltos', data: porMes.map(function (m) { return m.resueltos; }),
+                      backgroundColor: 'rgba(26,122,74,0.7)', borderRadius: 4 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top', labels: { font: { size: 12 } } } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+
+    // NUEVO: Gráfico proyectos por estado (indicadores)
+    if (document.getElementById('grafico-ind-proyectos') && proyectosEst.length) {
+        var canvasProyInd = document.getElementById('grafico-ind-proyectos');
+        canvasProyInd.style.height = '320px';
+        new Chart(canvasProyInd, {
+            type: 'doughnut',
+            data: {
+                labels: proyectosEst.map(function(e){ return e.estado.replace('_',' '); }),
+                datasets: [{
+                    data: proyectosEst.map(function(e){ return e.total; }),
+                    backgroundColor: [
+                        'rgba(30,95,168,0.8)',
+                        'rgba(26,122,74,0.8)',
+                        'rgba(241,196,15,0.8)',
+                        'rgba(192,57,43,0.8)',
+                        'rgba(149,165,166,0.8)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    // NUEVO: Gráfico velocity por sprint (indicadores)
+    if (document.getElementById('grafico-velocity') && velocity.length) {
+        var canvasVel = document.getElementById('grafico-velocity');
+        canvasVel.style.height = '350px';
+        new Chart(canvasVel, {
+            type: 'bar',
+            data: {
+                labels: velocity.map(function(s){ return s.sprint; }),
+                datasets: [
+                    {
+                        label: 'Capacidad',
+                        data: velocity.map(function(s){ return s.capacidad_pts; }),
+                        backgroundColor: 'rgba(149,165,166,0.5)',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Completados',
+                        data: velocity.map(function(s){ return s.pts_completados; }),
+                        backgroundColor: 'rgba(26,122,74,0.8)',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    }
+
 })();
 
 /* ============================================================
-   4. GESTIÓN DE INCIDENCIAS – GestionIncidencia.html
+   4. GESTIÓN DE INCIDENCIAS – gestionTicket.html
    ============================================================ */
 
 function filtrarTickets() {
-    // Solo actúa si la tabla de tickets está presente
     if (!document.getElementById('tbody-tickets')) return;
 
     const texto   = document.getElementById('buscar-ticket').value.toLowerCase().trim();
@@ -167,7 +220,7 @@ function filtrarTickets() {
 
     document.getElementById('sin-resultados').style.display =
         visibles === 0 ? 'block' : 'none';
-}   
+}
 
 function limpiarFiltros() {
     document.getElementById('form-filtro-reportes').reset();
@@ -179,16 +232,19 @@ function limpiarFiltros() {
 function imprimirReporte() {
     window.print();
 }
- 
+
+/* ============================================================
+   5. REPORTES – reportes.html
+   ============================================================ */
 (function iniciarReportes() {
     var contenedor = document.getElementById('datos-reportes');
     if (!contenedor) return;
- 
-    var porApp      = JSON.parse(contenedor.getAttribute('data-app'));
-    var porTipo     = JSON.parse(contenedor.getAttribute('data-tipo'));
-    var storyPoints = JSON.parse(contenedor.getAttribute('data-sp'));
-    var carryover   = JSON.parse(contenedor.getAttribute('data-carryover'));
- 
+
+    var porApp          = JSON.parse(contenedor.getAttribute('data-app'));
+    var porTipo         = JSON.parse(contenedor.getAttribute('data-tipo'));
+    var storyPoints     = JSON.parse(contenedor.getAttribute('data-sp'));
+    var carryover       = JSON.parse(contenedor.getAttribute('data-carryover'));
+    var proyectosEstado = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
 
     if (document.getElementById('grafico-reporte-app') && porApp.length) {
         var canvasApp = document.getElementById('grafico-reporte-app');
@@ -210,12 +266,14 @@ function imprimirReporte() {
 
     if (document.getElementById('grafico-reporte-tipo') && porTipo.length) {
         var canvasTipo = document.getElementById('grafico-reporte-tipo');
-        canvasTipo.style.height = '400px'
+        canvasTipo.style.height = '400px';
         new Chart(canvasTipo, {
             type: 'doughnut',
             data: {
                 labels: porTipo.map(function (t) { return t.tipo; }),
-                datasets: [{ data: porTipo.map(function (t) { return t.total; }), backgroundColor: ['rgba(192, 57, 43, 0.8)', 'rgba(26, 122, 74, 0.8)', 'rgba(30, 95, 168, 0.8)'], borderWidth: 2 }]
+                datasets: [{ data: porTipo.map(function (t) { return t.total; }),
+                    backgroundColor: ['rgba(192, 57, 43, 0.8)', 'rgba(26, 122, 74, 0.8)', 'rgba(30, 95, 168, 0.8)'],
+                    borderWidth: 2 }]
             },
             options: { responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
@@ -235,8 +293,8 @@ function imprimirReporte() {
                 ]
             },
             options: { responsive: true, maintainAspectRatio: false,
-            layout: { padding: { bottom: 20 } },
-            plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
+                layout: { padding: { bottom: 20 } },
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
         });
     }
 
@@ -247,13 +305,42 @@ function imprimirReporte() {
             type: 'bar',
             data: {
                 labels: carryover.map(function (c) { return c.programador; }),
-                datasets: [{ label: 'Pts carryover', data: carryover.map(function (c) { return c.pts_carryover; }), backgroundColor: 'rgba(240, 165, 0, 0.8)', borderRadius: 4 }]
+                datasets: [{ label: 'Pts carryover', data: carryover.map(function (c) { return c.pts_carryover; }),
+                    backgroundColor: 'rgba(240, 165, 0, 0.8)', borderRadius: 4 }]
             },
             options: { responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
         });
     }
+
+    // NUEVO: Gráfico proyectos por estado (reportes)
+    if (document.getElementById('grafico-proyectos-estado') && proyectosEstado.length) {
+        var canvasProy = document.getElementById('grafico-proyectos-estado');
+        canvasProy.style.height = '320px';
+        new Chart(canvasProy, {
+            type: 'doughnut',
+            data: {
+                labels: proyectosEstado.map(function(e){ return e.estado.replace('_',' '); }),
+                datasets: [{
+                    data: proyectosEstado.map(function(e){ return e.total; }),
+                    backgroundColor: [
+                        'rgba(30,95,168,0.8)',
+                        'rgba(26,122,74,0.8)',
+                        'rgba(241,196,15,0.8)',
+                        'rgba(192,57,43,0.8)',
+                        'rgba(149,165,166,0.8)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
 })();
 
 function filtrarReportes() {
@@ -295,7 +382,6 @@ function filtrarReportes() {
 
 (function iniciarGestionProyecto() {
 
-    // ── Días restantes (se recalcula cada vez que se carga la página) ──
     var divDias = document.getElementById('dias-restantes');
     if (divDias) {
         var fechaFin = divDias.getAttribute('data-fecha-fin');
@@ -319,7 +405,6 @@ function filtrarReportes() {
         }
     }
 
-    // ── Gráfico de barras: historias por proyecto ──
     var canvas = document.getElementById('grafico-historias');
     if (!canvas) return;
 
@@ -332,7 +417,6 @@ function filtrarReportes() {
     var labels  = resumen.map(function (r) { return r.nombre_proyecto; });
     var totales = resumen.map(function (r) { return r.total; });
 
-    // Barra verde para el proyecto actual, gris para el resto
     var colores = resumen.map(function (r) {
         return r.id_proyecto === idActual
             ? 'rgba(26, 122, 74, 0.85)'
@@ -374,6 +458,9 @@ function filtrarReportes() {
             }
         }
     });
+
+})();
+
 /* ============================================================
    7. PERFIL DE USUARIO – perfilUsuario.html
    ============================================================ */
@@ -477,4 +564,168 @@ function setTipo(btn, tipo) {
     btn.classList.add('btn-verde');
     filtrarHistorial();
 }
+
+/* ============================================================
+   SELECTOR DE SECCIÓN – reportes.html
+   ============================================================ */
+function mostrarSeccion(seccion) {
+    document.getElementById('seccion-tickets').style.display   = seccion === 'tickets'   ? '' : 'none';
+    document.getElementById('seccion-proyectos').style.display = seccion === 'proyectos' ? '' : 'none';
+    document.getElementById('tab-tickets').className   = seccion === 'tickets'   ? 'btn btn-verde' : 'btn btn-outline';
+    document.getElementById('tab-proyectos').className = seccion === 'proyectos' ? 'btn btn-verde' : 'btn btn-outline';
+
+    if (seccion === 'proyectos') {
+        renderGraficoProyectosReportes();
+    }
+}
+
+function renderGraficoProyectosReportes() {
+    var contenedor = document.getElementById('datos-reportes');
+    if (!contenedor) return;
+    var datosEstado = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
+    var canvas = document.getElementById('grafico-proyectos-estado');
+    if (canvas && datosEstado.length && !canvas._chartCreado) {
+        canvas._chartCreado = true;
+        canvas.style.height = '450px';
+        new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: datosEstado.map(function(e){ return e.estado.replace('_',' '); }),
+                datasets: [{ data: datosEstado.map(function(e){ return e.total; }),
+                    backgroundColor: ['rgba(30,95,168,0.8)','rgba(26,122,74,0.8)',
+                        'rgba(241,196,15,0.8)','rgba(192,57,43,0.8)','rgba(149,165,166,0.8)'],
+                    borderWidth: 2 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+}
+
+// Al cargar la página de reportes, leer _tab de la URL
+(function iniciarTabReportes() {
+    if (!document.getElementById('seccion-tickets')) return;
+    var params = new URLSearchParams(window.location.search);
+    var tab = params.get('_tab') || 'tickets';
+    mostrarSeccion(tab);
 })();
+
+/* ============================================================
+   SELECTOR DE SECCIÓN – indicadores.html
+   ============================================================ */
+function mostrarSeccionInd(seccion) {
+    document.getElementById('seccion-ind-tickets').style.display   = seccion === 'tickets'   ? '' : 'none';
+    document.getElementById('seccion-ind-proyectos').style.display = seccion === 'proyectos' ? '' : 'none';
+    document.getElementById('tab-tickets').className   = seccion === 'tickets'   ? 'btn btn-verde' : 'btn btn-outline';
+    document.getElementById('tab-proyectos').className = seccion === 'proyectos' ? 'btn btn-verde' : 'btn btn-outline';
+
+    if (seccion === 'proyectos') {
+        renderGraficosIndicadoresProyectos();
+    }
+}
+
+function renderGraficosIndicadoresProyectos() {
+    var contenedor = document.getElementById('datos-graficos');
+    if (!contenedor) return;
+    var datosProyectos = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
+    var datosVelocity  = JSON.parse(contenedor.getAttribute('data-velocity') || '[]');
+
+    document.querySelectorAll('.sprint-barra-relleno').forEach(function(el) {
+        el.style.width = el.getAttribute('data-ancho') + '%';
+    });
+
+    var canvasProy = document.getElementById('grafico-ind-proyectos');
+    if (canvasProy && datosProyectos.length && !canvasProy._chartCreado) {
+        canvasProy._chartCreado = true;
+        canvasProy.style.height = '320px';
+        new Chart(canvasProy, {
+            type: 'doughnut',
+            data: {
+                labels: datosProyectos.map(function(e){ return e.estado.replace('_',' '); }),
+                datasets: [{ data: datosProyectos.map(function(e){ return e.total; }),
+                    backgroundColor: ['rgba(30,95,168,0.8)','rgba(26,122,74,0.8)',
+                        'rgba(241,196,15,0.8)','rgba(192,57,43,0.8)','rgba(149,165,166,0.8)'],
+                    borderWidth: 2 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    var canvasVel = document.getElementById('grafico-velocity');
+    if (canvasVel && datosVelocity.length && !canvasVel._chartCreado) {
+        canvasVel._chartCreado = true;
+        canvasVel.style.height = '350px';
+        new Chart(canvasVel, {
+            type: 'bar',
+            data: {
+                labels: datosVelocity.map(function(s){ return s.sprint; }),
+                datasets: [
+                    { label: 'Capacidad',   data: datosVelocity.map(function(s){ return s.capacidad_pts; }),   backgroundColor: 'rgba(149,165,166,0.5)', borderRadius: 4 },
+                    { label: 'Completados', data: datosVelocity.map(function(s){ return s.pts_completados; }), backgroundColor: 'rgba(26,122,74,0.8)',    borderRadius: 4 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+}
+
+// Al cargar la página de indicadores, leer _tab de la URL
+(function iniciarTabIndicadores() {
+    if (!document.getElementById('seccion-ind-tickets')) return;
+    var params = new URLSearchParams(window.location.search);
+    var tab = params.get('_tab') || 'tickets';
+    mostrarSeccionInd(tab);
+})();
+
+/* ============================================================
+   LIMPIAR FILTROS PROYECTOS
+   ============================================================ */
+function limpiarFiltrosProyecto() {
+    var url = window.location.pathname + '?_tab=proyectos';
+    window.location.href = url;
+}
+
+function filtrarProyectos() {
+    var estado      = document.getElementById('filtro-estado-proy');
+    var responsable = document.getElementById('filtro-responsable-proy');
+    if (!estado || !responsable) return;
+
+    var valEstado      = estado.value.toLowerCase().trim();
+    var valResponsable = responsable.value.toLowerCase().trim();
+
+    var filas    = document.querySelectorAll('#tbody-proyectos tr');
+    var visibles = 0;
+
+    filas.forEach(function(fila) {
+        var fEstado      = (fila.dataset.estado      || '').toLowerCase();
+        var fResponsable = (fila.dataset.responsable || '').toLowerCase();
+
+        var ok = true;
+        if (valEstado      && fEstado !== valEstado)               ok = false;
+        if (valResponsable && !fResponsable.includes(valResponsable)) ok = false;
+
+        fila.style.display = ok ? '' : 'none';
+        if (ok) visibles++;
+    });
+
+    var contador = document.getElementById('contador-proyectos');
+    if (contador) contador.textContent = visibles + ' resultado' + (visibles !== 1 ? 's' : '');
+
+    var sinRes = document.getElementById('sin-resultados-proyectos');
+    if (sinRes) sinRes.style.display = visibles === 0 ? 'block' : 'none';
+}
+
+function limpiarFiltrosProyecto() {
+    var estado      = document.getElementById('filtro-estado-proy');
+    var responsable = document.getElementById('filtro-responsable-proy');
+    if (estado)      estado.value      = '';
+    if (responsable) responsable.value = '';
+    filtrarProyectos();
+}
+
+function limpiarFiltrosProyectoInd() {
+    window.location.href = window.location.pathname + '?_tab=proyectos';
+}

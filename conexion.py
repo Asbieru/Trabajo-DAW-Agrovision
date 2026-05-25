@@ -14,7 +14,7 @@ def obtenerconexion():
     connection = pymysql.connect(
         host='localhost',
         user='root',
-        password='',          # Ajusta si tu MySQL tiene contraseña
+        password='',         
         database='bd_proyectofinal',
         cursorclass=pymysql.cursors.DictCursor
     )

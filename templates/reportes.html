@@ -2,10 +2,6 @@
 
 {% block title %}Gestión de Reportes{% endblock %}
 
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{% endblock %}
-
 {% block content %}
 
 <!-- Datos para JS -->
@@ -13,7 +9,8 @@
      data-app='{{ tickets_app | tojson if tickets_app else "[]" }}'
      data-tipo='{{ tickets_tipo | tojson if tickets_tipo else "[]" }}'
      data-sp='{{ story_points | tojson if story_points else "[]" }}'
-     data-carryover='{{ carryover | tojson if carryover else "[]" }}'>
+     data-carryover='{{ carryover | tojson if carryover else "[]" }}'
+     data-proyectos-estado='{{ proyectos_estado | tojson if proyectos_estado else "[]" }}'>
 </div>
 
 <div class="page-header">
@@ -23,186 +20,347 @@
     </div>
 </div>
 
-<!-- FILA 1: Resumen -->
-<div class="kpi-fila reporte-fila">
-    <div class="kpi-card total">
-        <div class="etiqueta">Total tickets</div>
-        <div class="numero">{{ resumen.total_tickets or 0 }}</div>
-    </div>
-    <div class="kpi-card pendiente">
-        <div class="etiqueta">Pendientes</div>
-        <div class="numero">{{ resumen.tickets_pendientes or 0 }}</div>
-    </div>
-    <div class="kpi-card resuelto">
-        <div class="etiqueta">Resueltos</div>
-        <div class="numero">{{ resumen.tickets_resueltos or 0 }}</div>
-    </div>
-    <div class="kpi-card promedio">
-        <div class="etiqueta">Proyectos</div>
-        <div class="numero">{{ resumen.total_proyectos or 0 }}</div>
-    </div>
-    <div class="kpi-card sla">
-        <div class="etiqueta">Sprints activos</div>
-        <div class="numero">{{ resumen.sprints_activos or 0 }}</div>
-    </div>
-    <div class="kpi-card total">
-        <div class="etiqueta">Programadores</div>
-        <div class="numero">{{ resumen.total_programadores or 0 }}</div>
-    </div>
+<!-- SELECTOR TICKETS / PROYECTOS -->
+<div class="reporte-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
+    <button id="tab-tickets" class="btn btn-verde" onclick="mostrarSeccion('tickets')">🎫 Tickets</button>
+    <button id="tab-proyectos" class="btn btn-outline" onclick="mostrarSeccion('proyectos')">📁 Proyectos</button>
 </div>
 
-<!-- FILA 2: Gráficos -->
-<div class="fila-dos">
-    <div class="seccion">
-        <div class="seccion-titulo">🖥 Tickets por aplicación</div>
-        <div class="seccion-cuerpo">
-            {% if tickets_app %}
-            <canvas id="grafico-reporte-app"></canvas>
-            {% else %}
-            <div class="sin-datos">Sin datos aún</div>
-            {% endif %}
-        </div>
-    </div>
-    <div class="seccion">
-        <div class="seccion-titulo">🎫 Tickets por tipo (Incidencia vs Petición)</div>
-        <div class="seccion-cuerpo">
-            {% if tickets_tipo %}
-            <canvas id="grafico-reporte-tipo"></canvas>
-            {% else %}
-            <div class="sin-datos">Sin datos aún</div>
-            {% endif %}
-        </div>
-    </div>
-</div>
+<!-- ══════════════════ SECCIÓN TICKETS ══════════════════ -->
+<div id="seccion-tickets">
 
-<div class="fila-dos">
-    <div class="seccion">
-        <div class="seccion-titulo">⭐ Story points completados por programador</div>
-        <div class="seccion-cuerpo">
-            {% if story_points %}
-            <canvas id="grafico-reporte-sp"></canvas>
-            {% else %}
-            <div class="sin-datos">Sin datos aún</div>
-            {% endif %}
+    <div class="kpi-fila reporte-fila">
+        <div class="kpi-card total">
+            <div class="etiqueta">Total tickets</div>
+            <div class="numero">{{ resumen.total_tickets or 0 }}</div>
+        </div>
+        <div class="kpi-card pendiente">
+            <div class="etiqueta">Pendientes</div>
+            <div class="numero">{{ resumen.tickets_pendientes or 0 }}</div>
+        </div>
+        <div class="kpi-card resuelto">
+            <div class="etiqueta">Resueltos</div>
+            <div class="numero">{{ resumen.tickets_resueltos or 0 }}</div>
+        </div>
+        <div class="kpi-card promedio">
+            <div class="etiqueta">Programadores</div>
+            <div class="numero">{{ resumen.total_programadores or 0 }}</div>
         </div>
     </div>
-    <div class="seccion">
-        <div class="seccion-titulo">⚠️ Carryover por programador</div>
-        <div class="seccion-cuerpo">
-            {% if carryover %}
-            <canvas id="grafico-reporte-carryover"></canvas>
-            {% else %}
-            <div class="sin-datos">Sin datos aún</div>
-            {% endif %}
-        </div>
-    </div>
-</div>
 
-<!-- FILTROS -->
-<div class="seccion reporte-no-print">
-    <div class="seccion-titulo">🔍 Filtrar tickets</div>
-    <div class="seccion-cuerpo">
-        <form id="form-filtro-reportes" action="{{ url_for('gestion_reportes') }}#tabla-reporte" method="get" class="reporte-filtros-form">
+    <div class="fila-dos">
+        <div class="seccion">
+            <div class="seccion-titulo">🖥 Tickets por aplicación</div>
+            <div class="seccion-cuerpo">
+                {% if tickets_app %}
+                <canvas id="grafico-reporte-app"></canvas>
+                {% else %}
+                <div class="sin-datos">Sin datos aún</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="seccion">
+            <div class="seccion-titulo">🎫 Tickets por tipo</div>
+            <div class="seccion-cuerpo">
+                {% if tickets_tipo %}
+                <canvas id="grafico-reporte-tipo"></canvas>
+                {% else %}
+                <div class="sin-datos">Sin datos aún</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="fila-dos">
+        <div class="seccion">
+            <div class="seccion-titulo">⭐ Story points por programador</div>
+            <div class="seccion-cuerpo">
+                {% if story_points %}
+                <canvas id="grafico-reporte-sp"></canvas>
+                {% else %}
+                <div class="sin-datos">Sin datos aún</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="seccion">
+            <div class="seccion-titulo">⚠️ Carryover por programador</div>
+            <div class="seccion-cuerpo">
+                {% if carryover %}
+                <canvas id="grafico-reporte-carryover"></canvas>
+                {% else %}
+                <div class="sin-datos">Sin datos aún</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="seccion reporte-no-print">
+        <div class="seccion-titulo">🔍 Filtrar tickets</div>
+        <div class="seccion-cuerpo">
+            <form id="form-filtro-reportes" action="{{ url_for('gestion_reportes') }}#tabla-reporte" method="get" class="reporte-filtros-form">
+                <div class="reporte-filtros-grid">
+                    <div class="reporte-filtro-grupo">
+                        <label>Fecha inicio</label>
+                        <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}">
+                    </div>
+                    <div class="reporte-filtro-grupo">
+                        <label>Fecha fin</label>
+                        <input type="date" name="fecha_fin" value="{{ fecha_fin }}">
+                    </div>
+                    <div class="reporte-filtro-grupo">
+                        <label>Aplicación</label>
+                        <select name="aplicacion">
+                            <option value="">Todas</option>
+                            {% for app in aplicaciones %}
+                            <option value="{{ app }}" {{ 'selected' if aplicacion == app }}>{{ app }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="reporte-filtro-grupo">
+                        <label>Estado</label>
+                        <select name="estado">
+                            <option value="">Todos</option>
+                            <option value="abierto"     {{ 'selected' if estado == 'abierto' }}>Abierto</option>
+                            <option value="en_progreso" {{ 'selected' if estado == 'en_progreso' }}>En progreso</option>
+                            <option value="resuelto"    {{ 'selected' if estado == 'resuelto' }}>Resuelto</option>
+                            <option value="cerrado"     {{ 'selected' if estado == 'cerrado' }}>Cerrado</option>
+                        </select>
+                    </div>
+                    <div class="reporte-filtro-grupo">
+                        <label>Prioridad</label>
+                        <select name="prioridad">
+                            <option value="">Todas</option>
+                            <option value="critica" {{ 'selected' if prioridad == 'critica' }}>Crítica</option>
+                            <option value="alta"    {{ 'selected' if prioridad == 'alta' }}>Alta</option>
+                            <option value="media"   {{ 'selected' if prioridad == 'media' }}>Media</option>
+                            <option value="baja"    {{ 'selected' if prioridad == 'baja' }}>Baja</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="reporte-filtros-botones">
+                    <button type="button" class="btn btn-verde" onclick="filtrarReportes()">🔍 Filtrar</button>
+                    <button type="button" class="btn btn-outline" onclick="limpiarFiltros()">✖ Limpiar</button>
+                    <button type="button" onclick="imprimirReporte()" class="btn btn-exportar-pdf">🖨 Exportar PDF</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TABLA RESULTADOS -->
+    <div class="seccion" id="tabla-reporte">
+        <div class="seccion-titulo">
+            🕐 Tickets filtrados
+            <span class="reporte-total-badge">{{ tickets_filtrados | length }} resultado{{ 's' if tickets_filtrados | length != 1 }}</span>
+        </div>
+        <div class="seccion-cuerpo" style="padding: 0;">
+            {% if tickets_filtrados %}
+            <table class="tabla tabla-tickets">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Título</th><th>Aplicación</th>
+                        <th>Tipo</th><th>Prioridad</th><th>Estado</th>
+                        <th>Solicitante</th><th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tickets_filtrados %}
+                    <tr>
+                        <td class="ticket-id">#{{ t.id_ticket }}</td>
+                        <td>{{ t.titulo }}</td>
+                        <td class="ticket-aplicacion">{{ t.aplicacion }}</td>
+                        <td><span class="badge {{ 'badge-rojo' if t.tipo == 'incidencia' else 'badge-verde' }}">{{ t.tipo | capitalize }}</span></td>
+                        <td><span class="badge {{ 'badge-rojo' if t.prioridad in ('critica','alta') else 'badge-verde' }}">{{ t.prioridad | capitalize }}</span></td>
+                        <td><span class="badge {{ 'badge-verde' if t.estado in ('resuelto','cerrado') else 'badge-rojo' }}">{{ t.estado | replace('_',' ') | capitalize }}</span></td>
+                        <td class="ticket-agente">{{ t.solicitante }}</td>
+                        <td class="ticket-apertura">{{ t.fecha_apertura }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="sin-datos">No se encontraron tickets con los filtros seleccionados.</div>
+            {% endif %}
+        </div>
+    </div>
+
+</div><!-- fin seccion-tickets -->
+
+<!-- ══════════════════ SECCIÓN PROYECTOS ══════════════════ -->
+<div id="seccion-proyectos" style="display:none;">
+ 
+    <div class="kpi-fila reporte-fila">
+        <div class="kpi-card promedio">
+            <div class="etiqueta">Total proyectos</div>
+            <div class="numero">{{ resumen.total_proyectos or 0 }}</div>
+        </div>
+        <div class="kpi-card sla">
+            <div class="etiqueta">Sprints activos</div>
+            <div class="numero">{{ resumen.sprints_activos or 0 }}</div>
+        </div>
+        <div class="kpi-card pendiente">
+            <div class="etiqueta">En riesgo</div>
+            <div class="numero">{{ proyectos_riesgo | length }}</div>
+        </div>
+    </div>
+ 
+    <div class="fila-dos">
+        <div class="seccion">
+            <div class="seccion-titulo">📁 Proyectos por estado</div>
+            <div class="seccion-cuerpo">
+                {% if proyectos_estado %}
+                <canvas id="grafico-proyectos-estado"></canvas>
+                {% else %}
+                <div class="sin-datos">Sin proyectos aún</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="seccion">
+            <div class="seccion-titulo">🔴 Proyectos en riesgo</div>
+            <div class="seccion-cuerpo" style="padding:0;">
+                {% if proyectos_riesgo %}
+                <table class="tabla">
+                    <thead>
+                        <tr><th>Proyecto</th><th>Responsable</th><th>Estado</th><th>Días vencido</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in proyectos_riesgo %}
+                        <tr>
+                            <td>{{ p.nombre }}</td>
+                            <td>{{ p.responsable }}</td>
+                            <td><span class="badge badge-rojo">{{ p.estado | replace('_',' ') | capitalize }}</span></td>
+                            <td><span class="badge badge-rojo">+{{ p.dias_vencido }} días</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="sin-datos">✅ Ningún proyecto en riesgo</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+ 
+    <div class="seccion">
+        <div class="seccion-titulo">⚡ Rendimiento por sprint</div>
+        <div class="seccion-cuerpo" style="padding:0;">
+            {% if rendimiento_sprint %}
+            <table class="tabla">
+                <thead>
+                    <tr><th>Sprint</th><th>Proyecto</th><th>Capacidad</th><th>Completados</th><th>Pendientes</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in rendimiento_sprint %}
+                    <tr>
+                        <td>{{ s.sprint }}</td>
+                        <td>{{ s.proyecto }}</td>
+                        <td>{{ s.capacidad_pts }} pts</td>
+                        <td><span class="badge badge-verde">{{ s.pts_completados }} pts</span></td>
+                        <td><span class="badge badge-rojo">{{ s.pts_pendientes }} pts</span></td>
+                        <td><span class="badge {{ 'badge-verde' if s.estado_sprint == 'completado' else 'badge-rojo' }}">{{ s.estado_sprint | capitalize }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="sin-datos">Sin sprints registrados</div>
+            {% endif %}
+        </div>
+    </div>
+ 
+    <!-- FILTRO PROYECTOS (JS puro, sin recargar) -->
+    <div class="seccion reporte-no-print">
+        <div class="seccion-titulo">🔍 Filtrar proyectos</div>
+        <div class="seccion-cuerpo">
             <div class="reporte-filtros-grid">
                 <div class="reporte-filtro-grupo">
-                    <label>Fecha inicio</label>
-                    <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}">
-                </div>
-                <div class="reporte-filtro-grupo">
-                    <label>Fecha fin</label>
-                    <input type="date" name="fecha_fin" value="{{ fecha_fin }}">
-                </div>
-                <div class="reporte-filtro-grupo">
-                    <label>Aplicación</label>
-                    <select name="aplicacion">
-                        <option value="">Todas</option>
-                        {% for app in aplicaciones %}
-                        <option value="{{ app }}" {{ 'selected' if aplicacion == app }}>{{ app }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="reporte-filtro-grupo">
                     <label>Estado</label>
-                    <select name="estado">
+                    <select id="filtro-estado-proy">
                         <option value="">Todos</option>
-                        <option value="abierto"     {{ 'selected' if estado == 'abierto' }}>Abierto</option>
-                        <option value="en_progreso" {{ 'selected' if estado == 'en_progreso' }}>En progreso</option>
-                        <option value="resuelto"    {{ 'selected' if estado == 'resuelto' }}>Resuelto</option>
-                        <option value="cerrado"     {{ 'selected' if estado == 'cerrado' }}>Cerrado</option>
+                        <option value="planificado">Planificado</option>
+                        <option value="en_desarrollo">En desarrollo</option>
+                        <option value="qa">QA</option>
+                        <option value="pausado">Pausado</option>
+                        <option value="completado">Completado</option>
                     </select>
                 </div>
                 <div class="reporte-filtro-grupo">
-                    <label>Prioridad</label>
-                    <select name="prioridad">
-                        <option value="">Todas</option>
-                        <option value="critica" {{ 'selected' if prioridad == 'critica' }}>Crítica</option>
-                        <option value="alta"    {{ 'selected' if prioridad == 'alta' }}>Alta</option>
-                        <option value="media"   {{ 'selected' if prioridad == 'media' }}>Media</option>
-                        <option value="baja"    {{ 'selected' if prioridad == 'baja' }}>Baja</option>
+                    <label>Responsable</label>
+                    <select id="filtro-responsable-proy">
+                        <option value="">Todos</option>
+                        {% for r in responsables %}
+                        <option value="{{ r.nombre_completo }}">{{ r.nombre_completo }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
             <div class="reporte-filtros-botones">
-                <button type="button" class="btn btn-verde" onclick="filtrarReportes()">🔍 Filtrar</button>
-                <button type="button" class="btn btn-outline" onclick="limpiarFiltros()">✖ Limpiar</button>
-                <button type="button" onclick="imprimirReporte()" class="btn btn-exportar-pdf">🖨 Exportar PDF</button>
+                <button type="button" class="btn btn-verde" onclick="filtrarProyectos()">🔍 Filtrar</button>
+                <button type="button" class="btn btn-outline" onclick="limpiarFiltrosProyecto()">✖ Limpiar</button>
             </div>
-        </form>
+        </div>
     </div>
-</div>
-
-<!-- TABLA RESULTADOS -->
-<div class="seccion" id="tabla-reporte">
-    <div class="seccion-titulo">
-        🕐 Tickets filtrados
-        <span class="reporte-total-badge">{{ tickets_filtrados | length }} resultado{{ 's' if tickets_filtrados | length != 1 }}</span>
+ 
+    <!-- TABLA PROYECTOS -->
+    <div class="seccion">
+        <div class="seccion-titulo">
+            📋 Proyectos
+            <span id="contador-proyectos" class="reporte-total-badge">{{ proyectos_filtrados | length }} resultado{{ 's' if proyectos_filtrados | length != 1 }}</span>
+        </div>
+        <div class="seccion-cuerpo" style="padding:0;">
+            {% if proyectos_filtrados %}
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Proyecto</th>
+                        <th>Responsable</th>
+                        <th>Estado</th>
+                        <th>Inicio</th>
+                        <th>Fecha fin</th>
+                        <th>Avance</th>
+                        <th>Salud</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-proyectos">
+                    {% for p in proyectos_filtrados %}
+                    <tr data-estado="{{ p.estado }}"
+                        data-responsable="{{ p.responsable }}">
+                        <td class="ticket-id">#{{ p.id_proyecto }}</td>
+                        <td>{{ p.nombre }}</td>
+                        <td>{{ p.responsable }}</td>
+                        <td>
+                            <span class="badge {{ 'badge-verde' if p.estado == 'completado' else 'badge-rojo' if p.estado == 'pausado' else '' }}">
+                                {{ p.estado | replace('_',' ') | capitalize }}
+                            </span>
+                        </td>
+                        <td>{{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}</td>
+                        <td>{{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}</td>
+                        <td>
+                            <span class="badge {{ 'badge-verde' if (p.pct_avance or 0) >= 70 else 'badge-rojo' if (p.pct_avance or 0) < 30 else '' }}">
+                                {{ p.pct_avance or 0 }}%
+                            </span>
+                        </td>
+                        <td>
+                            {% if p.salud == 'completado' %}<span class="badge badge-verde">✅ Completado</span>
+                            {% elif p.salud == 'vencido' %}<span class="badge badge-rojo">🔴 Vencido</span>
+                            {% elif p.salud == 'por_vencer' %}<span class="badge badge-rojo">⚠️ Por vencer</span>
+                            {% else %}<span class="badge badge-verde">✅ OK</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div id="sin-resultados-proyectos" class="sin-datos" style="display:none;">
+                No se encontraron proyectos con los filtros seleccionados.
+            </div>
+            {% else %}
+            <div class="sin-datos">No hay proyectos registrados.</div>
+            {% endif %}
+        </div>
     </div>
-    <div class="seccion-cuerpo" style="padding: 0;">
-        {% if tickets_filtrados %}
-        <table class="tabla tabla-tickets">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Título</th>
-                    <th>Aplicación</th>
-                    <th>Tipo</th>
-                    <th>Prioridad</th>
-                    <th>Estado</th>
-                    <th>Solicitante</th>
-                    <th>Fecha</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in tickets_filtrados %}
-                <tr>
-                    <td class="ticket-id">#{{ t.id_ticket }}</td>
-                    <td>{{ t.titulo }}</td>
-                    <td class="ticket-aplicacion">{{ t.aplicacion }}</td>
-                    <td>
-                        <span class="badge {{ 'badge-rojo' if t.tipo == 'incidencia' else 'badge-verde' }}">
-                            {{ t.tipo | capitalize }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge {{ 'badge-rojo' if t.prioridad in ('critica','alta') else 'badge-verde' }}">
-                            {{ t.prioridad | capitalize }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge {{ 'badge-verde' if t.estado in ('resuelto','cerrado') else 'badge-rojo' }}">
-                            {{ t.estado | replace('_',' ') | capitalize }}
-                        </span>
-                    </td>
-                    <td class="ticket-agente">{{ t.solicitante }}</td>
-                    <td class="ticket-apertura">{{ t.fecha_apertura }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="sin-datos">No se encontraron tickets con los filtros seleccionados.</div>
-        {% endif %}
-    </div>
-</div>
+ 
+</div><!-- fin seccion-proyectos -->
 
 {% endblock %}
