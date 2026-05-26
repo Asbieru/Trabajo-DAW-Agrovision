@@ -104,6 +104,38 @@ def insertarTicket(obj):
         conn.commit()
 
 
+def editarTicket(id_ticket, titulo, tipo, prioridad, aplicacion, sla_horas, descripcion):
+    """Actualiza los campos editables de un ticket que está en_progreso."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE tickets
+                   SET titulo      = %s,
+                       tipo        = %s,
+                       prioridad   = %s,
+                       aplicacion  = %s,
+                       sla_horas   = %s,
+                       descripcion = %s
+                 WHERE id_ticket = %s
+                   AND estado    = 'en_progreso'
+            """, (titulo, tipo, prioridad, aplicacion, sla_horas, descripcion, id_ticket))
+        conn.commit()
+
+
+def eliminarTicket(id_ticket):
+    """Elimina permanentemente un ticket que está en estado cerrado."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                DELETE FROM tickets
+                 WHERE id_ticket = %s
+                   AND estado    = 'cerrado'
+            """, (id_ticket,))
+        conn.commit()
+
+
 def listarTickets():
     """Retorna tickets con nombre del solicitante y agente asignado."""
     asegurarTablaCalificacionesTicket()
