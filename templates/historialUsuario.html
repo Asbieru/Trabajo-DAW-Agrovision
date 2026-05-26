@@ -7,7 +7,7 @@
 <div class="page-header">
     <div>
         <h1>📋 Historia de participación de: {{ usuario.nombre_completo }}{% if usuario.apellido %} {{ usuario.apellido }}{% endif %}</h1>
-        <p>Tickets e historias en los que el usuario ha participado</p>
+        <p>Tickets y proyectos en los que el usuario ha participado</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a href="{{ url_for('perfil_usuario', id_usuario=usuario.id_usuario) }}"
@@ -34,8 +34,8 @@
                         onclick="setTipo(this,'todos')">Todos</button>
                 <button class="btn btn-outline btn-sm filtro-tipo" data-tipo="ticket"
                         onclick="setTipo(this,'ticket')">🎫 Ticket</button>
-                <button class="btn btn-outline btn-sm filtro-tipo" data-tipo="historia"
-                        onclick="setTipo(this,'historia')">📖 Proyecto</button>
+                <button class="btn btn-outline btn-sm filtro-tipo" data-tipo="proyecto" 
+                        onclick="setTipo(this,'proyecto')">📁 Proyecto</button>
             </div>
         </div>
     </div>
@@ -79,7 +79,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <span style="font-size:0.68rem;font-weight:700;
                                  color:{% if item.tipo_item == 'ticket' %}var(--azul){% else %}var(--verde-oscuro){% endif %};">
-                        {% if item.tipo_item == 'ticket' %}🎫 TICKET{% else %}📖 HISTORIA{% endif %}
+                            {% if item.tipo_item == 'ticket' %}🎫 TICKET{% else %}📁 PROYECTO{% endif %}
                     </span>
                     <span class="badge badge-{% if item.subtipo in ('incidencia','bug') %}rojo
                                               {% elif item.subtipo in ('peticion','tecnica') %}azul
@@ -102,10 +102,17 @@
                 </p>
 
                 <!-- Proyecto (solo historias) -->
-                {% if item.nombre_proyecto and item.tipo_item == 'historia' %}
-                <p style="font-size:0.72rem;color:var(--gris-texto);margin:0 0 4px 0;">
-                    📁 {{ item.nombre_proyecto }}
-                </p>
+                {% if item.tipo_item == 'proyecto' and item.actividades %}
+                <div style="margin-top:6px;border-top:1px solid var(--gris-borde);padding-top:6px;">
+                    <div style="font-size:0.68rem;font-weight:700;color:var(--gris-texto);margin-bottom:3px;">
+                        Actividades:
+                    </div>
+                    {% for act in item.actividades %}
+                    <div style="font-size:0.72rem;color:var(--negro);line-height:1.4;">
+                        — {% if act.codigo %}<span style="color:var(--verde);font-weight:600;">{{ act.codigo }}</span> {% endif %}{{ act.titulo }}
+                    </div>
+                    {% endfor %}
+                </div>
                 {% endif %}
 
                 <!-- Rol del usuario + prioridad -->
@@ -155,8 +162,8 @@
         <div class="stat-label">Tickets</div>
     </div>
     <div class="stat-card" style="border-top:4px solid var(--verde);text-align:center;">
-        <div class="stat-num verde" id="cnt-historias">{{ resumen.historias_total }}</div>
-        <div class="stat-label">Historias / Proyectos</div>
+        <div class="stat-num verde" id="cnt-proyectos">{{ resumen.proyectos_total }}</div>
+        <div class="stat-label">Proyectos</div>
     </div>
     <div class="stat-card" style="border-top:4px solid var(--verde);text-align:center;">
         <div class="stat-num verde">{{ resumen.estados.completada }}</div>

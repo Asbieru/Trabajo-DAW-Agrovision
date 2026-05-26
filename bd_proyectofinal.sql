@@ -130,37 +130,6 @@ VALUES
 (1,'Sprint KPIs','Dashboard KPIs','activo',60,CURDATE(),CURDATE()+INTERVAL 10 DAY),
 (2,'Sprint Movil','Core App','activo',40,CURDATE(),CURDATE()+INTERVAL 10 DAY);
 
--- ============================================================
--- TABLA HISTORIAS
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS historias (
-    id_historia INT AUTO_INCREMENT PRIMARY KEY,
-    id_proyecto INT NOT NULL,
-    id_sprint INT NULL,
-    id_asignado INT NULL,
-    codigo VARCHAR(30) NOT NULL UNIQUE,
-    titulo VARCHAR(200) NOT NULL,
-    tipo ENUM('funcional','tecnica','bug') NOT NULL DEFAULT 'funcional',
-    prioridad ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
-    estado ENUM('backlog','por_hacer','en_progreso','completada','cancelada')
-    NOT NULL DEFAULT 'backlog',
-    story_points SMALLINT DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_historia_proy FOREIGN KEY (id_proyecto)
-    REFERENCES proyectos(id_proyecto),
-    CONSTRAINT fk_historia_sprint FOREIGN KEY (id_sprint)
-    REFERENCES sprints(id_sprint),
-    CONSTRAINT fk_historia_asig FOREIGN KEY (id_asignado)
-    REFERENCES usuarios(id_usuario)
-) ENGINE=InnoDB;
-
-INSERT INTO historias
-(id_proyecto, id_sprint, id_asignado, codigo, titulo, prioridad, estado, story_points)
-VALUES
-(1,1,3,'HU-001','KPIs tiempo real','alta','completada',8),
-(1,1,2,'HU-002','Filtro indicadores','media','en_progreso',5),
-(2,2,3,'HU-003','Login movil','critica','completada',8);
 
 -- ============================================================
 -- TABLA AVANCES

@@ -201,65 +201,109 @@ def historialParticipacionUsuario(id_usuario):
             como_agente = cursor.fetchall()
 
             cursor.execute("""
-                SELECT 'historia' AS tipo_item, h.id_historia AS id_item,
-                       h.titulo, h.tipo AS subtipo, h.prioridad, h.estado,
-                       'asignado' AS rol_usuario,
-                       h.codigo, p.nombre AS nombre_proyecto,
-                       h.created_at AS fecha
-                FROM historias h
-                JOIN proyectos p ON h.id_proyecto = p.id_proyecto
-                WHERE h.id_asignado = %s
-            """, (id_usuario,))
-            como_asignado = cursor.fetchall()
+                SELECT DISTINCT p.id_proyecto, p.nombre AS titulo,
+                    p.estado AS estado_proyecto,
+                    CASE WHEN p.id_responsable = %s THEN 'responsable'
+                        WHEN asig.id_usuario IS NOT NULL THEN 'responsable'
+                        ELSE 'asignado' END AS rol_usuario,
+                    p.nombre AS nombre_proyecto,
+                    p.created_at AS fecha
+                FROM proyectos p
+                LEFT JOIN asignado asig ON asig.id_proyecto = p.id_proyecto AND asig.id_usuario = %s
+                LEFT JOIN actividades a ON a.id_proyecto = p.id_proyecto AND a.id_asignado = %s
+                WHERE p.id_responsable = %s OR asig.id_usuario IS NOT NULL OR a.id_asignado IS NOT NULL
+            """, (id_usuario, id_usuario, id_usuario, id_usuario))
+            proyectos_raw = cursor.fetchall()
 
             cursor.execute("""
-                SELECT 'historia' AS tipo_item, p.id_proyecto AS id_item,
-                       p.nombre AS titulo, p.estado AS subtipo,
-                       'media' AS prioridad,
-                       CASE p.estado
-                           WHEN 'completado'    THEN 'completada'
-                           WHEN 'pausado'       THEN 'cancelada'
-                           WHEN 'en_desarrollo' THEN 'en_progreso'
-                           WHEN 'qa'            THEN 'en_progreso'
-                           ELSE 'backlog'
-                       END AS estado,
-                       'responsable' AS rol_usuario,
-                       NULL AS codigo, p.nombre AS nombre_proyecto,
-                       p.created_at AS fecha
-                FROM proyectos p WHERE p.id_responsable = %s
+                SELECT a.id_proyecto, a.titulo, a.codigo, a.estado
+                FROM actividades a
+                WHERE a.id_asignado = %s
             """, (id_usuario,))
-            como_responsable = cursor.fetchall()
+            actividades_propias = cursor.fetchall()
 
-    mapa = {
-        'abierto':       'backlog',
-        'en_progreso':   'en_progreso',
-        'resuelto':      'completada',
-        'cerrado':       'completada',
-        'base_proyecto': 'cancelada',
+            # Todas las actividades de proyectos donde es responsable (para caso 2)
+            cursor.execute("""
+                SELECT a.id_proyecto, a.titulo, a.codigo, a.estado
+                FROM actividades a
+                INNER JOIN proyectos p ON a.id_proyecto = p.id_proyecto
+                LEFT JOIN asignado asig ON asig.id_proyecto = p.id_proyecto AND asig.id_usuario = %s
+                WHERE p.id_responsable = %s OR asig.id_usuario IS NOT NULL
+            """, (id_usuario, id_usuario))
+            todas_actividades = cursor.fetchall()
+
+            jerarquia = ['backlog', 'por_hacer', 'en_progreso', 'completada', 'cancelada']
+
+    mapa_proyecto = {
+        'planificado':   'backlog',
+        'en_desarrollo': 'en_progreso',
+        'qa':            'en_progreso',
+        'completado':    'completada',
+        'pausado':       'cancelada',
     }
-    todos = []
+
+    mapa_ticket = {
+        'abierto':     'backlog',
+        'en_progreso': 'en_progreso',
+        'resuelto':    'completada',
+        'cerrado':     'completada',
+    }
+
+    def estado_mas_atrasado(acts):
+        estados = [a['estado'] for a in acts]
+        activos = [e for e in estados if e != 'cancelada']
+        pool = activos if activos else estados
+        return min(pool, key=lambda e: jerarquia.index(e) if e in jerarquia else 99)
+
+    propias_por_proyecto = {}
+    for a in actividades_propias:
+        propias_por_proyecto.setdefault(a['id_proyecto'], []).append(dict(a))
+
+    todas_por_proyecto = {}
+    for a in todas_actividades:
+        todas_por_proyecto.setdefault(a['id_proyecto'], []).append(dict(a))
+
+    resultado = []
     for t in list(como_solicitante) + list(como_agente):
         t = dict(t)
-        t['estado'] = mapa.get(t['estado'], 'backlog')
-        todos.append(t)
-    for h in list(como_asignado) + list(como_responsable):
-        todos.append(dict(h))
-    return todos
+        t['estado'] = mapa_ticket.get(t['estado'], 'backlog')
+        resultado.append(t)
 
+    for p in proyectos_raw:
+        p = dict(p)
+        pid = p['id_proyecto']
+        propias = propias_por_proyecto.get(pid, [])
+        todas   = todas_por_proyecto.get(pid, [])
 
+        if propias:
+            estado_kanban = estado_mas_atrasado(propias)
+        elif todas:
+            estado_kanban = estado_mas_atrasado(todas)
+        else:
+            estado_kanban = mapa_proyecto.get(p['estado_proyecto'], 'backlog')
+
+        p['tipo_item']   = 'proyecto'
+        p['estado']      = estado_kanban
+        p['subtipo']     = p['estado_proyecto']
+        p['prioridad']   = 'media'
+        p['codigo']      = None
+        p['actividades'] = propias
+        resultado.append(p)
+
+    return resultado
 def resumenHistorialUsuario(id_usuario):
     items = historialParticipacionUsuario(id_usuario)
     estados = {'backlog': 0, 'por_hacer': 0, 'en_progreso': 0, 'completada': 0, 'cancelada': 0}
-    tickets_total = historias_total = 0
+    tickets_total = proyectos_total = 0
     for i in items:
         estados[i['estado']] = estados.get(i['estado'], 0) + 1
         if i['tipo_item'] == 'ticket':
             tickets_total += 1
         else:
-            historias_total += 1
+            proyectos_total += 1
     return {
         'estados':         estados,
         'tickets_total':   tickets_total,
-        'historias_total': historias_total,
+        'proyectos_total': proyectos_total,
         'total':           len(items),
     }

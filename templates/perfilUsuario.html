@@ -195,8 +195,8 @@
 
 <!-- Datos para Chart.js -->
 <div id="datos-perfil-usuario"
-     data-tickets="{{ tickets_json }}"
-     data-proyectos="{{ proyectos_json }}"
-     style="display:none;"></div>
+    data-tickets='{{ tickets_json | tojson }}'
+    data-proyectos='{{ proyectos_json | tojson }}'
+    style="display:none;"></div>
 
 {% endblock %}
