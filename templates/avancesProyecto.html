@@ -12,64 +12,110 @@
         <h1>📊 Bitácora Ejecutiva de Proyecto</h1>
         <p>PR-{{ proyecto.id_proyecto }} · {{ proyecto.nombre }}</p>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Volver</a>
         <button class="btn btn-exportar-pdf" onclick="exportarPDF()">📄 Exportar PDF</button>
         <a class="btn btn-verde" href="{{ url_for('nuevo_avance', id_proyecto=proyecto.id_proyecto) }}">+ Nuevo Reporte</a>
     </div>
 </div>
 
-<div id="documento-pdf" style="background: white; padding: 20px; border-radius: 10px;">
-    
-    <div class="solo-pdf" style="display: none; text-align: center; margin-bottom: 20px;">
+<div id="documento-pdf" style="background:white; padding:20px; border-radius:10px;">
+
+    <!-- Cabecera solo para PDF -->
+    <div class="solo-pdf" style="display:none; text-align:center; margin-bottom:20px;">
         <h2>Reporte de Avance: {{ proyecto.nombre }}</h2>
-        <p style="color: #666; font-size: 0.9rem;">Generado el: <span id="fecha-hoy"></span></p>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+        <p style="color:#666; font-size:0.9rem;">Generado el: <span id="fecha-hoy"></span></p>
+        <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
     </div>
 
-    <div class="stats-grid" style="margin-bottom: 24px;">
-        <div class="stat-card" style="border-left: 4px solid var(--azul);">
+    <!-- KPI Cards -->
+    <div class="stats-grid" style="margin-bottom:24px;">
+        <div class="stat-card" style="border-left:4px solid var(--azul);">
             <div class="stat-label">Total de Reportes</div>
             <div class="stat-num">{{ avances|length }}</div>
         </div>
-        <div class="stat-card" style="border-left: 4px solid var(--verde);">
+
+        <div class="stat-card" style="border-left:4px solid var(--verde);">
             <div class="stat-label">Avance Actual</div>
-            <div class="stat-num">
-                {% if avances %}
-                    {{ avances[0].porcentaje_avance }}%
-                {% else %}
-                    0%
-                {% endif %}
+            <div class="stat-num" id="avance-actual-num">
+                {% if avances %}{{ avances[0].porcentaje_avance }}%{% else %}0%{% endif %}
             </div>
+            <!-- Barra de avance actual -->
+            {% if avances %}
+            <div style="margin-top:8px; background:var(--gris-borde); border-radius:20px;
+                        height:6px; overflow:hidden;">
+                <div style="height:100%; border-radius:20px; background:var(--verde);
+                            width:{{ avances[0].porcentaje_avance }}%;
+                            transition:width 0.6s ease;"></div>
+            </div>
+            {% endif %}
         </div>
-        <div class="stat-card" style="border-left: 4px solid var(--acento);">
+
+        <div class="stat-card" style="border-left:4px solid var(--acento);">
             <div class="stat-label">Salud Último Reporte</div>
-            <div class="stat-num" style="font-size: 1.4rem; padding-top: 5px;">
+            <div class="stat-num" style="font-size:1.4rem; padding-top:5px;">
                 {% if avances %}
                     {% set ultima_salud = avances[0].estado_salud %}
-                    {% if ultima_salud == 'a_tiempo' %} <span style="color: var(--verde);">🟢 A tiempo</span>
-                    {% elif ultima_salud == 'en_riesgo' %} <span style="color: var(--acento);">🟡 En riesgo</span>
-                    {% else %} <span style="color: var(--rojo);">🔴 Retrasado</span> {% endif %}
+                    {% if ultima_salud == 'a_tiempo' %}
+                        <span style="color:var(--verde);">🟢 A tiempo</span>
+                    {% elif ultima_salud == 'en_riesgo' %}
+                        <span style="color:var(--acento);">🟡 En riesgo</span>
+                    {% else %}
+                        <span style="color:var(--rojo);">🔴 Retrasado</span>
+                    {% endif %}
+                {% else %}—{% endif %}
+            </div>
+        </div>
+
+        <!-- Card extra: fecha último reporte -->
+        <div class="stat-card" style="border-left:4px solid var(--gris-texto);">
+            <div class="stat-label">Último Reporte</div>
+            <div class="stat-num" style="font-size:1.1rem; color:var(--negro);">
+                {% if avances %}
+                    {{ avances[0].fecha_reporte.strftime('%d/%m/%Y') }}
                 {% else %}
                     —
                 {% endif %}
             </div>
+            <div style="font-size:0.75rem; color:var(--gris-texto); margin-top:4px;">
+                {% if avances %}por {{ avances[0].autor }}{% endif %}
+            </div>
         </div>
     </div>
 
-    <div class="card" style="margin-bottom: 24px;">
-        <div class="card-header">📈 Curva de Avance del Proyecto</div>
+    <!-- Gráfico de curva -->
+    <div class="card" style="margin-bottom:24px;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>📈 Curva de Avance del Proyecto</span>
+            <button type="button" class="reporte-no-print"
+                    onclick="refrescarGrafico()"
+                    style="background:none; border:none; cursor:pointer;
+                           color:var(--verde); font-size:0.82rem;
+                           display:flex; align-items:center; gap:4px;">
+                🔄 <span id="txt-refresh-grafico">Refrescar</span>
+            </button>
+        </div>
         <div class="card-body">
             {% if avances %}
-                <canvas id="graficoAvance" style="max-height: 250px;"></canvas>
+                <canvas id="graficoAvance" style="max-height:260px;"></canvas>
             {% else %}
-                <p class="sin-resultados" style="display: block;">No hay datos suficientes para graficar.</p>
+                <p class="sin-resultados" style="display:block;">
+                    No hay datos suficientes para graficar.
+                </p>
             {% endif %}
         </div>
     </div>
 
+    <!-- Tabla de revisiones -->
     <div class="card">
-        <div class="card-header">📋 Detalle de Revisiones</div>
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>📋 Detalle de Revisiones</span>
+            {% if avances %}
+            <span style="font-size:0.78rem; color:var(--gris-texto);">
+                {{ avances|length }} reporte{{ 's' if avances|length != 1 else '' }} registrado{{ 's' if avances|length != 1 else '' }}
+            </span>
+            {% endif %}
+        </div>
         <div class="card-body">
             {% if avances %}
             <div class="tabla-wrap">
@@ -81,32 +127,48 @@
                             <th>% Avance</th>
                             <th>Salud</th>
                             <th>Logros del periodo</th>
+                            <th>Pendientes / Bloqueos</th>
                             <th class="reporte-no-print">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for av in avances %}
                         <tr>
-                            <td data-label="Fecha" style="font-weight: 600;">
+                            <td data-label="Fecha" style="font-weight:600; white-space:nowrap;">
                                 {{ av.fecha_reporte.strftime('%d/%m/%Y') }}
                             </td>
-                            <td data-label="Autor" class="ticket-agente">{{ av.autor }}</td>
-                            <td data-label="% Avance"><span class="badge badge-verde">{{ av.porcentaje_avance }}%</span></td>
+                            <td data-label="Autor" class="ticket-agente">
+                                {{ av.autor }}
+                            </td>
+                            <td data-label="% Avance">
+                                <span class="badge badge-verde">{{ av.porcentaje_avance }}%</span>
+                            </td>
                             <td data-label="Salud">
                                 {% if av.estado_salud == 'a_tiempo' %}
-                                    <span style="color: var(--verde); font-weight: 600;">A tiempo</span>
+                                    <span style="color:var(--verde); font-weight:600;">🟢 A tiempo</span>
                                 {% elif av.estado_salud == 'en_riesgo' %}
-                                    <span style="color: var(--acento); font-weight: 600;">En riesgo</span>
+                                    <span style="color:var(--acento); font-weight:600;">🟡 En riesgo</span>
                                 {% else %}
-                                    <span style="color: var(--rojo); font-weight: 600;">Retrasado</span>
+                                    <span style="color:var(--rojo); font-weight:600;">🔴 Retrasado</span>
                                 {% endif %}
                             </td>
-                            <td data-label="Logros" style="font-size: 0.85rem; max-width: 300px;">
+                            <td data-label="Logros"
+                                style="font-size:0.85rem; max-width:260px; line-height:1.5;">
                                 {{ av.logros_periodo }}
                             </td>
+                            <td data-label="Pendientes"
+                                style="font-size:0.83rem; max-width:200px;
+                                       color:var(--gris-texto); line-height:1.5;">
+                                {{ av.pendientes_next or '—' }}
+                            </td>
                             <td data-label="Acción" class="td-accion reporte-no-print">
-                                <form action="{{ url_for('eliminar_avance_ruta', id_proyecto=proyecto.id_proyecto, id_avance=av.id_avance) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este reporte de avance? Esta acción no se puede deshacer.');">
-                                    <button type="submit" class="btn btn-sm btn-rojo" style="padding: 5px 10px; font-size: 0.75rem;">🗑️ Eliminar</button>
+                                <form action="{{ url_for('eliminar_avance_ruta', id_proyecto=proyecto.id_proyecto, id_avance=av.id_avance) }}"
+                                      method="POST"
+                                      onsubmit="return confirm('¿Eliminar este reporte? Esta acción no se puede deshacer.');">
+                                    <button type="submit" class="btn btn-sm btn-rojo"
+                                            style="padding:5px 10px; font-size:0.75rem;">
+                                        🗑️ Eliminar
+                                    </button>
                                 </form>
                             </td>
                         </tr>
@@ -115,67 +177,116 @@
                 </table>
             </div>
             {% else %}
-            <div class="sin-resultados" style="display: block;">No hay reportes de avance registrados para este proyecto todavía.</div>
+            <div class="sin-resultados" style="display:block;">
+                No hay reportes de avance registrados para este proyecto todavía.
+            </div>
             {% endif %}
         </div>
     </div>
-</div>
+
+</div><!-- fin #documento-pdf -->
 
 <script>
-    {% if avances %}
-    document.addEventListener("DOMContentLoaded", function() {
-        const ctx = document.getElementById('graficoAvance').getContext('2d');
-        const etiquetas = {{ fechas_grafico | tojson }};
-        const datos = {{ porcentajes_grafico | tojson }};
+const ID_PROYECTO = {{ proyecto.id_proyecto }};
+var instanciaGrafico = null;
 
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: etiquetas,
-                datasets: [{
-                    label: '% de Avance',
-                    data: datos,
-                    borderColor: '#1a7a4a',
-                    backgroundColor: 'rgba(26, 122, 74, 0.1)',
-                    borderWidth: 3,
-                    pointBackgroundColor: '#f0a500',
-                    pointRadius: 5,
-                    fill: true,
-                    tension: 0.3
-                }]
+// ── 1. Dibujar gráfico inicial ────────────────────────────────
+{% if avances %}
+document.addEventListener('DOMContentLoaded', function() {
+    var etiquetas = {{ fechas_grafico | tojson }};
+    var datos     = {{ porcentajes_grafico | tojson }};
+    dibujarGrafico(etiquetas, datos);
+});
+{% endif %}
+
+function dibujarGrafico(etiquetas, datos) {
+    var ctx = document.getElementById('graficoAvance');
+    if (!ctx) return;
+
+    if (instanciaGrafico) {
+        instanciaGrafico.destroy();
+    }
+
+    instanciaGrafico = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: etiquetas,
+            datasets: [{
+                label: '% de Avance',
+                data: datos,
+                borderColor: '#1a7a4a',
+                backgroundColor: 'rgba(26,122,74,0.08)',
+                borderWidth: 3,
+                pointBackgroundColor: '#f0a500',
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                fill: true,
+                tension: 0.35
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { callback: function(v) { return v + '%'; } }
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true, max: 100, ticks: { callback: function(value) { return value + "%" } } }
-                },
-                plugins: {
-                    legend: { display: false }
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ' Avance: ' + ctx.parsed.y + '%'; }
+                    }
                 }
             }
-        });
+        }
     });
-    {% endif %}
+}
 
-    function exportarPDF() {
-        document.getElementById('fecha-hoy').innerText = new Date().toLocaleDateString();
-        const elemento = document.getElementById('documento-pdf');
-        const opt = {
-            margin:       0.5,
-            filename:     'Avance_PR-{{ proyecto.id_proyecto }}.pdf',
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-        const cabeceraPDF = document.querySelector('.solo-pdf');
-        cabeceraPDF.style.display = 'block';
-        const elementosNoPrint = document.querySelectorAll('.reporte-no-print');
-        elementosNoPrint.forEach(el => el.style.display = 'none');
-        html2pdf().set(opt).from(elemento).save().then(() => {
-            cabeceraPDF.style.display = 'none';
-            elementosNoPrint.forEach(el => el.style.display = '');
+// ── 2. Refrescar gráfico desde la API ─────────────────────────
+function refrescarGrafico() {
+    var txtBtn = document.getElementById('txt-refresh-grafico');
+    txtBtn.textContent = 'Cargando…';
+
+    fetch('/api/proyecto/' + ID_PROYECTO + '/avances-grafico')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            dibujarGrafico(data.fechas, data.porcentajes);
+            txtBtn.textContent = 'Actualizado ✓';
+            setTimeout(function() { txtBtn.textContent = 'Refrescar'; }, 2000);
+        })
+        .catch(function() {
+            txtBtn.textContent = '⚠️ Error';
+            setTimeout(function() { txtBtn.textContent = 'Refrescar'; }, 2000);
         });
-    }
+}
+
+// ── 3. Exportar a PDF ─────────────────────────────────────────
+function exportarPDF() {
+    document.getElementById('fecha-hoy').innerText = new Date().toLocaleDateString('es-PE');
+
+    var opt = {
+        margin:      0.5,
+        filename:    'Avance_PR-{{ proyecto.id_proyecto }}.pdf',
+        image:       { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF:       { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    var cabecera = document.querySelector('.solo-pdf');
+    cabecera.style.display = 'block';
+
+    var noPrint = document.querySelectorAll('.reporte-no-print');
+    noPrint.forEach(function(el) { el.style.display = 'none'; });
+
+    html2pdf().set(opt).from(document.getElementById('documento-pdf')).save().then(function() {
+        cabecera.style.display = 'none';
+        noPrint.forEach(function(el) { el.style.display = ''; });
+    });
+}
 </script>
 {% endblock %}

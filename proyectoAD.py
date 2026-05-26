@@ -4,7 +4,6 @@ class Proyecto:
     def __init__(self, nombre, ids_responsables, estado,
                  fecha_inicio, fecha_fin_plan, descripcion):
         self.nombre           = nombre
-        # ids_responsables puede ser lista (nuevo) o un solo valor (edicion existente)
         if isinstance(ids_responsables, list):
             self.ids_responsables = ids_responsables
             self.id_responsable   = ids_responsables[0] if ids_responsables else None
@@ -17,16 +16,38 @@ class Proyecto:
         self.descripcion     = descripcion
 
 
+def _calcularEstado(estado_bd, total_acts, completadas, en_progreso):
+    """
+    Calcula el estado real de un proyecto basándose en sus actividades.
+    Si no hay actividades, respeta el estado guardado en la BD.
+    """
+    if total_acts == 0:
+        return estado_bd
+    if completadas == total_acts:
+        return 'completado'
+    if en_progreso > 0 or completadas > 0:
+        return 'en_desarrollo'
+    return estado_bd
+
+
 def listarProyectos():
-    """Retorna proyectos con todos sus responsables agrupados."""
+    """Retorna proyectos con estado calculado según actividades y responsables agrupados."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
-            # Traer proyectos base
+            # Proyectos con conteo de actividades para calcular estado real
             cursor.execute("""
-                SELECT p.id_proyecto, p.nombre, p.estado,
-                       p.fecha_inicio, p.fecha_fin_plan, p.id_responsable
+                SELECT p.id_proyecto, p.nombre, p.estado AS estado_bd,
+                       p.fecha_inicio, p.fecha_fin_plan, p.id_responsable,
+                       COUNT(a.id_actividad)                                          AS total_acts,
+                       SUM(a.estado = 'completada')                                   AS completadas,
+                       SUM(a.estado = 'en_progreso')                                  AS en_progreso
                 FROM proyectos p
+                LEFT JOIN actividades a
+                       ON p.id_proyecto = a.id_proyecto
+                      AND a.estado != 'cancelada'
+                GROUP BY p.id_proyecto, p.nombre, p.estado,
+                         p.fecha_inicio, p.fecha_fin_plan, p.id_responsable
                 ORDER BY p.created_at DESC
             """)
             proyectos = cursor.fetchall()
@@ -34,7 +55,7 @@ def listarProyectos():
             if not proyectos:
                 return []
 
-            # Traer todos los responsables de la tabla asignado
+            # Responsables
             cursor.execute("""
                 SELECT a.id_proyecto, u.nombre_completo
                 FROM asignado a
@@ -51,15 +72,22 @@ def listarProyectos():
             resp_por_proyecto[pid] = []
         resp_por_proyecto[pid].append(fila['nombre_completo'])
 
-    # Inyectar la lista de nombres en cada proyecto como 'responsables'
     result = []
     for p in proyectos:
-        pid = p['id_proyecto']
+        pid   = p['id_proyecto']
+        fila  = dict(p)
+
+        # ── Estado calculado dinámicamente ──────────────────────
+        fila['estado'] = _calcularEstado(
+            estado_bd    = p['estado_bd'],
+            total_acts   = int(p['total_acts']   or 0),
+            completadas  = int(p['completadas']  or 0),
+            en_progreso  = int(p['en_progreso']  or 0),
+        )
+
+        # Responsables
         nombres = resp_por_proyecto.get(pid, [])
-        # Convertir a dict mutable para agregar el campo
-        fila = dict(p)
-        fila['responsables'] = nombres
-        # Compatibilidad: nombre_responsable con todos los nombres juntos
+        fila['responsables']      = nombres
         fila['nombre_responsable'] = ', '.join(nombres) if nombres else '—'
         result.append(fila)
 
@@ -82,7 +110,6 @@ def insertarProyecto(obj):
             ))
             nuevo_id = cursor.lastrowid
 
-            # Insertar todos los responsables en la tabla asignado
             for id_resp in obj.ids_responsables:
                 cursor.execute("""
                     INSERT IGNORE INTO asignado (id_proyecto, id_usuario)
@@ -92,20 +119,41 @@ def insertarProyecto(obj):
 
 
 def obtenerProyecto(id_proyecto):
-    """Retorna el detalle completo de un proyecto por su ID."""
+    """Retorna el detalle completo de un proyecto con estado calculado."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT p.id_proyecto, p.nombre, p.estado,
+                SELECT p.id_proyecto, p.nombre, p.estado AS estado_bd,
                        p.fecha_inicio, p.fecha_fin_plan, p.descripcion,
                        p.id_responsable,
-                       u.nombre_completo AS nombre_responsable
+                       u.nombre_completo AS nombre_responsable,
+                       COUNT(a.id_actividad)          AS total_acts,
+                       SUM(a.estado = 'completada')   AS completadas,
+                       SUM(a.estado = 'en_progreso')  AS en_progreso
                 FROM proyectos p
                 JOIN usuarios u ON p.id_responsable = u.id_usuario
+                LEFT JOIN actividades a
+                       ON p.id_proyecto = a.id_proyecto
+                      AND a.estado != 'cancelada'
                 WHERE p.id_proyecto = %s
+                GROUP BY p.id_proyecto, p.nombre, p.estado,
+                         p.fecha_inicio, p.fecha_fin_plan, p.descripcion,
+                         p.id_responsable, u.nombre_completo
             """, (id_proyecto,))
-            return cursor.fetchone()
+            row = cursor.fetchone()
+
+    if not row:
+        return None
+
+    fila = dict(row)
+    fila['estado'] = _calcularEstado(
+        estado_bd   = row['estado_bd'],
+        total_acts  = int(row['total_acts']  or 0),
+        completadas = int(row['completadas'] or 0),
+        en_progreso = int(row['en_progreso'] or 0),
+    )
+    return fila
 
 
 def actualizarProyecto(id_proyecto, nombre, id_responsable, estado, descripcion):
@@ -126,16 +174,22 @@ def actualizarProyecto(id_proyecto, nombre, id_responsable, estado, descripcion)
 
 
 def listarAvances(id_proyecto):
-    """Retorna el historial de avances de un proyecto especifico."""
+    """Retorna el historial de avances de un proyecto con nombre del autor."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT a.id_avance, a.fecha_reporte, a.porcentaje_avance,
-                       a.estado_salud, a.logros_periodo, a.pendientes_next
-                FROM avances_proyecto a
-                WHERE a.id_proyecto = %s
-                ORDER BY a.fecha_reporte DESC, a.created_at DESC
+                SELECT ap.id_avance,
+                       ap.fecha_reporte,
+                       ap.porcentaje_avance,
+                       ap.estado_salud,
+                       ap.logros_periodo,
+                       ap.pendientes_next,
+                       u.nombre_completo AS autor
+                FROM avances_proyecto ap
+                JOIN usuarios u ON ap.id_autor = u.id_usuario
+                WHERE ap.id_proyecto = %s
+                ORDER BY ap.fecha_reporte DESC, ap.created_at DESC
             """, (id_proyecto,))
             return cursor.fetchall()
 
@@ -161,5 +215,8 @@ def eliminarAvance(id_avance):
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM avances_proyecto WHERE id_avance = %s", (id_avance,))
+            cursor.execute(
+                "DELETE FROM avances_proyecto WHERE id_avance = %s",
+                (id_avance,)
+            )
         conn.commit()

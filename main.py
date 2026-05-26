@@ -627,6 +627,33 @@ def api_estado_actividad(id_actividad):
     actualizarEstadoActividad(id_actividad, nuevo_estado)
     return jsonify({'ok': True, 'estado': nuevo_estado})
 
+@app.route('/api/proyecto/<int:id_proyecto>/porcentaje')
+def api_porcentaje_proyecto(id_proyecto):
+    resumen     = resumenActividadesPorProyecto()
+    fila_actual = next((r for r in resumen
+                        if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
+    if fila_actual:
+        if isinstance(fila_actual, dict):
+            valor_raw = fila_actual.get('porcentaje_avance_real')
+        else:
+            valor_raw = fila_actual[3]
+        pct = round(float(valor_raw)) if valor_raw is not None else 0
+    else:
+        pct = 0
+
+    proyecto = obtenerProyecto(id_proyecto)
+    if proyecto and proyecto.get('estado') == 'completado':
+        pct = 100
+
+    return jsonify({'porcentaje': pct})
+
+@app.route('/api/proyecto/<int:id_proyecto>/avances-grafico')
+def api_avances_grafico(id_proyecto):
+    avances = listarAvances(id_proyecto)
+    avances_cronologicos = list(reversed(avances))
+    fechas      = [av['fecha_reporte'].strftime('%d/%m') for av in avances_cronologicos]
+    porcentajes = [float(av['porcentaje_avance']) for av in avances_cronologicos]
+    return jsonify({'fechas': fechas, 'porcentajes': porcentajes})
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE
