@@ -3,6 +3,7 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 Sin uso de session ni import json.
 """
 
+
 from flask import Flask, render_template, request, redirect, url_for, abort, jsonify
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios,
