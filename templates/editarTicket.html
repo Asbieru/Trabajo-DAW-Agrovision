@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Editar Ticket SD-{{ ticket.id_ticket }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>✏️ Editar ticket <span style="color:var(--verde);">SD-{{ ticket.id_ticket }}</span></h1>
+        <p>Solo disponible mientras el ticket está <strong>en progreso</strong></p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
+</div>
+
+<div class="alerta alerta-info" style="margin-bottom:1.5rem;">
+    ⚠️ <strong>Nota:</strong> Solo puedes editar tickets en estado <em>En progreso</em>. El estado y el solicitante no se pueden cambiar aquí.
+</div>
+
+<div class="card">
+    <div class="card-header">Datos del ticket</div>
+    <div class="card-body">
+        <form action="{{ url_for('guardar_edicion_ticket', id_ticket=ticket.id_ticket) }}" method="POST">
+
+            <!-- Título -->
+            <div class="form-group form-section-spacing">
+                <label for="titulo">Título del problema *</label>
+                <input type="text" id="titulo" name="titulo"
+                       value="{{ ticket.titulo }}"
+                       placeholder="Resume el problema en una línea clara" required>
+            </div>
+
+            <!-- Tipo, Prioridad, Aplicación -->
+            <div class="form-grid tres form-section-spacing">
+                <div class="form-group">
+                    <label for="tipo">Tipo de solicitud *</label>
+                    <select id="tipo" name="tipo" required>
+                        <option value="incidencia" {% if ticket.tipo == 'incidencia' %}selected{% endif %}>🔴 Incidencia (error / falla)</option>
+                        <option value="peticion"   {% if ticket.tipo == 'peticion'   %}selected{% endif %}>🔵 Petición (acceso / cuenta)</option>
+                        <option value="consulta"   {% if ticket.tipo == 'consulta'   %}selected{% endif %}>🟡 Consulta</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="prioridad">Prioridad *</label>
+                    <select id="prioridad" name="prioridad" required>
+                        <option value="critica" {% if ticket.prioridad == 'critica' %}selected{% endif %}>🚨 Crítica – sistema caído</option>
+                        <option value="alta"    {% if ticket.prioridad == 'alta'    %}selected{% endif %}>🔴 Alta – afecta producción</option>
+                        <option value="media"   {% if ticket.prioridad == 'media'   %}selected{% endif %}>🟡 Media</option>
+                        <option value="baja"    {% if ticket.prioridad == 'baja'    %}selected{% endif %}>🟢 Baja</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="aplicacion">Aplicación afectada *</label>
+                    <select id="aplicacion" name="aplicacion" required>
+                        <option value="">— Selecciona —</option>
+                        {% for app in ['Sistema Empaque', 'App Móvil Campo', 'API Ventas', 'Portal RRHH', 'Dashboard BI', 'Otro'] %}
+                        <option value="{{ app }}" {% if ticket.aplicacion == app %}selected{% endif %}>{{ app }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Solicitante (solo lectura) y SLA -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label>Solicitante</label>
+                    <input type="text" value="{{ ticket.nombre_solicitante }}" disabled
+                           style="background:var(--fondo); color:var(--gris-texto); cursor:not-allowed;">
+                    <span class="form-hint">El solicitante no se puede cambiar</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="sla_horas">SLA esperado (horas)</label>
+                    <select id="sla_horas" name="sla_horas">
+                        <option value="4"  {% if ticket.sla_horas == 4  %}selected{% endif %}>4 horas (crítico)</option>
+                        <option value="8"  {% if ticket.sla_horas == 8  %}selected{% endif %}>8 horas (alto)</option>
+                        <option value="24" {% if ticket.sla_horas == 24 %}selected{% endif %}>24 horas (estándar)</option>
+                        <option value="48" {% if ticket.sla_horas == 48 %}selected{% endif %}>48 horas (bajo)</option>
+                        <option value="72" {% if ticket.sla_horas == 72 %}selected{% endif %}>72 horas (consulta)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-group form-section-spacing">
+                <label for="descripcion">Descripción detallada *</label>
+                <textarea id="descripcion" name="descripcion" rows="4" required>{{ ticket.descripcion }}</textarea>
+            </div>
+
+            <!-- ACCIONES -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">💾 Guardar cambios</button>
+                <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}

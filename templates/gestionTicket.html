@@ -105,8 +105,14 @@
                         </td>
                         <td class="td-accion">
                             {% if t.estado in ('abierto', 'en_progreso') %}
-                                <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
-                                   class="btn btn-sm btn-verde">🔧 Resolver</a>
+                                <div class="ticket-actions">
+                                    <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
+                                       class="btn btn-sm btn-verde">🔧 Resolver</a>
+                                    {% if t.estado == 'en_progreso' %}
+                                    <a href="{{ url_for('form_editar_ticket', id_ticket=t.id_ticket) }}"
+                                       class="btn btn-sm btn-outline">✏️ Editar</a>
+                                    {% endif %}
+                                </div>
                             {% elif t.estado == 'resuelto' %}
                                 <div class="ticket-actions">
                                     <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
@@ -149,6 +155,11 @@
                                         ⭐ Calificar
                                     </a>
                                     {% endif %}
+                                    <form action="{{ url_for('eliminar_ticket', id_ticket=t.id_ticket) }}"
+                                          method="POST" style="display:inline;"
+                                          onsubmit="return confirm('¿Eliminar permanentemente el ticket SD-{{ t.id_ticket }}? Esta acción no se puede deshacer.')">
+                                        <button type="submit" class="btn btn-sm btn-rojo">🗑️ Eliminar</button>
+                                    </form>
                                 </div>
                             {% endif %}
                         </td>
@@ -216,14 +227,32 @@ function renderizarFilas(tickets) {
         var fecha = t.fecha_apertura ? t.fecha_apertura.replace('T', ' ').slice(0, 16) : '—';
 
         var accion = '';
-        if (t.estado === 'abierto' || t.estado === 'en_progreso') {
+        if (t.estado === 'abierto') {
             accion = '<a href="/ticket/' + t.id_ticket + '/resolver" class="btn btn-sm btn-verde">🔧 Resolver</a>';
+        } else if (t.estado === 'en_progreso') {
+            accion = '<div class="ticket-actions">' +
+                     '<a href="/ticket/' + t.id_ticket + '/resolver" class="btn btn-sm btn-verde">🔧 Resolver</a>' +
+                     '<a href="/ticket/' + t.id_ticket + '/editar" class="btn btn-sm btn-outline">✏️ Editar</a>' +
+                     '</div>';
         } else if (t.estado === 'resuelto') {
-            accion = '<span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>';
+            var cal = t.calificacion_estrellas
+                ? '<button class="btn btn-sm btn-outline" disabled>⭐ ' + t.calificacion_estrellas + '/5</button>'
+                : '<a href="/ticket/' + t.id_ticket + '/calificar" class="btn btn-sm btn-outline">⭐ Calificar</a>';
+            accion = '<div class="ticket-actions"><span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>' + cal + '</div>';
         } else if (t.estado === 'base_proyecto') {
-            accion = '<a href="/proyecto/nuevo" class="btn btn-sm btn-azul">🚀 Ver proyecto</a>';
+            var cal = t.calificacion_estrellas
+                ? '<button class="btn btn-sm btn-outline" disabled>⭐ ' + t.calificacion_estrellas + '/5</button>'
+                : '<a href="/ticket/' + t.id_ticket + '/calificar" class="btn btn-sm btn-outline">⭐ Calificar</a>';
+            accion = '<div class="ticket-actions"><a href="/proyecto/nuevo" class="btn btn-sm btn-azul">🚀 Ver proyecto</a>' + cal + '</div>';
         } else {
-            accion = '<span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>';
+            // cerrado
+            var cal = t.calificacion_estrellas
+                ? '<button class="btn btn-sm btn-outline" disabled>⭐ ' + t.calificacion_estrellas + '/5</button>'
+                : '<a href="/ticket/' + t.id_ticket + '/calificar" class="btn btn-sm btn-outline">⭐ Calificar</a>';
+            var delBtn = '<form action="/ticket/' + t.id_ticket + '/eliminar" method="POST" style="display:inline;" ' +
+                         'onsubmit="return confirm(\'¿Eliminar permanentemente el ticket SD-' + t.id_ticket + '? Esta acción no se puede deshacer.\')">' +
+                         '<button type="submit" class="btn btn-sm btn-rojo">🗑️ Eliminar</button></form>';
+            accion = '<div class="ticket-actions"><span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>' + cal + delBtn + '</div>';
         }
 
         return '<tr>' +

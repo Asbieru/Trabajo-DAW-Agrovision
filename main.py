@@ -10,10 +10,10 @@ from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuario
                        estadisticasUsuario, historialParticipacionUsuario,
                        resumenHistorialUsuario)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
-                      resolverTicket, guardarCalificacionTicket)
+                      resolverTicket, guardarCalificacionTicket,
+                      editarTicket, eliminarTicket)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
-                         actualizarEstadoActividad, eliminarActividad,
-                         listarTodosSprints,
+                         actualizarEstadoActividad, listarTodosSprints,
                          listarAsignadosPorProyecto, resumenActividadesPorProyecto,
                          proximoCodigo)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
@@ -21,16 +21,10 @@ from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         listarAvances, insertarAvance, eliminarAvance)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos,
-                            kpiSatisfaccion, comentariosCalificacionesRecientes,
-                            kpiProyectosPorEstado, kpiVelocityPorSprint,
-                            kpiCargaPorProgramador,
-                            kpiProyectosFiltrados, obtenerResponsablesProyecto)                         
+                            kpiSatisfaccion, comentariosCalificacionesRecientes)
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
-                         reporteTicketsFiltrados, obtenerAplicaciones,
-                         reporteProyectosPorEstado, reporteProyectosEnRiesgo,
-                         reporteRendimientoPorSprint,
-                         reporteProyectosFiltrados, obtenerResponsables)                        
+                         reporteTicketsFiltrados, obtenerAplicaciones)
 
 app = Flask(__name__)
 app.secret_key = 'agrovision-clave-secreta-2024'
@@ -171,18 +165,7 @@ def guardar_ticket():
 @app.route('/tickets')
 def listar_tickets():
     tickets = listarTickets()
-    mensaje = None
-    tipo = None
-    estado_msg = request.args.get('calificacion', '').strip()
-
-    if estado_msg == 'ok':
-        mensaje = 'Gracias. Tu calificación fue registrada correctamente.'
-        tipo = 'exito'
-    elif estado_msg == 'bloqueada':
-        mensaje = 'Este ticket ya fue calificado y no se puede editar la calificación.'
-        tipo = 'error'
-
-    return render_template('gestionTicket.html', tickets=tickets, mensaje=mensaje, tipo=tipo)
+    return render_template('gestionTicket.html', tickets=tickets)
 
 
 @app.route('/tickets/resolver')
@@ -219,16 +202,10 @@ def calificar_ticket(id_ticket):
     if ticket['estado'] not in ('resuelto', 'cerrado', 'base_proyecto'):
         abort(400)
 
-    if request.method == 'GET' and ticket.get('calificacion_estrellas') is not None:
-        return redirect(url_for('listar_tickets', calificacion='bloqueada'))
-
     mensaje = None
     tipo = None
 
     if request.method == 'POST':
-        if ticket.get('calificacion_estrellas') is not None:
-            return redirect(url_for('listar_tickets', calificacion='bloqueada'))
-
         estrellas_raw = request.form.get('estrellas', '').strip()
         observacion = request.form.get('observacion', '').strip()
 
@@ -242,14 +219,53 @@ def calificar_ticket(id_ticket):
             tipo = 'error'
         else:
             guardarCalificacionTicket(id_ticket, estrellas, observacion)
-            if ticket.get('estado') == 'resuelto':
-                resolverTicket(id_ticket, ticket.get('id_agente'), 'cerrado', ticket.get('notas_resolucion') or '')
-            return redirect(url_for('listar_tickets', calificacion='ok'))
+            ticket = obtenerTicket(id_ticket)
+            mensaje = 'Gracias. Tu calificación fue registrada correctamente.'
+            tipo = 'exito'
 
     return render_template('calificarTicket.html',
                            ticket=ticket,
                            mensaje=mensaje,
                            tipo=tipo)
+
+
+# ── EDITAR TICKET (solo en_progreso) ──────────────────────────────────────────
+@app.route('/ticket/<int:id_ticket>/editar', methods=['GET'])
+def form_editar_ticket(id_ticket):
+    ticket = obtenerTicket(id_ticket)
+    if not ticket or ticket['estado'] != 'en_progreso':
+        return redirect(url_for('listar_tickets'))
+    usuarios = listarUsuarios()
+    return render_template('editarTicket.html', ticket=ticket, usuarios=usuarios)
+
+
+@app.route('/ticket/<int:id_ticket>/editar', methods=['POST'])
+def guardar_edicion_ticket(id_ticket):
+    ticket = obtenerTicket(id_ticket)
+    if not ticket or ticket['estado'] != 'en_progreso':
+        return redirect(url_for('listar_tickets'))
+
+    titulo      = request.form.get('titulo', '').strip()
+    tipo        = request.form.get('tipo', '')
+    prioridad   = request.form.get('prioridad', '')
+    aplicacion  = request.form.get('aplicacion', '')
+    sla_horas   = request.form.get('sla_horas', 24)
+    descripcion = request.form.get('descripcion', '').strip()
+
+    if not titulo:
+        return redirect(url_for('form_editar_ticket', id_ticket=id_ticket))
+
+    editarTicket(id_ticket, titulo, tipo, prioridad, aplicacion, sla_horas, descripcion)
+    return redirect(url_for('listar_tickets'))
+
+
+# ── ELIMINAR TICKET (solo cerrado) ────────────────────────────────────────────
+@app.route('/ticket/<int:id_ticket>/eliminar', methods=['POST'])
+def eliminar_ticket(id_ticket):
+    ticket = obtenerTicket(id_ticket)
+    if ticket and ticket['estado'] == 'cerrado':
+        eliminarTicket(id_ticket)
+    return redirect(url_for('listar_tickets'))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -392,23 +408,20 @@ def eliminar_avance_ruta(id_proyecto, id_avance):
 
 @app.route('/indicadores')
 def indicadores_soporte():
-    estado_proy    = limpiar(request.args.get('estado_proy', ''))
-    id_responsable = limpiar(request.args.get('id_responsable', ''))
- 
-    resumen           = resumenKPI()
-    por_app           = kpiPorAplicacion()
-    por_prioridad     = kpiPorPrioridad()
-    por_agente        = kpiPorAgente()
-    por_mes           = kpiPorMes()
-    sprint_activo     = kpiSprintsActivos()
-    satisfaccion      = kpiSatisfaccion()
-    comentarios       = comentariosCalificacionesRecientes()
-    proyectos_estado  = kpiProyectosPorEstado()
-    velocity_sprints  = kpiVelocityPorSprint()
-    carga_programador = kpiCargaPorProgramador()
-    proyectos_filtrados = kpiProyectosFiltrados(estado_proy, id_responsable)
-    responsables      = obtenerResponsablesProyecto()
- 
+    mes_inicio  = request.args.get('mes_inicio', '')  or None
+    anio_inicio = request.args.get('anio_inicio', '') or None
+    mes_fin     = request.args.get('mes_fin', '')     or None
+    anio_fin    = request.args.get('anio_fin', '')    or None
+
+    resumen       = resumenKPI()
+    por_app       = kpiPorAplicacion()
+    por_prioridad = kpiPorPrioridad()
+    por_agente    = kpiPorAgente()
+    por_mes       = kpiPorMes()
+    sprint_activo = kpiSprintsActivos()
+    satisfaccion  = kpiSatisfaccion()
+    comentarios   = comentariosCalificacionesRecientes()
+
     return render_template('indicadores.html',
                            resumen=resumen,
                            por_app=por_app,
@@ -418,13 +431,10 @@ def indicadores_soporte():
                            sprint_activo=sprint_activo,
                            satisfaccion=satisfaccion,
                            comentarios=comentarios,
-                           proyectos_estado=proyectos_estado,
-                           velocity_sprints=velocity_sprints,
-                           carga_programador=carga_programador,
-                           proyectos_filtrados=proyectos_filtrados,
-                           responsables=responsables,
-                           estado_proy=estado_proy       or '',
-                           id_responsable=id_responsable or '')
+                           mes_inicio=mes_inicio   or '',
+                           anio_inicio=anio_inicio or '',
+                           mes_fin=mes_fin         or '',
+                           anio_fin=anio_fin       or '')
 
 
 # ──────────────────────────────────────────────────────────────
@@ -440,28 +450,21 @@ def limpiar(valor):
 
 @app.route('/reportes')
 def gestion_reportes():
-    fecha_inicio   = limpiar(request.args.get('fecha_inicio', ''))
-    fecha_fin      = limpiar(request.args.get('fecha_fin', ''))
-    aplicacion     = limpiar(request.args.get('aplicacion', ''))
-    estado         = limpiar(request.args.get('estado', ''))
-    prioridad      = limpiar(request.args.get('prioridad', ''))
-    estado_proy    = limpiar(request.args.get('estado_proy', ''))
-    id_responsable = limpiar(request.args.get('id_responsable', ''))
- 
-    resumen            = reporteResumen()
-    tickets_app        = reporteTicketsPorApp()
-    tickets_tipo       = reporteTicketsPorTipo()
-    story_points       = reporteStoryPointsPorProgramador()
-    carryover          = reporteCarryoverPorProgramador()
-    aplicaciones       = obtenerAplicaciones()
-    tickets_filtrados  = reporteTicketsFiltrados(fecha_inicio, fecha_fin,
-                                                  aplicacion, estado, prioridad)
-    proyectos_estado   = reporteProyectosPorEstado()
-    proyectos_riesgo   = reporteProyectosEnRiesgo()
-    rendimiento_sprint = reporteRendimientoPorSprint()
-    proyectos_filtrados = reporteProyectosFiltrados(estado_proy, id_responsable)
-    responsables       = obtenerResponsables()
- 
+    fecha_inicio = limpiar(request.args.get('fecha_inicio', ''))
+    fecha_fin    = limpiar(request.args.get('fecha_fin', ''))
+    aplicacion   = limpiar(request.args.get('aplicacion', ''))
+    estado       = limpiar(request.args.get('estado', ''))
+    prioridad    = limpiar(request.args.get('prioridad', ''))
+
+    resumen           = reporteResumen()
+    tickets_app       = reporteTicketsPorApp()
+    tickets_tipo      = reporteTicketsPorTipo()
+    story_points      = reporteStoryPointsPorProgramador()
+    carryover         = reporteCarryoverPorProgramador()
+    aplicaciones      = obtenerAplicaciones()
+    tickets_filtrados = reporteTicketsFiltrados(fecha_inicio, fecha_fin,
+                                                aplicacion, estado, prioridad)
+
     return render_template('reportes.html',
                            resumen=resumen,
                            tickets_app=tickets_app,
@@ -470,18 +473,11 @@ def gestion_reportes():
                            carryover=carryover,
                            aplicaciones=aplicaciones,
                            tickets_filtrados=tickets_filtrados,
-                           fecha_inicio=fecha_inicio   or '',
-                           fecha_fin=fecha_fin         or '',
-                           aplicacion=aplicacion       or '',
-                           estado=estado               or '',
-                           prioridad=prioridad         or '',
-                           proyectos_estado=proyectos_estado,
-                           proyectos_riesgo=proyectos_riesgo,
-                           rendimiento_sprint=rendimiento_sprint,
-                           proyectos_filtrados=proyectos_filtrados,
-                           responsables=responsables,
-                           estado_proy=estado_proy     or '',
-                           id_responsable=id_responsable or '')
+                           fecha_inicio=fecha_inicio or '',
+                           fecha_fin=fecha_fin       or '',
+                           aplicacion=aplicacion     or '',
+                           estado=estado             or '',
+                           prioridad=prioridad       or '')
 
 
 # ──────────────────────────────────────────────────────────────
@@ -522,7 +518,7 @@ def guardar_actividad():
             id_asignado  = request.form.get('id_asignado') or None,
             titulo       = request.form['titulo'],
             prioridad    = request.form['prioridad'],
-            estado       = 'backlog',
+            estado       = request.form['estado'],
             story_points = request.form.get('story_points') or 0,
         )
         insertarActividad(obj)
@@ -645,38 +641,6 @@ def api_estado_actividad(id_actividad):
     actualizarEstadoActividad(id_actividad, nuevo_estado)
     return jsonify({'ok': True, 'estado': nuevo_estado})
 
-@app.route('/api/actividad/<int:id_actividad>/eliminar', methods=['POST'])
-def api_eliminar_actividad(id_actividad):
-    eliminarActividad(id_actividad)
-    return jsonify({'ok': True})
-
-@app.route('/api/proyecto/<int:id_proyecto>/porcentaje')
-def api_porcentaje_proyecto(id_proyecto):
-    resumen     = resumenActividadesPorProyecto()
-    fila_actual = next((r for r in resumen
-                        if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
-    if fila_actual:
-        if isinstance(fila_actual, dict):
-            valor_raw = fila_actual.get('porcentaje_avance_real')
-        else:
-            valor_raw = fila_actual[3]
-        pct = round(float(valor_raw)) if valor_raw is not None else 0
-    else:
-        pct = 0
-
-    proyecto = obtenerProyecto(id_proyecto)
-    if proyecto and proyecto.get('estado') == 'completado':
-        pct = 100
-
-    return jsonify({'porcentaje': pct})
-
-@app.route('/api/proyecto/<int:id_proyecto>/avances-grafico')
-def api_avances_grafico(id_proyecto):
-    avances = listarAvances(id_proyecto)
-    avances_cronologicos = list(reversed(avances))
-    fechas      = [av['fecha_reporte'].strftime('%d/%m') for av in avances_cronologicos]
-    porcentajes = [float(av['porcentaje_avance']) for av in avances_cronologicos]
-    return jsonify({'fechas': fechas, 'porcentajes': porcentajes})
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE
