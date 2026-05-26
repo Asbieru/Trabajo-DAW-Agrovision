@@ -194,79 +194,83 @@
         </div>
     </div>
  
-    <div class="fila-dos">
-        <div class="seccion">
-            <div class="seccion-titulo">📁 Proyectos por estado</div>
-            <div class="seccion-cuerpo">
-                {% if proyectos_estado %}<canvas id="grafico-ind-proyectos"></canvas>
-                {% else %}<div class="sin-datos">Sin proyectos aún</div>{% endif %}
+    <div class="proyectos-layout">
+        <div class="proyectos-columna">
+            <div class="seccion">
+                <div class="seccion-titulo">📁 Proyectos por estado</div>
+                <div class="seccion-cuerpo">
+                    {% if proyectos_estado %}<canvas id="grafico-ind-proyectos"></canvas>
+                    {% else %}<div class="sin-datos">Sin proyectos aún</div>{% endif %}
+                </div>
             </div>
-        </div>
-        <div class="seccion">
-            <div class="seccion-titulo">👨‍💻 Carga actual por programador</div>
-            <div class="seccion-cuerpo">
-                {% if carga_programador %}
-                    {% for p in carga_programador %}
-                    <div class="agente-item">
-                        <div class="agente-avatar">
-                            {{ p.programador.split()[0][0] }}{{ p.programador.split()[-1][0] if p.programador.split()|length > 1 else '' }}
-                        </div>
-                        <div class="agente-info">
-                            <div class="agente-nombre">{{ p.programador }}</div>
-                            <div class="agente-dato">
-                                {{ p.en_progreso }} en progreso · {{ p.por_hacer }} por hacer · {{ p.pts_asignados }} pts
+
+            <div class="seccion">
+                <div class="seccion-titulo">⚡ Avance de sprints activos</div>
+                <div class="seccion-cuerpo">
+                    {% if sprint_activo %}
+                        {% for s in sprint_activo %}
+                        {% set pct_sp = ((s.pts_completados / s.capacidad_pts) * 100) | int if s.capacidad_pts else 0 %}
+                        {% set pct_final = [pct_sp, 100] | min %}
+                        <div class="sprint-item">
+                            <div class="sprint-nombre">{{ s.sprint }}</div>
+                            <div class="sprint-proyecto">{{ s.proyecto }}</div>
+                            <div class="sprint-barra-fondo">
+                                <div class="sprint-barra-relleno" data-ancho="{{ pct_final }}"></div>
                             </div>
-                        </div>
-                        <div class="agente-total">{{ p.total_activas }}</div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="sin-datos">Sin actividades activas asignadas.</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
- 
-    <div class="fila-dos">
-        <div class="seccion">
-            <div class="seccion-titulo">⚡ Avance de sprints activos</div>
-            <div class="seccion-cuerpo">
-                {% if sprint_activo %}
-                    {% for s in sprint_activo %}
-                    {% set pct_sp = ((s.pts_completados / s.capacidad_pts) * 100) | int if s.capacidad_pts else 0 %}
-                    {% set pct_final = [pct_sp, 100] | min %}
-                    <div class="sprint-item">
-                        <div class="sprint-nombre">{{ s.sprint }}</div>
-                        <div class="sprint-proyecto">{{ s.proyecto }}</div>
-                        <div class="sprint-barra-fondo">
-                            <div class="sprint-barra-relleno" data-ancho="{{ pct_final }}"></div>
-                        </div>
-                        <div class="sprint-texto">
-                            <span>{{ s.pts_completados }} / {{ s.capacidad_pts }} pts ({{ pct_sp }}%)</span>
-                            <span>
-                                {% if s.dias_restantes is not none %}
-                                    {% if s.dias_restantes > 0 %}{{ s.dias_restantes }} día{{ 's' if s.dias_restantes != 1 }} restantes
-                                    {% elif s.dias_restantes == 0 %}⚠️ Termina hoy
-                                    {% else %}🔴 Vencido hace {{ s.dias_restantes | abs }} día{{ 's' if s.dias_restantes | abs != 1 }}
+                            <div class="sprint-texto">
+                                <span>{{ s.pts_completados }} / {{ s.capacidad_pts }} pts ({{ pct_sp }}%)</span>
+                                <span>
+                                    {% if s.dias_restantes is not none %}
+                                        {% if s.dias_restantes > 0 %}{{ s.dias_restantes }} día{{ 's' if s.dias_restantes != 1 }} restantes
+                                        {% elif s.dias_restantes == 0 %}⚠️ Termina hoy
+                                        {% else %}🔴 Vencido hace {{ s.dias_restantes | abs }} día{{ 's' if s.dias_restantes | abs != 1 }}
+                                        {% endif %}
                                     {% endif %}
-                                {% endif %}
-                            </span>
+                                </span>
+                            </div>
+                            {% if s.pts_en_progreso > 0 %}
+                            <div class="sprint-progreso">🔄 {{ s.pts_en_progreso }} pts en progreso</div>
+                            {% endif %}
                         </div>
-                        {% if s.pts_en_progreso > 0 %}
-                        <div class="sprint-progreso">🔄 {{ s.pts_en_progreso }} pts en progreso</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="sin-datos">No hay sprints activos.</div>
-                {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="sin-datos">No hay sprints activos.</div>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        <div class="seccion">
-            <div class="seccion-titulo">🚀 Velocity por sprint</div>
-            <div class="seccion-cuerpo">
-                {% if velocity_sprints %}<canvas id="grafico-velocity"></canvas>
-                {% else %}<div class="sin-datos">Sin sprints registrados aún.</div>{% endif %}
+
+        <div class="proyectos-columna">
+            <div class="seccion">
+                <div class="seccion-titulo">👨‍💻 Carga actual por programador</div>
+                <div class="seccion-cuerpo">
+                    {% if carga_programador %}
+                        {% for p in carga_programador %}
+                        <div class="agente-item">
+                            <div class="agente-avatar">
+                                {{ p.programador.split()[0][0] }}{{ p.programador.split()[-1][0] if p.programador.split()|length > 1 else '' }}
+                            </div>
+                            <div class="agente-info">
+                                <div class="agente-nombre">{{ p.programador }}</div>
+                                <div class="agente-dato">
+                                    {{ p.en_progreso }} en progreso · {{ p.por_hacer }} por hacer · {{ p.pts_asignados }} pts
+                                </div>
+                            </div>
+                            <div class="agente-total">{{ p.total_activas }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="sin-datos">Sin actividades activas asignadas.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="seccion">
+                <div class="seccion-titulo">🚀 Velocity por sprint</div>
+                <div class="seccion-cuerpo">
+                    {% if velocity_sprints %}<canvas id="grafico-velocity"></canvas>
+                    {% else %}<div class="sin-datos">Sin sprints registrados aún.</div>{% endif %}
+                </div>
             </div>
         </div>
     </div>

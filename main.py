@@ -171,7 +171,18 @@ def guardar_ticket():
 @app.route('/tickets')
 def listar_tickets():
     tickets = listarTickets()
-    return render_template('gestionTicket.html', tickets=tickets)
+    mensaje = None
+    tipo = None
+    estado_msg = request.args.get('calificacion', '').strip()
+
+    if estado_msg == 'ok':
+        mensaje = 'Gracias. Tu calificación fue registrada correctamente.'
+        tipo = 'exito'
+    elif estado_msg == 'bloqueada':
+        mensaje = 'Este ticket ya fue calificado y no se puede editar la calificación.'
+        tipo = 'error'
+
+    return render_template('gestionTicket.html', tickets=tickets, mensaje=mensaje, tipo=tipo)
 
 
 @app.route('/tickets/resolver')
@@ -208,10 +219,16 @@ def calificar_ticket(id_ticket):
     if ticket['estado'] not in ('resuelto', 'cerrado', 'base_proyecto'):
         abort(400)
 
+    if request.method == 'GET' and ticket.get('calificacion_estrellas') is not None:
+        return redirect(url_for('listar_tickets', calificacion='bloqueada'))
+
     mensaje = None
     tipo = None
 
     if request.method == 'POST':
+        if ticket.get('calificacion_estrellas') is not None:
+            return redirect(url_for('listar_tickets', calificacion='bloqueada'))
+
         estrellas_raw = request.form.get('estrellas', '').strip()
         observacion = request.form.get('observacion', '').strip()
 
@@ -225,9 +242,9 @@ def calificar_ticket(id_ticket):
             tipo = 'error'
         else:
             guardarCalificacionTicket(id_ticket, estrellas, observacion)
-            ticket = obtenerTicket(id_ticket)
-            mensaje = 'Gracias. Tu calificación fue registrada correctamente.'
-            tipo = 'exito'
+            if ticket.get('estado') == 'resuelto':
+                resolverTicket(id_ticket, ticket.get('id_agente'), 'cerrado', ticket.get('notas_resolucion') or '')
+            return redirect(url_for('listar_tickets', calificacion='ok'))
 
     return render_template('calificarTicket.html',
                            ticket=ticket,

@@ -951,6 +951,31 @@ body {
     align-items: start; /* CORRECCIÓN */
 }
 
+/* ── INDICADORES PROYECTOS · layout específico ── */
+#seccion-ind-proyectos .proyectos-layout {
+    display: grid;
+    grid-template-columns: minmax(460px, 1.15fr) minmax(360px, 1fr);
+    gap: 18px;
+    margin-bottom: 20px;
+    align-items: start;
+}
+
+#seccion-ind-proyectos .proyectos-columna {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+#seccion-ind-proyectos .proyectos-columna .seccion {
+    margin-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+    #seccion-ind-proyectos .proyectos-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
 .tendencia-wrap {
     margin-bottom: 20px;
 }

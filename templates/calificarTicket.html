@@ -64,6 +64,7 @@
     <div class="card">
         <div class="card-header">🗣 Tu experiencia con la atención</div>
         <div class="card-body">
+            {% set ya_calificado = ticket.calificacion_estrellas is not none %}
             <form action="{{ url_for('calificar_ticket', id_ticket=ticket.id_ticket) }}" method="POST">
                 <div class="calificacion-bloque">
                     <label class="ticket-summary-label calificacion-label">Selecciona una calificación</label>
@@ -75,6 +76,7 @@
                                name="estrellas"
                                value="{{ valor }}"
                                {% if estrellas_actuales == valor %}checked{% endif %}
+                               {% if ya_calificado %}disabled{% endif %}
                                required>
                         <label for="estrella-{{ valor }}" aria-label="{{ valor }} estrellas">★</label>
                         {% endfor %}
@@ -85,12 +87,17 @@
                 <div class="form-group form-section-spacing">
                     <label for="observacion">Observación</label>
                     <textarea id="observacion" name="observacion" rows="5"
-                              placeholder="Cuéntanos qué salió bien, qué faltó o qué debería mejorar el equipo de soporte...">{{ ticket.calificacion_observacion or '' }}</textarea>
+                              placeholder="Cuéntanos qué salió bien, qué faltó o qué debería mejorar el equipo de soporte..."
+                              {% if ya_calificado %}readonly{% endif %}>{{ ticket.calificacion_observacion or '' }}</textarea>
                     <span class="form-hint">Opcional, pero útil para enriquecer los indicadores cualitativos.</span>
                 </div>
 
                 <div class="form-actions">
+                    {% if ya_calificado %}
+                    <button type="button" class="btn btn-outline" disabled>Calificación registrada</button>
+                    {% else %}
                     <button type="submit" class="btn btn-verde">💾 Guardar calificación</button>
+                    {% endif %}
                     <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">Cancelar</a>
                 </div>
             </form>

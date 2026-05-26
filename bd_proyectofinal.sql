@@ -80,6 +80,12 @@ CREATE TABLE IF NOT EXISTS calificaciones_ticket (
     REFERENCES tickets(id_ticket) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+INSERT INTO calificaciones_ticket
+(id_ticket, estrellas, observacion)
+VALUES
+(1, 4, 'Atencion buena, se resolvio con seguimiento.'),
+(4, 5, 'Excelente atencion, solucion rapida y clara.');
+
 -- ============================================================
 -- TABLA PROYECTOS
 -- ============================================================

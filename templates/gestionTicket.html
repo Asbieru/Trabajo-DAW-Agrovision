@@ -10,6 +10,10 @@
     <a class="btn btn-verde" href="{{ url_for('form_ticket') }}">+ Nuevo ticket</a>
 </div>
 
+{% if mensaje %}
+<div class="calificacion-alerta {{ tipo }}">{{ mensaje }}</div>
+{% endif %}
+
 <div class="card">
     <div class="buscador-wrap">
         <input type="text" id="buscar-ticket" class="buscador-input"
@@ -106,27 +110,45 @@
                             {% elif t.estado == 'resuelto' %}
                                 <div class="ticket-actions">
                                     <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
+                                    {% if t.calificacion_estrellas %}
+                                    <button type="button" class="btn btn-sm btn-outline" disabled>
+                                        ⭐ {{ t.calificacion_estrellas }}/5
+                                    </button>
+                                    {% else %}
                                     <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
                                        class="btn btn-sm btn-outline">
-                                        ⭐ {% if t.calificacion_estrellas %}{{ t.calificacion_estrellas }}/5{% else %}Calificar{% endif %}
+                                        ⭐ Calificar
                                     </a>
+                                    {% endif %}
                                 </div>
                             {% elif t.estado == 'base_proyecto' %}
                                 <div class="ticket-actions">
                                     <a href="{{ url_for('form_proyecto') }}"
                                        class="btn btn-sm btn-azul">🚀 Ver proyecto</a>
+                                    {% if t.calificacion_estrellas %}
+                                    <button type="button" class="btn btn-sm btn-outline" disabled>
+                                        ⭐ {{ t.calificacion_estrellas }}/5
+                                    </button>
+                                    {% else %}
                                     <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
                                        class="btn btn-sm btn-outline">
-                                        ⭐ {% if t.calificacion_estrellas %}{{ t.calificacion_estrellas }}/5{% else %}Calificar{% endif %}
+                                        ⭐ Calificar
                                     </a>
+                                    {% endif %}
                                 </div>
                             {% else %}
                                 <div class="ticket-actions">
                                     <span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>
+                                    {% if t.calificacion_estrellas %}
+                                    <button type="button" class="btn btn-sm btn-outline" disabled>
+                                        ⭐ {{ t.calificacion_estrellas }}/5
+                                    </button>
+                                    {% else %}
                                     <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
                                        class="btn btn-sm btn-outline">
-                                        ⭐ {% if t.calificacion_estrellas %}{{ t.calificacion_estrellas }}/5{% else %}Calificar{% endif %}
+                                        ⭐ Calificar
                                     </a>
+                                    {% endif %}
                                 </div>
                             {% endif %}
                         </td>
