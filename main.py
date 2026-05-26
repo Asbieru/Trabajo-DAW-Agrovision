@@ -12,7 +12,8 @@ from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuario
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       resolverTicket, guardarCalificacionTicket)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
-                         actualizarEstadoActividad, listarTodosSprints,
+                         actualizarEstadoActividad, eliminarActividad,
+                         listarTodosSprints,
                          listarAsignadosPorProyecto, resumenActividadesPorProyecto,
                          proximoCodigo)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
@@ -504,7 +505,7 @@ def guardar_actividad():
             id_asignado  = request.form.get('id_asignado') or None,
             titulo       = request.form['titulo'],
             prioridad    = request.form['prioridad'],
-            estado       = request.form['estado'],
+            estado       = 'backlog',
             story_points = request.form.get('story_points') or 0,
         )
         insertarActividad(obj)
@@ -626,6 +627,11 @@ def api_estado_actividad(id_actividad):
         return jsonify({'ok': False, 'mensaje': 'Estado no enviado'}), 400
     actualizarEstadoActividad(id_actividad, nuevo_estado)
     return jsonify({'ok': True, 'estado': nuevo_estado})
+
+@app.route('/api/actividad/<int:id_actividad>/eliminar', methods=['POST'])
+def api_eliminar_actividad(id_actividad):
+    eliminarActividad(id_actividad)
+    return jsonify({'ok': True})
 
 @app.route('/api/proyecto/<int:id_proyecto>/porcentaje')
 def api_porcentaje_proyecto(id_proyecto):

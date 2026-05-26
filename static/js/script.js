@@ -582,9 +582,12 @@ function renderGraficoProyectosReportes() {
 })();
 
 /* -- 6.2  Cambiar estado de actividad via fetch (tablero Kanban) -- */
-function cambiarEstadoActividad(idActividad, btn) {
-    var select      = document.getElementById('estado-act-' + idActividad);
-    var nuevoEstado = select.value;
+var ORDEN_ESTADOS = ['backlog', 'por_hacer', 'en_progreso', 'completada'];
+
+function avanzarEstadoActividad(idActividad, estadoActual, btn) {
+    var idx = ORDEN_ESTADOS.indexOf(estadoActual);
+    if (idx === -1 || idx >= ORDEN_ESTADOS.length - 1) return;
+    var nuevoEstado = ORDEN_ESTADOS[idx + 1];
 
     btn.textContent = '…';
     btn.disabled    = true;
@@ -607,6 +610,57 @@ function cambiarEstadoActividad(idActividad, btn) {
     .catch(function () {
         alert('Error de conexión.');
         btn.textContent = '→';
+        btn.disabled    = false;
+    });
+}
+
+function cancelarActividad(idActividad, btn) {
+    btn.textContent = '…';
+    btn.disabled    = true;
+
+    fetch('/api/actividad/' + idActividad + '/estado', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ estado: 'cancelada' })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert('Error al cancelar actividad.');
+            btn.textContent = 'Cancelar';
+            btn.disabled    = false;
+        }
+    })
+    .catch(function () {
+        alert('Error de conexión.');
+        btn.textContent = 'Cancelar';
+        btn.disabled    = false;
+    });
+}
+
+function eliminarActividad(idActividad, btn) {
+    btn.textContent = '…';
+    btn.disabled    = true;
+
+    fetch('/api/actividad/' + idActividad + '/eliminar', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert('Error al eliminar actividad.');
+            btn.textContent = '🗑 Eliminar';
+            btn.disabled    = false;
+        }
+    })
+    .catch(function () {
+        alert('Error de conexión.');
+        btn.textContent = '🗑 Eliminar';
         btn.disabled    = false;
     });
 }

@@ -72,13 +72,11 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="estado">Estado inicial *</label>
-                    <select id="estado" name="estado" required>
-                        <option value="backlog" selected>📥 Backlog</option>
-                        <option value="por_hacer">📝 Por hacer</option>
-                        <option value="en_progreso">⚙️ En progreso</option>
-                        <option value="completada">✅ Completada</option>
-                    </select>
+                    <label for="estado">Estado inicial</label>
+                    <input type="text" id="estado_display" value="📥 Backlog" disabled
+                           style="background:var(--gris-fondo);color:var(--gris-texto);cursor:not-allowed;">
+                    <input type="hidden" name="estado" value="backlog">
+                    <span class="form-hint">Las actividades siempre inician en Backlog</span>
                 </div>
             </div>
 

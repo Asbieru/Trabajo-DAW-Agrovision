@@ -91,6 +91,18 @@ def actualizarEstadoActividad(id_actividad, nuevo_estado):
         conn.commit()
 
 
+def eliminarActividad(id_actividad):
+    """Elimina definitivamente una actividad."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM actividades WHERE id_actividad = %s",
+                (id_actividad,)
+            )
+        conn.commit()
+
+
 def listarTodosSprints():
     """Devuelve todos los sprints con su proyecto."""
     conn = obtenerconexion()
