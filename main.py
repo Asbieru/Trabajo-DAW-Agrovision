@@ -14,9 +14,9 @@ from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       resolverTicket, guardarCalificacionTicket,
                       editarTicket, eliminarTicket)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
-                         actualizarEstadoActividad, listarTodosSprints,
-                         listarAsignadosPorProyecto, resumenActividadesPorProyecto,
-                         proximoCodigo)
+                         actualizarEstadoActividad, eliminarActividad,
+                         listarTodosSprints, listarAsignadosPorProyecto,
+                         resumenActividadesPorProyecto, proximoCodigo)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
                         listarAvances, insertarAvance, eliminarAvance)
@@ -641,6 +641,12 @@ def api_estado_actividad(id_actividad):
         return jsonify({'ok': False, 'mensaje': 'Estado no enviado'}), 400
     actualizarEstadoActividad(id_actividad, nuevo_estado)
     return jsonify({'ok': True, 'estado': nuevo_estado})
+
+
+@app.route('/api/actividad/<int:id_actividad>/eliminar', methods=['POST'])
+def api_eliminar_actividad(id_actividad):
+    eliminarActividad(id_actividad)
+    return jsonify({'ok': True})
 
 
 # ──────────────────────────────────────────────────────────────
