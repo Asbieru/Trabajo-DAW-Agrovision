@@ -275,10 +275,10 @@ def resumenActividadesReporte(id_proyecto):
             cursor.execute("""
                 SELECT
                     COUNT(*) AS total,
-                    SUM(estado = 'completada')  AS completadas,
-                    SUM(estado = 'en_progreso') AS en_progreso,
-                    SUM(estado IN ('backlog','por_hacer')) AS pendientes,
-                    SUM(estado = 'cancelada')   AS canceladas,
+                    COALESCE(SUM(estado = 'completada'),  0) AS completadas,
+                    COALESCE(SUM(estado = 'en_progreso'), 0) AS en_progreso,
+                    COALESCE(SUM(estado IN ('backlog','por_hacer')), 0) AS pendientes,
+                    COALESCE(SUM(estado = 'cancelada'),   0) AS canceladas,
                     COALESCE(SUM(story_points), 0) AS total_pts,
                     COALESCE(SUM(CASE WHEN estado = 'completada' THEN story_points ELSE 0 END), 0) AS pts_completados
                 FROM actividades
