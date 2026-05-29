@@ -62,17 +62,14 @@
                 </div>
             </div>
 
-            <!-- Solicitante y SLA -->
+            <!-- Solicitante (automático desde localStorage) y SLA -->
             <div class="form-grid form-section-spacing">
                 <div class="form-group">
-                    <label for="id_solicitante">Solicitante *</label>
-                    <select id="id_solicitante" name="id_solicitante" required>
-                        <option value="">— Selecciona tu nombre —</option>
-                        {% for u in usuarios %}
-                        <option value="{{ u.id_usuario }}">{{ u.nombre_completo }}</option>
-                        {% endfor %}
-                    </select>
-                    <span class="form-hint">Selecciona tu nombre de la lista</span>
+                    <label>Solicitante</label>
+                    <input type="text" id="solicitante-nombre" disabled
+                           style="background:var(--gris-fondo);color:var(--gris-texto);cursor:not-allowed;">
+                    <input type="hidden" id="id_solicitante" name="id_solicitante">
+                    <span class="form-hint">Se asigna automáticamente con tu sesión</span>
                 </div>
 
                 <div class="form-group">
@@ -103,6 +100,23 @@
         </form>
     </div>
 </div>
+
+<script>
+(function() {
+    try {
+        var raw = localStorage.getItem('usuario');
+        if (!raw) return;
+        var u = JSON.parse(raw);
+        if (u.id_usuario != null) {
+            document.getElementById('id_solicitante').value = u.id_usuario;
+        }
+        var nombreEl = document.getElementById('solicitante-nombre');
+        if (nombreEl && u.nombre_completo) {
+            nombreEl.value = u.nombre_completo;
+        }
+    } catch(e) {}
+})();
+</script>
 
 <!-- ══ MODAL TICKET CREADO ══ -->
 <div id="modal-ticket-creado" class="av-modal-overlay" style="display:none;">

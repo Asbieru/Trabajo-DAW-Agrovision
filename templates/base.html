@@ -28,54 +28,66 @@
 
 <div class="layout">
     <!-- SIDEBAR -->
-    <nav class="sidebar">
+    <nav class="sidebar" id="sidebar">
         <div class="sidebar-section">Principal</div>
         <a href="{{ url_for('index') }}"
-           class="{{ 'activo' if request.endpoint == 'index' else '' }}">
+           class="{{ 'activo' if request.endpoint == 'index' else '' }}"
+           data-vis="soporte programador admin">
             <span class="ico">🏠</span> Dashboard
         </a>
 
         <div class="sidebar-section">Soporte</div>
         <a href="{{ url_for('form_ticket') }}"
-           class="{{ 'activo' if request.endpoint == 'form_ticket' else '' }}">
+           class="{{ 'activo' if request.endpoint == 'form_ticket' else '' }}"
+           data-vis="soporte programador admin">
             <span class="ico">🎫</span> Nuevo ticket
         </a>
         <a href="{{ url_for('listar_tickets') }}"
-           class="{{ 'activo' if request.endpoint == 'listar_tickets' else '' }}">
+           class="{{ 'activo' if request.endpoint == 'listar_tickets' else '' }}"
+           data-vis="soporte programador admin">
             <span class="ico">📨</span> Ver tickets
         </a>
         <a href="{{ url_for('resolver_tickets') }}"
-           class="{{ 'activo' if request.endpoint in ('resolver_tickets', 'form_resolver_ticket') else '' }}">
+           class="{{ 'activo' if request.endpoint in ('resolver_tickets', 'form_resolver_ticket') else '' }}"
+           data-vis="programador admin">
             <span class="ico">🔧</span> Resolver tickets
         </a>
 
         <div class="sidebar-section">Proyectos</div>
         <a href="{{ url_for('form_proyecto') }}"
-           class="{{ 'activo' if request.endpoint == 'form_proyecto' else '' }}">
+           class="{{ 'activo' if request.endpoint == 'form_proyecto' else '' }}"
+           data-vis="admin">
             <span class="ico">🚀</span> Nuevo proyecto
         </a>
         <a href="{{ url_for('listar_proyectos') }}"
-           class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}">
+           class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}"
+           data-vis="programador admin">
             <span class="ico">📁</span> Ver proyectos
         </a>
+
         <div class="sidebar-section">Actividades</div>
         <a href="{{ url_for('form_actividad') }}"
-           class="{{ 'activo' if request.endpoint == 'form_actividad' else '' }}">
+           class="{{ 'activo' if request.endpoint == 'form_actividad' else '' }}"
+           data-vis="programador admin">
             <span class="ico">📋</span> Nueva actividad
         </a>
 
         <div class="sidebar-section">Métricas</div>
         <a href="{{ url_for('indicadores_soporte') }}"
-           class="{{ 'activo' if request.endpoint == 'indicadores_soporte' else '' }}">
+           class="{{ 'activo' if request.endpoint == 'indicadores_soporte' else '' }}"
+           data-vis="admin">
             <span class="ico">📊</span> Indicadores
         </a>
+
         <div class="sidebar-section">Usuarios</div>
         <a href="{{ url_for('lista_usuarios') }}"
-           class="{{ 'activo' if request.endpoint in ('lista_usuarios','perfil_usuario','historial_usuario') else '' }}">
+           class="{{ 'activo' if request.endpoint in ('lista_usuarios','perfil_usuario','historial_usuario') else '' }}"
+           data-vis="admin">
             <span class="ico">👥</span> Lista de Usuarios
         </a>
         <a href="{{ url_for('gestion_reportes') }}"
-           class="{{ 'activo' if request.endpoint == 'gestion_reportes' else '' }}">
+           class="{{ 'activo' if request.endpoint == 'gestion_reportes' else '' }}"
+           data-vis="admin">
             <span class="ico">📈</span> Reportes
         </a>
     </nav>
@@ -88,16 +100,46 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>
+        function obtenerUsuario() {
+            try {
+                var raw = localStorage.getItem('usuario');
+                if (!raw) return null;
+                return JSON.parse(raw);
+            } catch(e) { return null; }
+        }
+
         // Leer usuario de localStorage y mostrarlo en el topbar
         (function() {
-            var raw = localStorage.getItem('usuario');
-            if (!raw) {
+            var u = obtenerUsuario();
+            if (!u) {
                 window.location.href = '{{ url_for("login") }}';
                 return;
             }
-            var u = JSON.parse(raw);
             document.getElementById('topbar-nombre').textContent = u.nombre_completo || '—';
             document.getElementById('topbar-rol').textContent    = u.rol             || '';
+
+            // Filtrar sidebar segun el rol
+            var rol = u.rol || '';
+            document.querySelectorAll('#sidebar a[data-vis]').forEach(function(a) {
+                var rolesPermitidos = (a.getAttribute('data-vis') || '').split(' ');
+                if (rolesPermitidos.indexOf(rol) === -1) {
+                    a.style.display = 'none';
+                }
+            });
+            // Ocultar sidebar-section que queden sin enlaces visibles
+            document.querySelectorAll('#sidebar .sidebar-section').forEach(function(sec) {
+                var hermanos = sec.parentNode.children;
+                var idx = Array.prototype.indexOf.call(hermanos, sec);
+                var tieneVisible = false;
+                for (var i = idx + 1; i < hermanos.length; i++) {
+                    if (hermanos[i].tagName === 'A' && hermanos[i].style.display !== 'none') {
+                        tieneVisible = true;
+                        break;
+                    }
+                    if (hermanos[i].classList.contains('sidebar-section')) break;
+                }
+                if (!tieneVisible) sec.style.display = 'none';
+            });
         })();
     </script>
 </body>

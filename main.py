@@ -144,8 +144,7 @@ def index():
 
 @app.route('/ticket/nuevo')
 def form_ticket():
-    usuarios = obtenerUsuarios()
-    return render_template('NuevoTicket.html', usuarios=usuarios)
+    return render_template('NuevoTicket.html')
 
 
 @app.route('/ticket/guardar', methods=['POST'])

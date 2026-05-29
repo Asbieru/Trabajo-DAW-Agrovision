@@ -11,28 +11,28 @@
 
 <!-- STATS -->
 <div class="stats-grid">
-    <div class="stat-card">
+    <div class="stat-card" data-vis="soporte programador admin">
         <div class="stat-num verde">3,000</div>
         <div class="stat-label">Hectáreas monitoreadas</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" data-vis="soporte programador admin">
         <div class="stat-num azul">40</div>
         <div class="stat-label">Sistemas en producción</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" data-vis="soporte programador admin">
         <div class="stat-num acento">12</div>
         <div class="stat-label">Tickets abiertos</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" data-vis="soporte programador admin">
         <div class="stat-num verde">98%</div>
         <div class="stat-label">Uptime de servicios</div>
     </div>
 </div>
 
 <!-- ACCESOS RÁPIDOS -->
-<div class="accesos-grid-container">
+<div class="accesos-grid-container" id="accesos-rapidos">
 
-    <div class="card">
+    <div class="card" data-vis="soporte programador admin">
         <div class="card-header">🎫 Soporte</div>
         <div class="card-body">
             <p class="card-body-text">
@@ -45,20 +45,19 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" data-vis="programador admin">
         <div class="card-header">🚀 Proyectos de software</div>
         <div class="card-body">
             <p class="card-body-text">
                 Gestiona proyectos con metodología ágil. Reemplaza el proceso BBP de 150 páginas.
             </p>
             <div class="card-actions-wrap">
-                <a class="btn btn-verde btn-sm" href="{{ url_for('form_proyecto') }}">+ Nuevo proyecto</a>
-                <a class="btn btn-outline btn-sm" href="{{ url_for('listar_proyectos') }}">Ver proyectos</a>
+                <a class="btn btn-verde btn-sm" href="{{ url_for('listar_proyectos') }}">Ver proyectos</a>
             </div>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" data-vis="admin">
         <div class="card-header">📊 Reportes e Indicadores</div>
         <div class="card-body">
             <p class="card-body-text">
@@ -73,27 +72,47 @@
 </div>
 
 <!-- INFORMACIÓN ADICIONAL -->
-<div class="info-adicional-container">
-    <div class="card">
+<div class="info-adicional-container" id="info-adicional">
+
+    <div class="card" data-vis="soporte programador admin">
         <div class="card-header">📢 Avisos del Sistema</div>
         <div class="card-body">
             <div class="aviso-item">
                 <span class="badge badge-verde">INFO</span>
                 <span class="aviso-text">Mantenimiento programado: Domingo 02:00 AM.</span>
+            </div>
         </div>
     </div>
-</div>
-<div class="card">
-    <div class="card-header">📋 Actividades</div>
-    <div class="card-body">
-        <p class="card-body-text">
-            Registra y sigue el avance de actividades por sprint con un tablero Kanban visual.
-        </p>
-        <div class="card-actions-wrap">
-            <a class="btn btn-verde btn-sm" href="{{ url_for('form_actividad') }}">+ Nueva actividad</a>
-            <a class="btn btn-outline btn-sm" href="{{ url_for('listar_proyectos') }}">Ver tablero</a>
+
+    <div class="card" data-vis="programador admin">
+        <div class="card-header">📋 Actividades</div>
+        <div class="card-body">
+            <p class="card-body-text">
+                Registra y sigue el avance de actividades por sprint con un tablero Kanban visual.
+            </p>
+            <div class="card-actions-wrap">
+                <a class="btn btn-verde btn-sm" href="{{ url_for('form_actividad') }}">+ Nueva actividad</a>
+                <a class="btn btn-outline btn-sm" href="{{ url_for('listar_proyectos') }}">Ver tablero</a>
+            </div>
         </div>
     </div>
+
 </div>
-</div>
+
+<script>
+(function() {
+    try {
+        var raw = localStorage.getItem('usuario');
+        if (!raw) return;
+        var u = JSON.parse(raw);
+        var rol = u.rol || '';
+        document.querySelectorAll('#accesos-rapidos .card[data-vis], #info-adicional .card[data-vis], .stats-grid .stat-card[data-vis]').forEach(function(el) {
+            var rolesPermitidos = (el.getAttribute('data-vis') || '').split(' ');
+            if (rolesPermitidos.indexOf(rol) === -1) {
+                el.style.display = 'none';
+            }
+        });
+    } catch(e) {}
+})();
+</script>
 {% endblock %}
