@@ -49,7 +49,8 @@
                 {% if tickets %}
                     {% for t in tickets %}
                     <tr data-texto="{{ (t.titulo ~ ' ' ~ t.nombre_solicitante ~ ' ' ~ t.aplicacion ~ ' SD-' ~ t.id_ticket)|lower }}"
-                        data-estado="{{ t.estado }}">
+                        data-estado="{{ t.estado }}"
+                        data-id-solicitante="{{ t.id_solicitante }}">
 
                         <td class="td-id ticket-id" data-label="ID">
                             SD-{{ t.id_ticket }}
@@ -108,10 +109,9 @@
                                 <div class="ticket-actions">
                                     <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
                                        class="btn btn-sm btn-verde">🔧 Resolver</a>
-                                    {% if t.estado == 'en_progreso' %}
                                     <a href="{{ url_for('form_editar_ticket', id_ticket=t.id_ticket) }}"
-                                       class="btn btn-sm btn-outline">✏️ Editar</a>
-                                    {% endif %}
+                                       class="btn btn-sm btn-outline btn-editar-ticket"
+                                       data-id-solicitante="{{ t.id_solicitante }}">✏️ Editar</a>
                                 </div>
                             {% elif t.estado == 'resuelto' %}
                                 <div class="ticket-actions">
@@ -155,11 +155,10 @@
                                         ⭐ Calificar
                                     </a>
                                     {% endif %}
-                                    <form action="{{ url_for('eliminar_ticket', id_ticket=t.id_ticket) }}"
-                                          method="POST" style="display:inline;"
-                                          onsubmit="return confirm('¿Eliminar permanentemente el ticket SD-{{ t.id_ticket }}? Esta acción no se puede deshacer.')">
-                                        <button type="submit" class="btn btn-sm btn-rojo">🗑️ Eliminar</button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-rojo"
+                                            onclick="mostrarModalEliminarTicket({{ t.id_ticket }})">
+                                        🗑️ Eliminar
+                                    </button>
                                 </div>
                             {% endif %}
                         </td>
@@ -183,7 +182,77 @@
     </div>
 </div>
 
+<!-- ══ MODAL CONFIRMAR ELIMINAR TICKET ══ -->
+<div id="modal-confirmar-eliminar-ticket" class="av-modal-overlay" style="display:none;">
+    <div class="av-modal-box">
+        <div style="font-size:2.5rem;margin-bottom:10px;">⚠️</div>
+        <h3 style="margin:0 0 8px 0;font-size:1.1rem;color:var(--rojo);">Eliminar ticket</h3>
+        <p id="modal-eliminar-ticket-msg" style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;">
+            ¿Eliminar permanentemente este ticket? Esta acción no se puede deshacer.
+        </p>
+        <form id="form-eliminar-ticket-modal" method="POST" style="display:inline;">
+            <button type="button" onclick="cerrarModalEliminarTicket()"
+                    class="btn btn-outline btn-sm"
+                    style="padding:8px 28px;font-size:0.88rem;margin-right:8px;">
+                Cancelar
+            </button>
+            <button type="submit" class="btn btn-rojo btn-sm"
+                    style="padding:8px 28px;font-size:0.88rem;">
+                🗑️ Eliminar
+            </button>
+        </form>
+    </div>
+</div>
+
 <script>
+// ── Helper: usuario logueado desde localStorage ──
+function obtenerUsuarioSesion() {
+    try {
+        var raw = localStorage.getItem('usuario');
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch(e) { return null; }
+}
+
+// ── Mostrar editar solo si el solicitante es el usuario logueado ──
+function filtrarBotonesEditarTicket() {
+    var usuario = obtenerUsuarioSesion();
+    if (!usuario || usuario.id_usuario == null) return;
+    var userId = String(usuario.id_usuario).trim();
+    document.querySelectorAll('.btn-editar-ticket').forEach(function(btn) {
+        var sid = btn.getAttribute('data-id-solicitante');
+        if (sid && String(sid).trim() !== userId) {
+            btn.style.display = 'none';
+        }
+    });
+}
+
+// ── Filtrar filas segun rol (soporte/programador ven solo sus tickets) ──
+function usuarioPuedeVerTicket(userId, ticketUserId) {
+    var usuario = obtenerUsuarioSesion();
+    if (!usuario || usuario.id_usuario == null) return true;
+    if (usuario.rol === 'admin') return true;
+    return String(ticketUserId).trim() === String(usuario.id_usuario).trim();
+}
+
+function filtrarFilasPorRol() {
+    var usuario = obtenerUsuarioSesion();
+    if (!usuario) return;
+    if (usuario.rol === 'admin') return; // admin ve todos
+    var userId = String(usuario.id_usuario).trim();
+    document.querySelectorAll('#tbody-tickets tr').forEach(function(tr) {
+        var sid = tr.getAttribute('data-id-solicitante');
+        if (!sid || String(sid).trim() !== userId) {
+            tr.style.display = 'none';
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    filtrarBotonesEditarTicket();
+    filtrarFilasPorRol();
+});
+
 // ── Filtro de tickets via fetch → /api/tickets ──
 var _timerFiltro = null;
 
@@ -199,7 +268,7 @@ function filtrarTicketsAPI() {
 
         fetch('/api/tickets?' + params.toString())
             .then(function(r) { return r.json(); })
-            .then(function(tickets) { renderizarFilas(tickets); });
+            .then(function(tickets) { renderizarFilas(tickets); filtrarBotonesEditarTicket(); filtrarFilasPorRol(); });
     }, 300);
 }
 
@@ -227,12 +296,10 @@ function renderizarFilas(tickets) {
         var fecha = t.fecha_apertura ? t.fecha_apertura.replace('T', ' ').slice(0, 16) : '—';
 
         var accion = '';
-        if (t.estado === 'abierto') {
-            accion = '<a href="/ticket/' + t.id_ticket + '/resolver" class="btn btn-sm btn-verde">🔧 Resolver</a>';
-        } else if (t.estado === 'en_progreso') {
+        if (t.estado === 'abierto' || t.estado === 'en_progreso') {
             accion = '<div class="ticket-actions">' +
                      '<a href="/ticket/' + t.id_ticket + '/resolver" class="btn btn-sm btn-verde">🔧 Resolver</a>' +
-                     '<a href="/ticket/' + t.id_ticket + '/editar" class="btn btn-sm btn-outline">✏️ Editar</a>' +
+                     '<a href="/ticket/' + t.id_ticket + '/editar" class="btn btn-sm btn-outline btn-editar-ticket" data-id-solicitante="' + t.id_solicitante + '">✏️ Editar</a>' +
                      '</div>';
         } else if (t.estado === 'resuelto') {
             var cal = t.calificacion_estrellas
@@ -249,13 +316,13 @@ function renderizarFilas(tickets) {
             var cal = t.calificacion_estrellas
                 ? '<button class="btn btn-sm btn-outline" disabled>⭐ ' + t.calificacion_estrellas + '/5</button>'
                 : '<a href="/ticket/' + t.id_ticket + '/calificar" class="btn btn-sm btn-outline">⭐ Calificar</a>';
-            var delBtn = '<form action="/ticket/' + t.id_ticket + '/eliminar" method="POST" style="display:inline;" ' +
-                         'onsubmit="return confirm(\'¿Eliminar permanentemente el ticket SD-' + t.id_ticket + '? Esta acción no se puede deshacer.\')">' +
-                         '<button type="submit" class="btn btn-sm btn-rojo">🗑️ Eliminar</button></form>';
+            var delBtn = '<button type="button" class="btn btn-sm btn-rojo" ' +
+                         'onclick="mostrarModalEliminarTicket(' + t.id_ticket + ', \'' + (t.titulo || '').replace(/'/g, "\\'") + '\')">' +
+                         '🗑️ Eliminar</button>';
             accion = '<div class="ticket-actions"><span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>' + cal + delBtn + '</div>';
         }
 
-        return '<tr>' +
+        return '<tr data-id-solicitante="' + (t.id_solicitante || '') + '">' +
             '<td class="td-id ticket-id" data-label="ID">SD-' + t.id_ticket + '</td>' +
             '<td class="td-titulo" data-label="Título"><strong>' + (t.titulo || '') + '</strong></td>' +
             '<td data-label="Tipo"><span class="badge badge-' + (badgeTipo[t.tipo] || 'gris') + '">' + (t.tipo || '—') + '</span></td>' +

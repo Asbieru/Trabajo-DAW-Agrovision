@@ -166,12 +166,16 @@ def guardar_ticket():
     except Exception as e:
         print(f'Error al guardar ticket: {e}')
         abort(500)
-    return redirect(url_for('form_ticket'))
+    return redirect(url_for('form_ticket') + '?ticket_creado=1')
 
 
 @app.route('/tickets')
 def listar_tickets():
-    tickets = listarTickets()
+    try:
+        tickets = listarTickets()
+    except Exception as e:
+        print(f'Error al listar tickets: {e}')
+        abort(500)
     return render_template('gestionTicket.html', tickets=tickets)
 
 
@@ -236,20 +240,19 @@ def calificar_ticket(id_ticket):
                            tipo=tipo)
 
 
-# ── EDITAR TICKET (solo en_progreso) ──────────────────────────────────────────
+# ── EDITAR TICKET (abierto o en_progreso) ─────────────────────────────────────
 @app.route('/ticket/<int:id_ticket>/editar', methods=['GET'])
 def form_editar_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
-    if not ticket or ticket['estado'] != 'en_progreso':
+    if not ticket or ticket['estado'] not in ('abierto', 'en_progreso'):
         return redirect(url_for('listar_tickets'))
-    usuarios = listarUsuarios()
-    return render_template('editarTicket.html', ticket=ticket, usuarios=usuarios)
+    return render_template('editarTicket.html', ticket=ticket)
 
 
 @app.route('/ticket/<int:id_ticket>/editar', methods=['POST'])
 def guardar_edicion_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
-    if not ticket or ticket['estado'] != 'en_progreso':
+    if not ticket or ticket['estado'] not in ('abierto', 'en_progreso'):
         return redirect(url_for('listar_tickets'))
 
     titulo      = request.form.get('titulo', '').strip()
@@ -346,7 +349,11 @@ def guardar_edicion_proyecto(id_proyecto):
 
 @app.route('/proyectos')
 def listar_proyectos():
-    proyectos = listarProyectos()
+    try:
+        proyectos = listarProyectos()
+    except Exception as e:
+        print(f'Error al listar proyectos: {e}')
+        abort(500)
     return render_template('listaProyectos.html', proyectos=proyectos)
 
 @app.route('/api/proyecto/<int:id_proyecto>/eliminar', methods=['POST'])
@@ -655,7 +662,11 @@ def cambiar_estado_actividad(id_actividad):
 @app.route('/usuarios')
 def lista_usuarios():
     nombre   = request.args.get('nombre', '').strip()
-    usuarios = listarUsuariosCompleto()
+    try:
+        usuarios = listarUsuariosCompleto()
+    except Exception as e:
+        print(f'Error al listar usuarios: {e}')
+        abort(500)
     if nombre:
         nombre_lower = nombre.lower()
         usuarios = [u for u in usuarios

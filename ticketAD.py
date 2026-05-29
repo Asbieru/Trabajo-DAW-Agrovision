@@ -146,6 +146,7 @@ def listarTickets():
                 SELECT t.id_ticket, t.titulo, t.tipo, t.prioridad,
                        t.aplicacion, t.estado, t.fecha_apertura, t.sla_horas,
                        t.notas_resolucion, t.fecha_resolucion,
+                       t.id_solicitante,
                        u.nombre_completo AS nombre_solicitante,
                        a.nombre_completo AS nombre_agente,
                        c.estrellas AS calificacion_estrellas,

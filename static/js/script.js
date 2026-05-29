@@ -1067,3 +1067,53 @@ function cerrarModalActividadCreada() {
         }
     });
 })();
+
+/* ============================================================
+   12. MODAL TICKET CREADO – NuevoTicket.html
+   ============================================================ */
+
+function cerrarModalTicketCreado() {
+    var modal = document.getElementById('modal-ticket-creado');
+    if (modal) modal.style.display = 'none';
+    var url = window.location.pathname + window.location.search.replace(/[?&]ticket_creado=1/, '');
+    window.history.replaceState({}, '', url);
+}
+
+(function chequearTicketCreado() {
+    document.addEventListener('DOMContentLoaded', function () {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('ticket_creado') === '1') {
+            var modal = document.getElementById('modal-ticket-creado');
+            if (modal) modal.style.display = 'flex';
+        }
+    });
+})();
+
+/* ============================================================
+   13. MODAL CONFIRMAR ELIMINAR TICKET – gestionTicket.html
+   ============================================================ */
+
+var _ticketAEliminar = null;
+
+function mostrarModalEliminarTicket(idTicket, titulo) {
+    _ticketAEliminar = idTicket;
+    var msg = document.getElementById('modal-eliminar-ticket-msg');
+    if (msg) {
+        var txt = '¿Eliminar permanentemente el ticket SD-' + idTicket;
+        if (titulo) txt += ' (' + titulo + ')';
+        txt += '? Esta acci\u00f3n no se puede deshacer.';
+        msg.textContent = txt;
+    }
+    var form = document.getElementById('form-eliminar-ticket-modal');
+    if (form) {
+        form.action = '/ticket/' + idTicket + '/eliminar';
+    }
+    var modal = document.getElementById('modal-confirmar-eliminar-ticket');
+    if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalEliminarTicket() {
+    var modal = document.getElementById('modal-confirmar-eliminar-ticket');
+    if (modal) modal.style.display = 'none';
+    _ticketAEliminar = null;
+}

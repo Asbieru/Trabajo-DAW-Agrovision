@@ -5,13 +5,13 @@
 <div class="page-header">
     <div>
         <h1>✏️ Editar ticket <span style="color:var(--verde);">SD-{{ ticket.id_ticket }}</span></h1>
-        <p>Solo disponible mientras el ticket está <strong>en progreso</strong></p>
+        <p>Solo disponible mientras el ticket está <strong>abierto o en progreso</strong></p>
     </div>
     <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
 </div>
 
 <div class="alerta alerta-info" style="margin-bottom:1.5rem;">
-    ⚠️ <strong>Nota:</strong> Solo puedes editar tickets en estado <em>En progreso</em>. El estado y el solicitante no se pueden cambiar aquí.
+    ⚠️ <strong>Nota:</strong> Solo puedes editar tickets en estado <em>Abierto</em> o <em>En progreso</em>. El estado y el solicitante no se pueden cambiar aquí.
 </div>
 
 <div class="card">
