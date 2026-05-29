@@ -16,7 +16,7 @@ def resumenKPI():
                        SUM(estado='abierto') AS abiertos,
                        SUM(estado='en_progreso') AS en_progreso,
                        SUM(estado='resuelto') AS resueltos,
-                       SUM(estado='cerrado') AS cerrados,
+                       SUM(estado IN ('cerrado','base_proyecto')) AS cerrados,
                        SUM(fecha_resolucion IS NOT NULL AND
                            TIMESTAMPDIFF(HOUR, fecha_apertura, fecha_resolucion) <= sla_horas) AS sla_ok,
                        SUM(fecha_resolucion IS NOT NULL) AS total_con_fecha,
@@ -67,7 +67,7 @@ def kpiPorAgente():
             cursor.execute("""
                 SELECT u.nombre_completo AS agente,
                        COUNT(*) AS total_atendidos,
-                       SUM(t.estado IN ('resuelto','cerrado')) AS resueltos,
+                       SUM(t.estado IN ('resuelto','cerrado','base_proyecto')) AS resueltos,
                        ROUND(AVG(CASE WHEN t.fecha_resolucion IS NOT NULL
                            THEN TIMESTAMPDIFF(HOUR, t.fecha_apertura, t.fecha_resolucion)
                            END), 1) AS promedio_horas
@@ -89,7 +89,7 @@ def kpiPorMes():
                        MONTH(fecha_apertura) AS num_mes,
                        YEAR(fecha_apertura) AS anio,
                        COUNT(*) AS total,
-                       SUM(estado IN ('resuelto','cerrado')) AS resueltos
+                       SUM(estado IN ('resuelto','cerrado','base_proyecto')) AS resueltos
                 FROM tickets
                 WHERE fecha_apertura >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
                 GROUP BY mes, num_mes, anio

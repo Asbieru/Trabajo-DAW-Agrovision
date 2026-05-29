@@ -98,7 +98,7 @@ function hacerLogin() {
     msgError.style.display = 'none';
 
     if (!correo || !password) {
-        msgError.textContent   = '⚠️ Completa todos los campos.';
+        msgError.textContent   = '️ Completa todos los campos.';
         msgError.style.display = 'block';
         return;
     }
@@ -119,7 +119,7 @@ function hacerLogin() {
             } else if (data.error_servidor) {
                 window.location.href = URL_ERROR_500;
             } else {
-                msgError.textContent   = '⚠️ ' + data.mensaje;
+                msgError.textContent   = '️ ' + data.mensaje;
                 msgError.style.display = 'block';
                 btn.textContent = 'Ingresar al sistema';
                 btn.disabled    = false;
@@ -296,14 +296,407 @@ function filtrarTickets() {
 }
 
 function limpiarFiltros() {
-    document.getElementById('form-filtro-reportes').reset();
-    document.querySelectorAll('#tabla-reporte tbody tr').forEach(function(fila) {
-        fila.style.display = '';
-    });
+    var form = document.getElementById('form-filtro-reportes');
+    if (form) form.reset();
+    var filas = document.querySelectorAll('#tabla-reporte tbody tr');
+    filas.forEach(function(fila) { fila.style.display = ''; });
+    var badge = document.querySelector('#tabla-reporte .rep-badge-total');
+    if (badge) badge.textContent = filas.length + ' resultado' + (filas.length !== 1 ? 's' : '');
 }
 
-function imprimirReporte() {
-    window.print();
+/* ════════════════════════════════════════════════════
+   EXPORTAR PDF — jsPDF + autoTable (sin html2canvas)
+   ════════════════════════════════════════════════════ */
+
+/* Inserta un canvas de Chart.js como imagen en el PDF */
+function _pdfGrafica(doc, canvasId, tituloGraf, x, y, w, h) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    try {
+        var imgData = canvas.toDataURL('image/png');
+        var pageW = doc.internal.pageSize.getWidth();
+        // Barra titulo de la grafica
+        doc.setFillColor(50, 50, 50);
+        doc.rect(x, y, w, 6, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        // limpiar titulo
+        var t = '';
+        for (var i = 0; i < tituloGraf.length; i++) {
+            var code = tituloGraf.charCodeAt(i);
+            if (code >= 32 && code <= 126) t += tituloGraf[i];
+            else if (code === 243) t += 'o';
+            else if (code === 233) t += 'e';
+            else if (code === 237) t += 'i';
+            else if (code === 225) t += 'a';
+            else if (code === 250) t += 'u';
+            else if (code === 241) t += 'n';
+        }
+        doc.text(t, x + 2, y + 4.2);
+        doc.setTextColor(26, 30, 36);
+        // Imagen del canvas
+        doc.addImage(imgData, 'PNG', x, y + 6, w, h);
+    } catch(e) { /* canvas no disponible */ }
+}
+
+/* Limpia texto para jsPDF: quita emojis y caracteres no latin */
+function _limpiarTexto(txt) {
+    if (!txt) return '';
+    var resultado = '';
+    var str = txt.trim();
+    for (var i = 0; i < str.length; i++) {
+        var code = str.charCodeAt(i);
+        if (code >= 32 && code <= 126) { resultado += str[i]; }
+        else if (code === 225) { resultado += 'a'; }
+        else if (code === 233) { resultado += 'e'; }
+        else if (code === 237) { resultado += 'i'; }
+        else if (code === 243) { resultado += 'o'; }
+        else if (code === 250) { resultado += 'u'; }
+        else if (code === 241) { resultado += 'n'; }
+        else if (code === 193) { resultado += 'A'; }
+        else if (code === 201) { resultado += 'E'; }
+        else if (code === 205) { resultado += 'I'; }
+        else if (code === 211) { resultado += 'O'; }
+        else if (code === 218) { resultado += 'U'; }
+        else if (code === 209) { resultado += 'N'; }
+        else if (code === 252) { resultado += 'u'; }  // u diéresis
+        else if (code === 191) { resultado += '?'; }  // ¿
+        else if (code === 161) { resultado += '!'; }  // ¡
+        // emojis y otros caracteres especiales: ignorar
+    }
+    // limpiar espacios múltiples
+    return resultado.replace(/\s+/g, ' ').trim();
+}
+
+function _getjsPDF() {
+    if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+    if (window.jsPDF) return window.jsPDF;
+    return null;
+}
+
+/* Cabecera común en el doc */
+function _pdfHeader(doc, titulo, subtitulo) {
+    doc.setFillColor(26, 122, 74);
+    doc.rect(0, 0, 297, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text(titulo, 10, 11);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(subtitulo, 10, 16);
+    doc.setTextColor(26, 30, 36);
+    return 24; // y de inicio de contenido
+}
+
+/* KPI boxes en una fila */
+function _pdfKPIs(doc, kpis, y) {
+    var boxW = (277 / kpis.length);
+    kpis.forEach(function(k, i) {
+        var x = 10 + i * boxW;
+        var colors = { negro:[26,30,36], rojo:[192,57,43], verde:[26,122,74], azul:[30,95,168], acento:[240,165,0] };
+        var c = colors[k.color] || colors.negro;
+        // borde izquierdo
+        doc.setFillColor(c[0], c[1], c[2]);
+        doc.rect(x, y, 2, 22, 'F');
+        // fondo card
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(226, 230, 234);
+        doc.rect(x + 2, y, boxW - 4, 22, 'FD');
+        // label
+        doc.setFontSize(6);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(108, 117, 125);
+        doc.text(k.label.toUpperCase(), x + 5, y + 7);
+        // número
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(c[0], c[1], c[2]);
+        doc.text(String(k.num), x + 5, y + 18);
+    });
+    return y + 28;
+}
+
+/* Tabla con autoTable */
+function _pdfAutoTable(doc, titulo, hdrs, filas, y) {
+    if (filas.length === 0) return y;
+    // Dibujar barra de titulo antes de la tabla — solo ASCII puro
+    var t = '';
+    for (var i = 0; i < titulo.length; i++) {
+        var code = titulo.charCodeAt(i);
+        if (code >= 32 && code <= 126) t += titulo[i]; // solo ASCII imprimible
+        else if (code === 243) t += 'o';  // o con tilde
+        else if (code === 233) t += 'e';  // e con tilde
+        else if (code === 237) t += 'i';  // i con tilde
+        else if (code === 225) t += 'a';  // a con tilde
+        else if (code === 250) t += 'u';  // u con tilde
+        else if (code === 241) t += 'n';  // n tilde
+    }
+    var pageW = doc.internal.pageSize.getWidth();
+    doc.setFillColor(50, 50, 50);
+    doc.rect(10, y, pageW - 20, 6, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text(t, 13, y + 4.2);
+    doc.setTextColor(26, 30, 36);
+    doc.autoTable({
+        startY: y + 6,
+        head: [hdrs],
+        body: filas,
+        theme: 'grid',
+        headStyles: { fillColor: [26, 122, 74], textColor: 255, fontSize: 7, fontStyle: 'bold', cellPadding: 3 },
+        bodyStyles: { fontSize: 7, cellPadding: 3, textColor: [26, 30, 36] },
+        alternateRowStyles: { fillColor: [245, 246, 248] },
+        margin: { left: 10, right: 10 },
+        tableWidth: 'auto',
+        styles: { overflow: 'linebreak' }
+    });
+    return doc.lastAutoTable.finalY + 10;
+}
+
+/* ══════════════════════════════════════════════════
+   exportarTabla() — solo la tabla filtrada
+   ══════════════════════════════════════════════════ */
+function exportarTabla() {
+    var jsPDF = _getjsPDF();
+    if (!jsPDF) { alert('Error: librería PDF no cargada.'); return; }
+
+    var secProy = document.getElementById('seccion-proyectos');
+    var esProyectos = secProy && secProy.style.display !== 'none';
+    var fecha = new Date().toLocaleDateString('es-PE');
+    var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+
+    var y = _pdfHeader(doc,
+        (esProyectos ? 'Proyectos' : 'Tickets') + ' · AgroVisión',
+        'Tabla filtrada · Generado el: ' + fecha
+    );
+
+    if (!esProyectos) {
+        var todas = Array.from(document.querySelectorAll('#tabla-reporte tbody tr'));
+        var hayFiltro = todas.some(function(f) { return f.style.display === 'none'; });
+        var visibles = hayFiltro ? todas.filter(function(f) { return f.style.display !== 'none'; }) : todas;
+
+        var hdrs = ['#','Título','Aplicación','Tipo','Prioridad','Estado','Solicitante','Fecha'];
+        var filas = [];
+        visibles.forEach(function(fila) {
+            var celdas = fila.querySelectorAll('td');
+            if (celdas.length < 8) return;
+            filas.push([
+                _limpiarTexto(celdas[0].textContent),
+                _limpiarTexto(celdas[1].textContent),
+                _limpiarTexto(celdas[2].textContent),
+                _limpiarTexto(celdas[3].textContent),
+                _limpiarTexto(celdas[4].textContent),
+                _limpiarTexto(celdas[5].textContent),
+                _limpiarTexto(celdas[6].textContent),
+                _limpiarTexto(celdas[7].textContent)
+            ]);
+        });
+
+        if (filas.length === 0) { alert('No hay tickets para exportar.'); return; }
+        _pdfAutoTable(doc, 'Tickets (' + filas.length + ' registros)', hdrs, filas, y);
+
+    } else {
+        // Solo filas de proyectos (fila-proy-X), NO los paneles de actividades
+        var todasP = Array.from(document.querySelectorAll('#tbody-proyectos tr[id^="fila-proy-"]'));
+        var hayFiltroP = todasP.some(function(f) { return f.style.display === 'none'; });
+        var visiblesP = hayFiltroP ? todasP.filter(function(f) { return f.style.display !== 'none'; }) : todasP;
+
+        var hdrsP = ['#','Proyecto','Responsable','Estado','Inicio','Fecha fin','Avance','Salud'];
+        var filasP = [];
+        visiblesP.forEach(function(fila) {
+            var celdas = fila.querySelectorAll('td');
+            if (celdas.length < 9) return; // 8 datos + 1 boton
+            var eliminado = fila.classList.contains('rep-fila-eliminada') ? ' [Eliminado]' : '';
+            filasP.push([
+                _limpiarTexto(celdas[0].textContent),
+                _limpiarTexto(celdas[1].textContent) + eliminado,
+                _limpiarTexto(celdas[2].textContent),
+                _limpiarTexto(celdas[3].textContent),
+                _limpiarTexto(celdas[4].textContent),
+                _limpiarTexto(celdas[5].textContent),
+                _limpiarTexto(celdas[6].textContent),
+                _limpiarTexto(celdas[7].textContent)
+            ]);
+        });
+
+        if (filasP.length === 0) { alert('No hay proyectos para exportar.'); return; }
+
+        // Barra titulo
+        var pageWP = doc.internal.pageSize.getWidth();
+        doc.setFillColor(50, 50, 50);
+        doc.rect(10, y, pageWP - 20, 6, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Proyectos (' + filasP.length + ' registros)', 13, y + 4.2);
+        doc.setTextColor(26, 30, 36);
+        y += 6;
+
+        doc.autoTable({
+            startY: y,
+            head: [hdrsP],
+            body: filasP,
+            theme: 'grid',
+            headStyles: { fillColor: [26, 122, 74], textColor: 255, fontSize: 7, fontStyle: 'bold', cellPadding: 3 },
+            bodyStyles: { fontSize: 7, cellPadding: 3, textColor: [26, 30, 36] },
+            alternateRowStyles: { fillColor: [245, 246, 248] },
+            margin: { left: 10, right: 10 },
+            columnStyles: {
+                0: { cellWidth: 12, fontStyle: 'bold', textColor: [108, 117, 125] },
+                3: { cellWidth: 28 },
+                4: { cellWidth: 22 },
+                5: { cellWidth: 22 },
+                6: { cellWidth: 18, halign: 'center' },
+                7: { cellWidth: 22 }
+            },
+            didParseCell: function(data) {
+                if (data.section === 'body' && data.column.index === 7) {
+                    var salud = data.cell.raw;
+                    if (salud === 'Completado' || salud === 'OK') { data.cell.styles.textColor = [26, 122, 74]; data.cell.styles.fontStyle = 'bold'; }
+                    if (salud === 'Vencido')    { data.cell.styles.textColor = [192, 57, 43]; data.cell.styles.fontStyle = 'bold'; }
+                    if (salud === 'Por vencer') { data.cell.styles.textColor = [240, 165, 0]; data.cell.styles.fontStyle = 'bold'; }
+                    if (salud === 'Eliminado')  { data.cell.styles.textColor = [150, 150, 150]; }
+                }
+                if (data.section === 'body' && data.column.index === 3) {
+                    var est = data.cell.raw;
+                    if (est === 'Completado')   { data.cell.styles.textColor = [26, 122, 74]; data.cell.styles.fontStyle = 'bold'; }
+                    if (est === 'En desarrollo') { data.cell.styles.textColor = [30, 95, 168]; data.cell.styles.fontStyle = 'bold'; }
+                    if (est === 'Pausado')       { data.cell.styles.textColor = [192, 57, 43]; }
+                }
+                // Filas eliminadas en gris
+                if (data.section === 'body') {
+                    var txt = filasP[data.row.index] ? filasP[data.row.index][1] : '';
+                    if (txt && txt.indexOf('[Eliminado]') !== -1) {
+                        data.cell.styles.textColor = [150, 150, 150];
+                    }
+                }
+            }
+        });
+    }
+
+    doc.save('Tabla_' + (esProyectos ? 'Proyectos' : 'Tickets') + '_AgroVision.pdf');
+}
+
+/* ══════════════════════════════════════════════════
+   exportarResumen() — KPIs + datos de gráficas
+   ══════════════════════════════════════════════════ */
+function exportarResumen() {
+    var jsPDF = _getjsPDF();
+    if (!jsPDF) { alert('Error: librería PDF no cargada.'); return; }
+
+    var secProy = document.getElementById('seccion-proyectos');
+    var esProyectos = secProy && secProy.style.display !== 'none';
+    var fecha = new Date().toLocaleDateString('es-PE');
+    var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+
+    var y = _pdfHeader(doc,
+        'Resumen de Reportes · AgroVisión',
+        'Sección: ' + (esProyectos ? 'Proyectos' : 'Tickets') + ' · Generado el: ' + fecha
+    );
+
+    var c = document.getElementById('datos-reportes');
+
+    if (!esProyectos) {
+        // KPIs
+        var cards = document.querySelectorAll('#seccion-tickets .rep-resumen-card');
+        var kpis = [];
+        cards.forEach(function(card) {
+            var num   = card.querySelector('.rep-rc-num')   ? card.querySelector('.rep-rc-num').textContent.trim()   : '0';
+            var label = card.querySelector('.rep-rc-label') ? card.querySelector('.rep-rc-label').textContent.trim() : '';
+            var color = card.classList.contains('rep-rc-total') ? 'negro'
+                      : card.classList.contains('rep-rc-pendiente') ? 'rojo'
+                      : card.classList.contains('rep-rc-resuelto')  ? 'verde' : 'azul';
+            kpis.push({ num: num, label: label, color: color });
+        });
+        y = _pdfKPIs(doc, kpis, y);
+
+        // Graficas + tablas de datos
+        if (c) {
+            var porApp  = JSON.parse(c.getAttribute('data-app')       || '[]');
+            var porTipo = JSON.parse(c.getAttribute('data-tipo')      || '[]');
+            var sp      = JSON.parse(c.getAttribute('data-sp')        || '[]');
+            var carry   = JSON.parse(c.getAttribute('data-carryover') || '[]');
+            var pageW   = doc.internal.pageSize.getWidth();
+            var halfW   = (pageW - 20) / 2;
+            var grafH   = 55; // altura de cada grafica en mm
+
+            // Fila 1: grafica app + grafica tipo (lado a lado)
+            var yGraf1 = y;
+            _pdfGrafica(doc, 'grafico-reporte-app',  'Tickets por aplicacion', 10,          yGraf1, halfW - 2, grafH);
+            _pdfGrafica(doc, 'grafico-reporte-tipo',  'Tickets por tipo',       12 + halfW,  yGraf1, halfW - 2, grafH);
+            y = yGraf1 + grafH + 8;
+
+            // Tabla app + tabla tipo (lado a lado usando autoTable con columnStyles)
+            if (porApp.length) {
+                y = _pdfAutoTable(doc, 'Datos: Tickets por aplicacion',
+                    ['Aplicacion','Pendientes','Cerrados','Total'],
+                    porApp.map(function(a){ return [a.aplicacion, a.pendientes||0, a.cerrados||0, a.total]; }), y);
+            }
+            if (porTipo.length) {
+                y = _pdfAutoTable(doc, 'Datos: Tickets por tipo',
+                    ['Tipo','Total'],
+                    porTipo.map(function(t){ return [t.tipo, t.total]; }), y);
+            }
+
+            // Nueva pagina para graficas 2
+            doc.addPage();
+            y = _pdfHeader(doc, 'Resumen de Reportes - Productividad', 'AgroVision');
+
+            // Fila 2: grafica sp + grafica carryover
+            _pdfGrafica(doc, 'grafico-reporte-sp',       'Story points por programador', 10,         y, halfW - 2, grafH);
+            _pdfGrafica(doc, 'grafico-reporte-carryover', 'Carryover por programador',   12 + halfW, y, halfW - 2, grafH);
+            y = y + grafH + 8;
+
+            if (sp.length) {
+                y = _pdfAutoTable(doc, 'Datos: Story points por programador',
+                    ['Programador','Asignados','Completados'],
+                    sp.map(function(p){ return [p.programador, p.pts_asignados, p.pts_completados]; }), y);
+            }
+            if (carry.length) {
+                _pdfAutoTable(doc, 'Datos: Carryover por programador',
+                    ['Programador','Sprints con carryover','Pts carryover'],
+                    carry.map(function(cc){ return [cc.programador, cc.sprints_con_carryover, cc.pts_carryover]; }), y);
+            }
+        }
+
+    } else {
+        // KPIs proyectos
+        var cardsP = document.querySelectorAll('#seccion-proyectos .rep-resumen-card');
+        var kpisP = [];
+        cardsP.forEach(function(card) {
+            var num   = card.querySelector('.rep-rc-num')   ? card.querySelector('.rep-rc-num').textContent.trim()   : '0';
+            var label = card.querySelector('.rep-rc-label') ? card.querySelector('.rep-rc-label').textContent.trim() : '';
+            var color = card.classList.contains('rep-rc-pendiente') ? 'rojo'
+                      : card.classList.contains('rep-rc-resuelto')  ? 'verde' : 'azul';
+            kpisP.push({ num: num, label: label, color: color });
+        });
+        y = _pdfKPIs(doc, kpisP, y);
+
+        // Grafica proyectos por estado
+        var pageWP = doc.internal.pageSize.getWidth();
+        _pdfGrafica(doc, 'grafico-proyectos-estado', 'Proyectos por estado', 10, y, pageWP - 20, 60);
+        y = y + 68;
+
+        // Tablas de proyectos
+        document.querySelectorAll('#seccion-proyectos .rep-tabla').forEach(function(tabla) {
+            var tituloEl = tabla.closest('.rep-panel') ? tabla.closest('.rep-panel').querySelector('.rep-panel-titulo') : null;
+            var tit = tituloEl ? tituloEl.textContent.trim().replace(/[^\x00-\x7F]/g, '').trim() : 'Tabla';
+            var hdrs = [];
+            tabla.querySelectorAll('thead th').forEach(function(th) { hdrs.push(th.textContent.trim()); });
+            var filas = [];
+            tabla.querySelectorAll('tbody tr').forEach(function(tr) {
+                var fila = [];
+                tr.querySelectorAll('td').forEach(function(td) { fila.push(td.textContent.trim()); });
+                if (fila.length) filas.push(fila);
+            });
+            if (filas.length) y = _pdfAutoTable(doc, tit, hdrs, filas, y);
+        });
+    }
+
+    doc.save('Resumen_' + (esProyectos ? 'Proyectos' : 'Tickets') + '_AgroVision.pdf');
 }
 
 
@@ -417,16 +810,22 @@ function imprimirReporte() {
 })();
 
 function filtrarReportes() {
-    var fechaInicio = document.querySelector('[name="fecha_inicio"]').value;
-    var fechaFin    = document.querySelector('[name="fecha_fin"]').value;
-    var aplicacion  = document.querySelector('[name="aplicacion"]').value.toLowerCase().trim();
-    var estado      = document.querySelector('[name="estado"]').value.toLowerCase().trim();
-    var prioridad   = document.querySelector('[name="prioridad"]').value.toLowerCase().trim();
+    // Scopear al form correcto para no agarrar inputs de otras paginas
+    var form = document.getElementById('form-filtro-reportes');
+    if (!form) return;
 
-    var filas = document.querySelectorAll('#tabla-reporte tbody tr');
+    var fechaInicio = form.querySelector('[name="fecha_inicio"]').value;
+    var fechaFin    = form.querySelector('[name="fecha_fin"]').value;
+    var aplicacion  = form.querySelector('[name="aplicacion"]').value.toLowerCase().trim();
+    var estado      = form.querySelector('[name="estado"]').value.toLowerCase().trim();
+    var prioridad   = form.querySelector('[name="prioridad"]').value.toLowerCase().trim();
+
+    var filas   = document.querySelectorAll('#tabla-reporte tbody tr');
+    var visibles = 0;
 
     filas.forEach(function(fila) {
         var celdas      = fila.querySelectorAll('td');
+        if (celdas.length < 8) return;
         var fAplicacion = celdas[2].textContent.trim().toLowerCase();
         var fEstado     = celdas[5].textContent.trim().toLowerCase();
         var fPrioridad  = celdas[4].textContent.trim().toLowerCase();
@@ -435,18 +834,29 @@ function filtrarReportes() {
         var ok = true;
 
         if (aplicacion && !fAplicacion.includes(aplicacion)) ok = false;
-        if (estado     && !fEstado.includes(estado.replace('_', ' '))) ok = false;
+        if (estado     && !fEstado.includes(estado.replace(/_/g, ' '))) ok = false;
         if (prioridad  && !fPrioridad.includes(prioridad))   ok = false;
 
         if (fechaInicio || fechaFin) {
             var partes    = fFecha.split('/');
-            var fechaFila = partes[2] + '-' + partes[1] + '-' + partes[0];
-            if (fechaInicio && fechaFila < fechaInicio) ok = false;
-            if (fechaFin    && fechaFila > fechaFin)    ok = false;
+            if (partes.length === 3) {
+                var fechaFila = partes[2] + '-' + partes[1] + '-' + partes[0];
+                if (fechaInicio && fechaFila < fechaInicio) ok = false;
+                if (fechaFin    && fechaFila > fechaFin)    ok = false;
+            }
         }
 
         fila.style.display = ok ? '' : 'none';
+        if (ok) visibles++;
     });
+
+    // Actualizar badge contador
+    var badge = document.querySelector('#tabla-reporte .rep-badge-total');
+    if (badge) badge.textContent = visibles + ' resultado' + (visibles !== 1 ? 's' : '');
+
+    // Mostrar mensaje si no hay resultados
+    var sinDatos = document.querySelector('#tabla-reporte .rep-sin-datos');
+    if (sinDatos) sinDatos.style.display = visibles === 0 ? 'block' : 'none';
 }
 
 /* ============================================================
@@ -455,8 +865,8 @@ function filtrarReportes() {
 function mostrarSeccion(seccion) {
     document.getElementById('seccion-tickets').style.display   = seccion === 'tickets'   ? '' : 'none';
     document.getElementById('seccion-proyectos').style.display = seccion === 'proyectos' ? '' : 'none';
-    document.getElementById('tab-tickets').className   = seccion === 'tickets'   ? 'btn btn-verde' : 'btn btn-outline';
-    document.getElementById('tab-proyectos').className = seccion === 'proyectos' ? 'btn btn-verde' : 'btn btn-outline';
+    document.getElementById('tab-tickets').className   = seccion === 'tickets'   ? 'rep-tab rep-tab-activo' : 'rep-tab';
+    document.getElementById('tab-proyectos').className = seccion === 'proyectos' ? 'rep-tab rep-tab-activo' : 'rep-tab';
 
     if (seccion === 'proyectos') {
         renderGraficoProyectosReportes();
@@ -876,8 +1286,26 @@ function setTipo(btn, tipo) {
 function mostrarSeccionInd(seccion) {
     document.getElementById('seccion-ind-tickets').style.display   = seccion === 'tickets'   ? '' : 'none';
     document.getElementById('seccion-ind-proyectos').style.display = seccion === 'proyectos' ? '' : 'none';
-    document.getElementById('tab-tickets').className   = seccion === 'tickets'   ? 'btn btn-verde' : 'btn btn-outline';
-    document.getElementById('tab-proyectos').className = seccion === 'proyectos' ? 'btn btn-verde' : 'btn btn-outline';
+    document.getElementById('tab-tickets').className   = seccion === 'tickets'   ? 'ind-tab ind-tab-activo' : 'ind-tab';
+    document.getElementById('tab-proyectos').className = seccion === 'proyectos' ? 'ind-tab ind-tab-activo' : 'ind-tab';
+
+    // Actualizar hero según sección activa
+    var btn  = document.getElementById('ind-hero-btn');
+    var tit  = document.getElementById('ind-hero-titulo');
+    var sub  = document.getElementById('ind-hero-sub');
+    if (btn && tit && sub) {
+        if (seccion === 'proyectos') {
+            tit.innerHTML = 'Indicadores<br><span>de Proyectos</span>';
+            sub.textContent = 'KPIs · Gestión de Proyectos · AgroVisión';
+            btn.textContent = 'Ver proyectos';
+            btn.href = btn.getAttribute('data-url-proyectos');
+        } else {
+            tit.innerHTML = 'Indicadores<br><span>de Soporte</span>';
+            sub.textContent = 'KPIs · Área de Sistemas · AgroVisión';
+            btn.textContent = 'Ver tickets';
+            btn.href = btn.getAttribute('data-url-tickets');
+        }
+    }
 
     if (seccion === 'proyectos') {
         renderGraficosIndicadoresProyectos();
@@ -1116,4 +1544,285 @@ function cerrarModalEliminarTicket() {
     var modal = document.getElementById('modal-confirmar-eliminar-ticket');
     if (modal) modal.style.display = 'none';
     _ticketAEliminar = null;
+}
+
+
+/* ============================================================
+   REPORTES — ACTIVIDADES POR PROYECTO
+   ============================================================ */
+
+var _actividadesCargadas = {}; // cache: id_proyecto → {actividades, resumen}
+
+/* Chips de estado/prioridad para actividades */
+function _chipEstadoAct(estado) {
+    var map = {
+        'completada':  'rep-chip-verde',
+        'en_progreso': 'rep-chip-azul',
+        'por_hacer':   'rep-chip-naranja',
+        'backlog':     'rep-chip-gris',
+        'cancelada':   'rep-chip-rojo'
+    };
+    return '<span class="rep-chip ' + (map[estado] || 'rep-chip-gris') + '">' + estado.replace('_',' ') + '</span>';
+}
+function _chipPrioridadAct(prioridad) {
+    var map = { 'critica': 'rep-chip-rojo', 'alta': 'rep-chip-rojo', 'media': 'rep-chip-naranja', 'baja': 'rep-chip-gris' };
+    return '<span class="rep-chip ' + (map[prioridad] || 'rep-chip-gris') + '">' + prioridad + '</span>';
+}
+
+/* Renderiza el panel de actividades de un proyecto */
+function _renderActividades(idProyecto, nombreProyecto, data) {
+    var r = data.resumen;
+    var acts = data.actividades;
+    var pctComp = r.total > 0 ? Math.round((r.completadas / r.total) * 100) : 0;
+
+    var html = '<div class="rep-act-titulo">'
+             + '<span>Actividades de: <strong>' + nombreProyecto + '</strong></span>'
+             + '<span style="font-size:0.75rem;color:var(--gris-texto);">' + r.total + ' actividad' + (r.total !== 1 ? 'es' : '') + ' · ' + pctComp + '% completado</span>'
+             + '</div>';
+
+    // KPIs
+    html += '<div class="rep-act-kpis">';
+    html += '<div class="rep-act-kpi kpi-total"><div class="rep-act-kpi-num">' + r.total + '</div><div class="rep-act-kpi-label">Total</div></div>';
+    html += '<div class="rep-act-kpi kpi-completada"><div class="rep-act-kpi-num">' + r.completadas + '</div><div class="rep-act-kpi-label">Completadas</div></div>';
+    html += '<div class="rep-act-kpi kpi-progreso"><div class="rep-act-kpi-num">' + r.en_progreso + '</div><div class="rep-act-kpi-label">En progreso</div></div>';
+    html += '<div class="rep-act-kpi kpi-pendiente"><div class="rep-act-kpi-num">' + r.pendientes + '</div><div class="rep-act-kpi-label">Pendientes</div></div>';
+    html += '<div class="rep-act-kpi kpi-pts"><div class="rep-act-kpi-num">' + r.pts_completados + '/' + r.total_pts + '</div><div class="rep-act-kpi-label">Pts completados</div></div>';
+    html += '</div>';
+
+    // Tabla
+    if (acts.length === 0) {
+        html += '<div class="rep-sin-datos">Este proyecto no tiene actividades registradas.</div>';
+    } else {
+        html += '<table class="rep-act-tabla">';
+        html += '<thead><tr><th>Código</th><th>Título</th><th>Sprint</th><th>Asignado</th><th>Prioridad</th><th>Estado</th><th>Story pts</th></tr></thead>';
+        html += '<tbody>';
+        acts.forEach(function(a) {
+            var eliminada = a.estado2 === 0 ? ' act-eliminada' : '';
+            html += '<tr class="' + eliminada + '">';
+            html += '<td class="act-codigo">' + a.codigo + '</td>';
+            html += '<td>' + a.titulo + (a.estado2 === 0 ? ' <span class="rep-chip rep-chip-eliminado">Eliminada</span>' : '') + '</td>';
+            html += '<td>' + a.sprint + '</td>';
+            html += '<td>' + a.asignado + '</td>';
+            html += '<td>' + _chipPrioridadAct(a.prioridad) + '</td>';
+            html += '<td>' + _chipEstadoAct(a.estado) + '</td>';
+            html += '<td style="text-align:center;font-weight:700;">' + (a.story_points || 0) + '</td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+    }
+
+    document.getElementById('contenido-act-' + idProyecto).innerHTML = html;
+}
+
+/* Toggle expandir/colapsar panel de actividades */
+function toggleActividades(btn) {
+    var idProyecto = btn.getAttribute('data-id');
+    var panel = document.getElementById('panel-act-' + idProyecto);
+    if (!panel) return;
+
+    var abierto = panel.style.display !== 'none';
+    if (abierto) {
+        panel.style.display = 'none';
+        btn.textContent = '▼';
+        btn.classList.remove('activo');
+        return;
+    }
+
+    panel.style.display = '';
+    btn.textContent = '▲';
+    btn.classList.add('activo');
+
+    var nombreProy = document.querySelector('#fila-proy-' + idProyecto + ' td:nth-child(2)');
+    var nombre = nombreProy ? nombreProy.textContent.trim() : 'Proyecto';
+
+    if (_actividadesCargadas[idProyecto]) {
+        _renderActividades(idProyecto, nombre, _actividadesCargadas[idProyecto]);
+        return;
+    }
+
+    // Cargar via AJAX
+    fetch('/api/reporte/proyecto/' + idProyecto + '/actividades')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                _actividadesCargadas[idProyecto] = data;
+                _renderActividades(idProyecto, nombre, data);
+            } else {
+                document.getElementById('contenido-act-' + idProyecto).innerHTML =
+                    '<div class="rep-sin-datos">Error al cargar actividades.</div>';
+            }
+        })
+        .catch(function() {
+            document.getElementById('contenido-act-' + idProyecto).innerHTML =
+                '<div class="rep-sin-datos">Error de conexion.</div>';
+        });
+}
+
+/* Exportar proyectos + sus actividades a PDF */
+function exportarConActividades() {
+    var jsPDF = _getjsPDF();
+    if (!jsPDF) { alert('Error: libreria PDF no cargada.'); return; }
+
+    var filasP   = Array.from(document.querySelectorAll('#tbody-proyectos tr[id^="fila-proy-"]'));
+    var hayFiltro = filasP.some(function(f) { return f.style.display === 'none'; });
+    var visibles  = hayFiltro ? filasP.filter(function(f) { return f.style.display !== 'none'; }) : filasP;
+
+    if (visibles.length === 0) { alert('No hay proyectos para exportar.'); return; }
+
+    var fecha = new Date().toLocaleDateString('es-PE');
+    var ids   = visibles.map(function(tr) { return tr.id.replace('fila-proy-', ''); });
+    var pendientes = ids.filter(function(id) { return !_actividadesCargadas[id]; });
+
+    function generarPDF() {
+        var doc   = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+        var y     = _pdfHeader(doc, 'Proyectos con Actividades', 'AgroVision · ' + fecha);
+        var pageW = doc.internal.pageSize.getWidth();
+        var primera = true;
+
+        visibles.forEach(function(filaTr) {
+            var id     = filaTr.id.replace('fila-proy-', '');
+            var celdas = filaTr.querySelectorAll('td');
+            if (celdas.length < 9) return;
+
+            if (!primera) {
+                doc.addPage();
+                y = _pdfHeader(doc, 'Proyectos con Actividades (cont.)', 'AgroVision · ' + fecha);
+            }
+            primera = false;
+
+            var nombre    = _limpiarTexto(celdas[1].textContent);
+            var eliminado = filaTr.classList.contains('rep-fila-eliminada');
+
+            // Barra azul/gris con nombre del proyecto
+            doc.setFillColor(eliminado ? 100 : 30, eliminado ? 100 : 95, eliminado ? 100 : 168);
+            doc.rect(10, y, pageW - 20, 9, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('#' + id + ' - ' + nombre + (eliminado ? '  [ELIMINADO]' : ''), 13, y + 6.2);
+            doc.setTextColor(26, 30, 36);
+            y += 11;
+
+            // Info del proyecto como tabla
+            var hdrsInfo = ['Responsable', 'Estado', 'Inicio', 'Fecha fin', 'Avance', 'Salud'];
+            var filaInfo = [[
+                _limpiarTexto(celdas[2].textContent),
+                _limpiarTexto(celdas[3].textContent),
+                _limpiarTexto(celdas[4].textContent),
+                _limpiarTexto(celdas[5].textContent),
+                _limpiarTexto(celdas[6].textContent),
+                _limpiarTexto(celdas[7].textContent)
+            ]];
+            doc.autoTable({
+                startY: y,
+                head: [hdrsInfo],
+                body: filaInfo,
+                theme: 'grid',
+                headStyles: { fillColor: [50, 50, 50], textColor: 255, fontSize: 7, fontStyle: 'bold', cellPadding: 3 },
+                bodyStyles: { fontSize: 7, cellPadding: 3, textColor: [26, 30, 36] },
+                margin: { left: 10, right: 10 },
+                didParseCell: function(data) {
+                    if (data.section === 'body') {
+                        var val = data.cell.raw;
+                        if (data.column.index === 1) {
+                            if (val === 'Completado')    { data.cell.styles.textColor = [26, 122, 74];  data.cell.styles.fontStyle = 'bold'; }
+                            if (val === 'En desarrollo') { data.cell.styles.textColor = [30, 95, 168];  data.cell.styles.fontStyle = 'bold'; }
+                            if (val === 'Pausado')       { data.cell.styles.textColor = [192, 57, 43]; }
+                        }
+                        if (data.column.index === 5) {
+                            if (val === 'Completado' || val === 'OK') { data.cell.styles.textColor = [26, 122, 74]; data.cell.styles.fontStyle = 'bold'; }
+                            if (val === 'Vencido')    { data.cell.styles.textColor = [192, 57, 43]; data.cell.styles.fontStyle = 'bold'; }
+                            if (val === 'Por vencer') { data.cell.styles.textColor = [240, 165, 0];  data.cell.styles.fontStyle = 'bold'; }
+                            if (val === 'Eliminado')  { data.cell.styles.textColor = [150, 150, 150]; }
+                        }
+                    }
+                }
+            });
+            y = doc.lastAutoTable.finalY + 5;
+
+            // Actividades
+            var data = _actividadesCargadas[id];
+            if (!data || data.actividades.length === 0) {
+                doc.setFontSize(7);
+                doc.setTextColor(108, 117, 125);
+                doc.text('Sin actividades registradas.', 10, y);
+                doc.setTextColor(26, 30, 36);
+                y += 8;
+                return;
+            }
+
+            // KPI resumen
+            var r = data.resumen;
+            doc.setFont('helvetica', 'bold');
+            doc.text(
+                'Actividades — Total: ' + r.total +
+                '   Completadas: ' + r.completadas +
+                '   En progreso: ' + r.en_progreso +
+                '   Pendientes: '  + r.pendientes +
+                '   Pts: ' + r.pts_completados + '/' + r.total_pts,
+                10, y
+            );
+            doc.setFont('helvetica', 'normal');
+            y += 5;
+
+            // Tabla de actividades con colores por estado
+            var hdrsAct  = ['Codigo', 'Titulo', 'Sprint', 'Asignado', 'Prioridad', 'Estado', 'Pts'];
+            var filasAct = [];
+            data.actividades.forEach(function(a) {
+                filasAct.push([
+                    _limpiarTexto(a.codigo),
+                    _limpiarTexto(a.titulo) + (a.estado2 === 0 ? ' [Eliminada]' : ''),
+                    _limpiarTexto(a.sprint),
+                    _limpiarTexto(a.asignado),
+                    _limpiarTexto(a.prioridad),
+                    _limpiarTexto(a.estado.replace(/_/g, ' ')),
+                    String(a.story_points || 0)
+                ]);
+            });
+
+            // autoTable con colores por estado en la columna Estado
+            doc.autoTable({
+                startY: y,
+                head: [hdrsAct],
+                body: filasAct,
+                theme: 'grid',
+                headStyles: { fillColor: [26, 122, 74], textColor: 255, fontSize: 7, fontStyle: 'bold', cellPadding: 3 },
+                bodyStyles: { fontSize: 7, cellPadding: 3, textColor: [26, 30, 36] },
+                alternateRowStyles: { fillColor: [245, 246, 248] },
+                margin: { left: 10, right: 10 },
+                columnStyles: {
+                    0: { cellWidth: 22, fontStyle: 'bold', textColor: [108, 117, 125] },
+                    4: { cellWidth: 22 },
+                    5: { cellWidth: 28 },
+                    6: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }
+                },
+                didParseCell: function(data) {
+                    if (data.section === 'body' && data.column.index === 5) {
+                        var est = data.cell.raw;
+                        if (est === 'completada')  { data.cell.styles.textColor = [26, 122, 74]; data.cell.styles.fontStyle = 'bold'; }
+                        if (est === 'en progreso') { data.cell.styles.textColor = [30, 95, 168]; data.cell.styles.fontStyle = 'bold'; }
+                        if (est === 'cancelada')   { data.cell.styles.textColor = [192, 57, 43]; }
+                    }
+                    if (data.section === 'body' && data.column.index === 4) {
+                        var pri = data.cell.raw;
+                        if (pri === 'critica' || pri === 'alta') { data.cell.styles.textColor = [192, 57, 43]; data.cell.styles.fontStyle = 'bold'; }
+                    }
+                }
+            });
+            y = doc.lastAutoTable.finalY + 10;
+        });
+
+        doc.save('Proyectos_con_Actividades_AgroVision.pdf');
+    }
+
+    if (pendientes.length === 0) {
+        generarPDF();
+    } else {
+        var promesas = pendientes.map(function(id) {
+            return fetch('/api/reporte/proyecto/' + id + '/actividades')
+                .then(function(r) { return r.json(); })
+                .then(function(data) { if (data.ok) _actividadesCargadas[id] = data; });
+        });
+        Promise.all(promesas).then(generarPDF).catch(generarPDF);
+    }
 }

@@ -16,9 +16,11 @@ def reporteResumen():
             cursor.execute("""
                 SELECT COUNT(*) AS total_tickets,
                        SUM(estado IN ('abierto','en_progreso')) AS tickets_pendientes,
-                       SUM(estado IN ('resuelto','cerrado')) AS tickets_resueltos,
+                       SUM(estado IN ('resuelto','cerrado','base_proyecto')) AS tickets_resueltos,
                        (SELECT COUNT(*) FROM proyectos) AS total_proyectos,
-                       (SELECT COUNT(*) FROM sprints WHERE estado='activo') AS sprints_activos,
+                       (SELECT COUNT(*) FROM sprints s
+                        JOIN proyectos p ON s.id_proyecto = p.id_proyecto
+                        WHERE s.estado = 'activo') AS sprints_activos,
                        (SELECT COUNT(*) FROM usuarios WHERE rol='soporte') AS total_programadores
                 FROM tickets
             """)
@@ -32,7 +34,7 @@ def reporteTicketsPorApp():
             cursor.execute("""
                 SELECT aplicacion, COUNT(*) AS total,
                        SUM(estado IN ('abierto','en_progreso')) AS pendientes,
-                       SUM(estado IN ('resuelto','cerrado')) AS cerrados
+                       SUM(estado IN ('resuelto','cerrado','base_proyecto')) AS cerrados
                 FROM tickets
                 GROUP BY aplicacion
                 ORDER BY total DESC
@@ -75,8 +77,10 @@ def reporteCarryoverPorProgramador():
                        COALESCE(SUM(h.story_points), 0) AS pts_carryover
                 FROM actividades h
                 JOIN sprints s ON h.id_sprint = s.id_sprint
+                JOIN proyectos p ON s.id_proyecto = p.id_proyecto
                 JOIN usuarios u ON h.id_asignado = u.id_usuario
-                WHERE s.estado = 'completado' AND h.estado != 'completada'
+                WHERE s.estado = 'completado'
+                  AND h.estado != 'completada'
                 GROUP BY h.id_asignado, u.nombre_completo
                 ORDER BY pts_carryover DESC
             """)
@@ -133,6 +137,7 @@ def reporteTicketsFiltrados(fecha_inicio=None, fecha_fin=None,
 
 
 def reporteProyectosPorEstado():
+    # REPORTES: incluye proyectos eliminados (histórico completo)
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -146,6 +151,7 @@ def reporteProyectosPorEstado():
 
 
 def reporteProyectosEnRiesgo():
+    # REPORTES: incluye proyectos eliminados (histórico completo)
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -153,7 +159,8 @@ def reporteProyectosEnRiesgo():
                 SELECT p.id_proyecto, p.nombre, p.estado,
                        p.fecha_fin_plan,
                        u.nombre_completo AS responsable,
-                       DATEDIFF(CURDATE(), p.fecha_fin_plan) AS dias_vencido
+                       DATEDIFF(CURDATE(), p.fecha_fin_plan) AS dias_vencido,
+                       p.estado2
                 FROM proyectos p
                 JOIN usuarios u ON p.id_responsable = u.id_usuario
                 WHERE p.fecha_fin_plan < CURDATE()
@@ -164,6 +171,7 @@ def reporteProyectosEnRiesgo():
 
 
 def reporteRendimientoPorSprint():
+    # REPORTES: incluye proyectos eliminados (histórico completo)
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -175,7 +183,8 @@ def reporteRendimientoPorSprint():
                            THEN a.story_points ELSE 0 END), 0) AS pts_completados,
                        COALESCE(SUM(CASE WHEN a.estado != 'completada' AND a.estado != 'cancelada'
                            THEN a.story_points ELSE 0 END), 0) AS pts_pendientes,
-                       s.estado AS estado_sprint
+                       s.estado AS estado_sprint,
+                       p.estado2
                 FROM sprints s
                 JOIN proyectos p ON s.id_proyecto = p.id_proyecto
                 LEFT JOIN actividades a ON a.id_sprint = s.id_sprint
@@ -186,6 +195,7 @@ def reporteRendimientoPorSprint():
 
 
 def obtenerResponsables():
+    # REPORTES: incluye responsables de proyectos eliminados
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -199,6 +209,7 @@ def obtenerResponsables():
 
 
 def reporteProyectosFiltrados(estado=None, id_responsable=None):
+    # REPORTES: incluye proyectos eliminados (histórico completo)
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -207,6 +218,7 @@ def reporteProyectosFiltrados(estado=None, id_responsable=None):
                        p.fecha_inicio, p.fecha_fin_plan,
                        u.nombre_completo AS responsable,
                        DATEDIFF(p.fecha_fin_plan, CURDATE()) AS dias_restantes,
+                       p.estado2,
                        CASE
                            WHEN p.estado = 'completado' THEN 'completado'
                            WHEN p.fecha_fin_plan < CURDATE() THEN 'vencido'
@@ -229,3 +241,47 @@ def reporteProyectosFiltrados(estado=None, id_responsable=None):
             sql += " ORDER BY p.fecha_fin_plan ASC"
             cursor.execute(sql, tuple(params) if params else None)
             return cursor.fetchall()
+
+
+def reporteActividadesPorProyecto(id_proyecto):
+    """Retorna todas las actividades de un proyecto (activas y eliminadas) para reportes históricos."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT a.id_actividad,
+                       a.codigo,
+                       a.titulo,
+                       a.prioridad,
+                       a.estado,
+                       a.story_points,
+                       a.estado2,
+                       COALESCE(s.nombre, '—') AS sprint,
+                       COALESCE(u.nombre_completo, '—') AS asignado
+                FROM actividades a
+                LEFT JOIN sprints  s ON a.id_sprint   = s.id_sprint
+                LEFT JOIN usuarios u ON a.id_asignado = u.id_usuario
+                WHERE a.id_proyecto = %s
+                ORDER BY a.estado2 DESC, a.created_at DESC
+            """, (id_proyecto,))
+            return [dict(r) for r in cursor.fetchall()]
+
+
+def resumenActividadesReporte(id_proyecto):
+    """KPIs rápidos de actividades de un proyecto para el panel de reportes."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(estado = 'completada')  AS completadas,
+                    SUM(estado = 'en_progreso') AS en_progreso,
+                    SUM(estado IN ('backlog','por_hacer')) AS pendientes,
+                    SUM(estado = 'cancelada')   AS canceladas,
+                    COALESCE(SUM(story_points), 0) AS total_pts,
+                    COALESCE(SUM(CASE WHEN estado = 'completada' THEN story_points ELSE 0 END), 0) AS pts_completados
+                FROM actividades
+                WHERE id_proyecto = %s
+            """, (id_proyecto,))
+            return dict(cursor.fetchone())

@@ -2,6 +2,11 @@
 
 {% block title %}Gestión de Reportes{% endblock %}
 
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+{% endblock %}
+
 {% block content %}
 
 <!-- Datos para JS -->
@@ -13,102 +18,133 @@
      data-proyectos-estado='{{ proyectos_estado | tojson if proyectos_estado else "[]" }}'>
 </div>
 
-<div class="page-header">
-    <div>
-        <h1>📈 Gestión de Reportes</h1>
-        <p>Reportes de soporte y proyectos para toma de decisiones · Jefe TI</p>
+<!-- Cabecera solo visible al exportar PDF -->
+<div class="solo-pdf" style="display:none; text-align:center; margin-bottom:24px;">
+    <h2 style="font-size:1.4rem; font-weight:800; color:#1a1e24;">Gestión de Reportes · AgroVisión</h2>
+    <p style="color:#6c757d; font-size:0.88rem;">Generado el: <span id="rep-fecha-hoy"></span></p>
+    <hr style="border:0; border-top:1px solid #e2e6ea; margin:14px 0;">
+</div>
+
+<div id="documento-pdf">
+
+<!-- HEADER REPORTES: estilo documento/panel de gestión -->
+<div class="rep-header reporte-no-print">
+    <div class="rep-header-izq">
+        <div class="rep-header-linea"></div>
+        <div>
+            <h1 class="rep-titulo">Gestión de Reportes</h1>
+            <p class="rep-subtitulo">Reportes de soporte y proyectos para toma de decisiones · Jefe TI</p>
+        </div>
+    </div>
+    <div class="rep-header-der">
+        <button onclick="exportarResumen()" class="rep-btn-pdf">Exportar Resumen PDF</button>
     </div>
 </div>
 
-<!-- SELECTOR TICKETS / PROYECTOS -->
-<div class="reporte-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
-    <button id="tab-tickets" class="btn btn-verde" onclick="mostrarSeccion('tickets')">🎫 Tickets</button>
-    <button id="tab-proyectos" class="btn btn-outline" onclick="mostrarSeccion('proyectos')">📁 Proyectos</button>
+<!-- TABS ESTILO PESTAÑA DOCUMENTO -->
+<div class="rep-tabs-wrap">
+    <button id="tab-tickets"   class="rep-tab rep-tab-activo" onclick="mostrarSeccion('tickets')">🎫 Tickets</button>
+    <button id="tab-proyectos" class="rep-tab"                onclick="mostrarSeccion('proyectos')">📁 Proyectos</button>
+    <div class="rep-tabs-linea"></div>
 </div>
 
 <!-- ══════════════════ SECCIÓN TICKETS ══════════════════ -->
 <div id="seccion-tickets">
 
-    <div class="kpi-fila reporte-fila">
-        <div class="kpi-card total">
-            <div class="etiqueta">Total tickets</div>
-            <div class="numero">{{ resumen.total_tickets or 0 }}</div>
+    <!-- RESUMEN: cards horizontales con borde izquierdo de color -->
+    <div class="rep-resumen-fila">
+        <div class="rep-resumen-card rep-rc-total">
+            <div class="rep-rc-icono">🎫</div>
+            <div class="rep-rc-info">
+                <div class="rep-rc-num">{{ resumen.total_tickets or 0 }}</div>
+                <div class="rep-rc-label">Total tickets</div>
+            </div>
         </div>
-        <div class="kpi-card pendiente">
-            <div class="etiqueta">Pendientes</div>
-            <div class="numero">{{ resumen.tickets_pendientes or 0 }}</div>
+        <div class="rep-resumen-card rep-rc-pendiente">
+            <div class="rep-rc-icono">⏳</div>
+            <div class="rep-rc-info">
+                <div class="rep-rc-num">{{ resumen.tickets_pendientes or 0 }}</div>
+                <div class="rep-rc-label">Pendientes</div>
+            </div>
         </div>
-        <div class="kpi-card resuelto">
-            <div class="etiqueta">Resueltos</div>
-            <div class="numero">{{ resumen.tickets_resueltos or 0 }}</div>
+        <div class="rep-resumen-card rep-rc-resuelto">
+            <div class="rep-rc-icono">✅</div>
+            <div class="rep-rc-info">
+                <div class="rep-rc-num">{{ resumen.tickets_resueltos or 0 }}</div>
+                <div class="rep-rc-label">Resueltos</div>
+            </div>
         </div>
-        <div class="kpi-card promedio">
-            <div class="etiqueta">Programadores</div>
-            <div class="numero">{{ resumen.total_programadores or 0 }}</div>
+        <div class="rep-resumen-card rep-rc-info">
+            <div class="rep-rc-icono">👥</div>
+            <div class="rep-rc-info">
+                <div class="rep-rc-num">{{ resumen.total_programadores or 0 }}</div>
+                <div class="rep-rc-label">Programadores</div>
+            </div>
         </div>
     </div>
 
-    <div class="fila-dos">
-        <div class="seccion">
-            <div class="seccion-titulo">🖥 Tickets por aplicación</div>
-            <div class="seccion-cuerpo">
+    <!-- GRÁFICAS EN PANEL DOCUMENTO -->
+    <div class="rep-panel-fila">
+        <div class="rep-panel">
+            <div class="rep-panel-titulo">🖥 Tickets por aplicación</div>
+            <div class="rep-panel-cuerpo">
                 {% if tickets_app %}
                 <canvas id="grafico-reporte-app"></canvas>
                 {% else %}
-                <div class="sin-datos">Sin datos aún</div>
+                <div class="rep-sin-datos">Sin datos aún</div>
                 {% endif %}
             </div>
         </div>
-        <div class="seccion">
-            <div class="seccion-titulo">🎫 Tickets por tipo</div>
-            <div class="seccion-cuerpo">
+        <div class="rep-panel">
+            <div class="rep-panel-titulo">🎫 Tickets por tipo</div>
+            <div class="rep-panel-cuerpo">
                 {% if tickets_tipo %}
                 <canvas id="grafico-reporte-tipo"></canvas>
                 {% else %}
-                <div class="sin-datos">Sin datos aún</div>
+                <div class="rep-sin-datos">Sin datos aún</div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="fila-dos">
-        <div class="seccion">
-            <div class="seccion-titulo">⭐ Story points por programador</div>
-            <div class="seccion-cuerpo">
+    <div class="rep-panel-fila">
+        <div class="rep-panel">
+            <div class="rep-panel-titulo">⭐ Story points por programador</div>
+            <div class="rep-panel-cuerpo">
                 {% if story_points %}
                 <canvas id="grafico-reporte-sp"></canvas>
                 {% else %}
-                <div class="sin-datos">Sin datos aún</div>
+                <div class="rep-sin-datos">Sin datos aún</div>
                 {% endif %}
             </div>
         </div>
-        <div class="seccion">
-            <div class="seccion-titulo">⚠️ Carryover por programador</div>
-            <div class="seccion-cuerpo">
+        <div class="rep-panel">
+            <div class="rep-panel-titulo">⚠️ Carryover por programador</div>
+            <div class="rep-panel-cuerpo">
                 {% if carryover %}
                 <canvas id="grafico-reporte-carryover"></canvas>
                 {% else %}
-                <div class="sin-datos">Sin datos aún</div>
+                <div class="rep-sin-datos">Sin datos aún</div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- FILTROS -->
-    <div class="seccion reporte-no-print">
-        <div class="seccion-titulo">🔍 Filtrar tickets</div>
-        <div class="seccion-cuerpo">
-            <form id="form-filtro-reportes" action="{{ url_for('gestion_reportes') }}#tabla-reporte" method="get" class="reporte-filtros-form">
-                <div class="reporte-filtros-grid">
-                    <div class="reporte-filtro-grupo">
+    <!-- FILTROS: panel colapsable de búsqueda -->
+    <div class="rep-panel rep-filtros-panel reporte-no-print">
+        <div class="rep-panel-titulo">🔍 Filtrar tickets</div>
+        <div class="rep-panel-cuerpo">
+            <form id="form-filtro-reportes" action="{{ url_for('gestion_reportes') }}#tabla-reporte" method="get">
+                <div class="rep-filtros-grid">
+                    <div class="rep-filtro-grupo">
                         <label>Fecha inicio</label>
                         <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}">
                     </div>
-                    <div class="reporte-filtro-grupo">
+                    <div class="rep-filtro-grupo">
                         <label>Fecha fin</label>
                         <input type="date" name="fecha_fin" value="{{ fecha_fin }}">
                     </div>
-                    <div class="reporte-filtro-grupo">
+                    <div class="rep-filtro-grupo">
                         <label>Aplicación</label>
                         <select name="aplicacion">
                             <option value="">Todas</option>
@@ -117,17 +153,18 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="reporte-filtro-grupo">
+                    <div class="rep-filtro-grupo">
                         <label>Estado</label>
                         <select name="estado">
                             <option value="">Todos</option>
-                            <option value="abierto"     {{ 'selected' if estado == 'abierto' }}>Abierto</option>
-                            <option value="en_progreso" {{ 'selected' if estado == 'en_progreso' }}>En progreso</option>
-                            <option value="resuelto"    {{ 'selected' if estado == 'resuelto' }}>Resuelto</option>
-                            <option value="cerrado"     {{ 'selected' if estado == 'cerrado' }}>Cerrado</option>
+                            <option value="abierto"       {{ 'selected' if estado == 'abierto' }}>Abierto</option>
+                            <option value="en_progreso"   {{ 'selected' if estado == 'en_progreso' }}>En progreso</option>
+                            <option value="resuelto"      {{ 'selected' if estado == 'resuelto' }}>Resuelto</option>
+                            <option value="cerrado"       {{ 'selected' if estado == 'cerrado' }}>Cerrado</option>
+                            <option value="base_proyecto" {{ 'selected' if estado == 'base_proyecto' }}>Base proyecto</option>
                         </select>
                     </div>
-                    <div class="reporte-filtro-grupo">
+                    <div class="rep-filtro-grupo">
                         <label>Prioridad</label>
                         <select name="prioridad">
                             <option value="">Todas</option>
@@ -138,24 +175,24 @@
                         </select>
                     </div>
                 </div>
-                <div class="reporte-filtros-botones">
-                    <button type="button" class="btn btn-verde" onclick="filtrarReportes()">🔍 Filtrar</button>
-                    <button type="button" class="btn btn-outline" onclick="limpiarFiltros()">✖ Limpiar</button>
-                    <button type="button" onclick="imprimirReporte()" class="btn btn-exportar-pdf">🖨 Exportar PDF</button>
+                <div class="rep-filtros-botones">
+                    <button type="button" class="rep-btn-filtrar" onclick="filtrarReportes()">Filtrar</button>
+                    <button type="button" class="rep-btn-limpiar" onclick="limpiarFiltros()">Limpiar</button>
+                    <button type="button" class="rep-btn-pdf reporte-no-print" onclick="exportarTabla()">Exportar Tabla PDF</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- TABLA RESULTADOS -->
-    <div class="seccion" id="tabla-reporte">
-        <div class="seccion-titulo">
+    <!-- TABLA: resultados filtrados -->
+    <div class="rep-panel" id="tabla-reporte">
+        <div class="rep-panel-titulo">
             🕐 Tickets filtrados
-            <span class="reporte-total-badge">{{ tickets_filtrados | length }} resultado{{ 's' if tickets_filtrados | length != 1 }}</span>
+            <span class="rep-badge-total">{{ tickets_filtrados | length }} resultado{{ 's' if tickets_filtrados | length != 1 }}</span>
         </div>
-        <div class="seccion-cuerpo" style="padding: 0;">
+        <div class="rep-panel-cuerpo rep-panel-tabla">
             {% if tickets_filtrados %}
-            <table class="tabla tabla-tickets">
+            <table class="rep-tabla">
                 <thead>
                     <tr>
                         <th>#</th><th>Título</th><th>Aplicación</th>
@@ -166,20 +203,20 @@
                 <tbody>
                     {% for t in tickets_filtrados %}
                     <tr>
-                        <td class="ticket-id">#{{ t.id_ticket }}</td>
+                        <td class="rep-td-id">#{{ t.id_ticket }}</td>
                         <td>{{ t.titulo }}</td>
-                        <td class="ticket-aplicacion">{{ t.aplicacion }}</td>
-                        <td><span class="badge {{ 'badge-rojo' if t.tipo == 'incidencia' else 'badge-verde' }}">{{ t.tipo | capitalize }}</span></td>
-                        <td><span class="badge {{ 'badge-rojo' if t.prioridad in ('critica','alta') else 'badge-verde' }}">{{ t.prioridad | capitalize }}</span></td>
-                        <td><span class="badge {{ 'badge-verde' if t.estado in ('resuelto','cerrado') else 'badge-rojo' }}">{{ t.estado | replace('_',' ') | capitalize }}</span></td>
-                        <td class="ticket-agente">{{ t.solicitante }}</td>
-                        <td class="ticket-apertura">{{ t.fecha_apertura }}</td>
+                        <td class="rep-td-app">{{ t.aplicacion }}</td>
+                        <td><span class="rep-chip {{ 'rep-chip-rojo' if t.tipo == 'incidencia' else 'rep-chip-azul' }}">{{ t.tipo | capitalize }}</span></td>
+                        <td><span class="rep-chip {{ 'rep-chip-rojo' if t.prioridad in ('critica','alta') else 'rep-chip-gris' }}">{{ t.prioridad | capitalize }}</span></td>
+                        <td><span class="rep-chip {{ 'rep-chip-verde' if t.estado in ('resuelto','cerrado') else 'rep-chip-naranja' if t.estado == 'en_progreso' else 'rep-chip-rojo' }}">{{ t.estado | replace('_',' ') | capitalize }}</span></td>
+                        <td class="rep-td-agente">{{ t.solicitante }}</td>
+                        <td class="rep-td-fecha">{{ t.fecha_apertura }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <div class="sin-datos">No se encontraron tickets con los filtros seleccionados.</div>
+            <div class="rep-sin-datos">No se encontraron tickets con los filtros seleccionados.</div>
             {% endif %}
         </div>
     </div>
@@ -188,38 +225,47 @@
 
 <!-- ══════════════════ SECCIÓN PROYECTOS ══════════════════ -->
 <div id="seccion-proyectos" style="display:none;">
- 
-    <div class="kpi-fila reporte-fila">
-        <div class="kpi-card promedio">
-            <div class="etiqueta">Total proyectos</div>
-            <div class="numero">{{ resumen.total_proyectos or 0 }}</div>
+
+    <div class="rep-resumen-fila">
+        <div class="rep-resumen-card rep-rc-info">
+            <div class="rep-rc-icono">📁</div>
+            <div class="rep-rc-info">
+                <div class="rep-rc-num">{{ resumen.total_proyectos or 0 }}</div>
+                <div class="rep-rc-label">Total proyectos</div>
+            </div>
         </div>
-        <div class="kpi-card sla">
-            <div class="etiqueta">Sprints activos</div>
-            <div class="numero">{{ resumen.sprints_activos or 0 }}</div>
+        <div class="rep-resumen-card rep-rc-resuelto">
+            <div class="rep-rc-icono">⚡</div>
+            <div class="rep-rc-info">
+                <div class="rep-rc-num">{{ resumen.sprints_activos or 0 }}</div>
+                <div class="rep-rc-label">Sprints activos</div>
+            </div>
         </div>
-        <div class="kpi-card pendiente">
-            <div class="etiqueta">En riesgo</div>
-            <div class="numero">{{ proyectos_riesgo | length }}</div>
+        <div class="rep-resumen-card rep-rc-pendiente">
+            <div class="rep-rc-icono">🔴</div>
+            <div class="rep-rc-info">
+                <div class="rep-rc-num">{{ proyectos_riesgo | length }}</div>
+                <div class="rep-rc-label">En riesgo</div>
+            </div>
         </div>
     </div>
- 
-    <div class="fila-dos">
-        <div class="seccion">
-            <div class="seccion-titulo">📁 Proyectos por estado</div>
-            <div class="seccion-cuerpo">
+
+    <div class="rep-panel-fila">
+        <div class="rep-panel">
+            <div class="rep-panel-titulo">📁 Proyectos por estado</div>
+            <div class="rep-panel-cuerpo">
                 {% if proyectos_estado %}
                 <canvas id="grafico-proyectos-estado"></canvas>
                 {% else %}
-                <div class="sin-datos">Sin proyectos aún</div>
+                <div class="rep-sin-datos">Sin proyectos aún</div>
                 {% endif %}
             </div>
         </div>
-        <div class="seccion">
-            <div class="seccion-titulo">🔴 Proyectos en riesgo</div>
-            <div class="seccion-cuerpo" style="padding:0;">
+        <div class="rep-panel">
+            <div class="rep-panel-titulo">🔴 Proyectos en riesgo</div>
+            <div class="rep-panel-cuerpo rep-panel-tabla">
                 {% if proyectos_riesgo %}
-                <table class="tabla">
+                <table class="rep-tabla">
                     <thead>
                         <tr><th>Proyecto</th><th>Responsable</th><th>Estado</th><th>Días vencido</th></tr>
                     </thead>
@@ -228,52 +274,53 @@
                         <tr>
                             <td>{{ p.nombre }}</td>
                             <td>{{ p.responsable }}</td>
-                            <td><span class="badge badge-rojo">{{ p.estado | replace('_',' ') | capitalize }}</span></td>
-                            <td><span class="badge badge-rojo">+{{ p.dias_vencido }} días</span></td>
+                            <td><span class="rep-chip rep-chip-rojo">{{ p.estado | replace('_',' ') | capitalize }}</span></td>
+                            <td><span class="rep-chip rep-chip-rojo">+{{ p.dias_vencido }} días</span></td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
                 {% else %}
-                <div class="sin-datos">✅ Ningún proyecto en riesgo</div>
+                <div class="rep-sin-datos">✅ Ningún proyecto en riesgo</div>
                 {% endif %}
             </div>
         </div>
     </div>
- 
-    <div class="seccion">
-        <div class="seccion-titulo">⚡ Rendimiento por sprint</div>
-        <div class="seccion-cuerpo" style="padding:0;">
+
+    <div class="rep-panel">
+        <div class="rep-panel-titulo">⚡ Rendimiento por sprint</div>
+        <div class="rep-panel-cuerpo rep-panel-tabla">
             {% if rendimiento_sprint %}
-            <table class="tabla">
+            <table class="rep-tabla">
                 <thead>
-                    <tr><th>Sprint</th><th>Proyecto</th><th>Capacidad</th><th>Completados</th><th>Pendientes</th><th>Estado</th></tr>
+                    <tr><th>Sprint</th><th>Proyecto</th><th>Capacidad</th><th>Completados</th><th>Pendientes</th><th>Estado</th><th>Registro</th></tr>
                 </thead>
                 <tbody>
                     {% for s in rendimiento_sprint %}
-                    <tr>
+                    <tr class="{{ 'rep-fila-eliminada' if s.estado2 == 0 else '' }}">
                         <td>{{ s.sprint }}</td>
-                        <td>{{ s.proyecto }}</td>
+                        <td>{{ s.proyecto }}{% if s.estado2 == 0 %} <span class="rep-chip rep-chip-eliminado">🗑</span>{% endif %}</td>
                         <td>{{ s.capacidad_pts }} pts</td>
-                        <td><span class="badge badge-verde">{{ s.pts_completados }} pts</span></td>
-                        <td><span class="badge badge-rojo">{{ s.pts_pendientes }} pts</span></td>
-                        <td><span class="badge {{ 'badge-verde' if s.estado_sprint == 'completado' else 'badge-rojo' }}">{{ s.estado_sprint | capitalize }}</span></td>
+                        <td><span class="rep-chip rep-chip-verde">{{ s.pts_completados }} pts</span></td>
+                        <td><span class="rep-chip rep-chip-rojo">{{ s.pts_pendientes }} pts</span></td>
+                        <td><span class="rep-chip {{ 'rep-chip-verde' if s.estado_sprint == 'completado' else 'rep-chip-naranja' }}">{{ s.estado_sprint | capitalize }}</span></td>
+                        <td>{% if s.estado2 == 0 %}<span class="rep-chip rep-chip-eliminado">🗑 Eliminado</span>{% else %}<span class="rep-chip rep-chip-verde">Activo</span>{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <div class="sin-datos">Sin sprints registrados</div>
+            <div class="rep-sin-datos">Sin sprints registrados</div>
             {% endif %}
         </div>
     </div>
- 
-    <!-- FILTRO PROYECTOS (JS puro, sin recargar) -->
-    <div class="seccion reporte-no-print">
-        <div class="seccion-titulo">🔍 Filtrar proyectos</div>
-        <div class="seccion-cuerpo">
-            <div class="reporte-filtros-grid">
-                <div class="reporte-filtro-grupo">
+
+    <!-- FILTRO PROYECTOS -->
+    <div class="rep-panel rep-filtros-panel reporte-no-print">
+        <div class="rep-panel-titulo">🔍 Filtrar proyectos</div>
+        <div class="rep-panel-cuerpo">
+            <div class="rep-filtros-grid">
+                <div class="rep-filtro-grupo">
                     <label>Estado</label>
                     <select id="filtro-estado-proy">
                         <option value="">Todos</option>
@@ -284,7 +331,7 @@
                         <option value="completado">Completado</option>
                     </select>
                 </div>
-                <div class="reporte-filtro-grupo">
+                <div class="rep-filtro-grupo">
                     <label>Responsable</label>
                     <select id="filtro-responsable-proy">
                         <option value="">Todos</option>
@@ -294,73 +341,86 @@
                     </select>
                 </div>
             </div>
-            <div class="reporte-filtros-botones">
-                <button type="button" class="btn btn-verde" onclick="filtrarProyectos()">🔍 Filtrar</button>
-                <button type="button" class="btn btn-outline" onclick="limpiarFiltrosProyecto()">✖ Limpiar</button>
+            <div class="rep-filtros-botones">
+                <button type="button" class="rep-btn-filtrar" onclick="filtrarProyectos()">Filtrar</button>
+                <button type="button" class="rep-btn-limpiar" onclick="limpiarFiltrosProyecto()">Limpiar</button>
+                <button type="button" class="rep-btn-pdf reporte-no-print" onclick="exportarTabla()">Exportar Tabla PDF</button>
+                <button type="button" class="rep-btn-pdf-act reporte-no-print" onclick="exportarConActividades()">Exportar con Actividades PDF</button>
             </div>
         </div>
     </div>
- 
+
     <!-- TABLA PROYECTOS -->
-    <div class="seccion">
-        <div class="seccion-titulo">
+    <div class="rep-panel">
+        <div class="rep-panel-titulo">
             📋 Proyectos
-            <span id="contador-proyectos" class="reporte-total-badge">{{ proyectos_filtrados | length }} resultado{{ 's' if proyectos_filtrados | length != 1 }}</span>
+            <span id="contador-proyectos" class="rep-badge-total">{{ proyectos_filtrados | length }} resultado{{ 's' if proyectos_filtrados | length != 1 }}</span>
         </div>
-        <div class="seccion-cuerpo" style="padding:0;">
+        <div class="rep-panel-cuerpo rep-panel-tabla">
             {% if proyectos_filtrados %}
-            <table class="tabla">
+            <table class="rep-tabla">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Proyecto</th>
-                        <th>Responsable</th>
-                        <th>Estado</th>
-                        <th>Inicio</th>
-                        <th>Fecha fin</th>
-                        <th>Avance</th>
-                        <th>Salud</th>
+                        <th>#</th><th>Proyecto</th><th>Responsable</th><th>Estado</th>
+                        <th>Inicio</th><th>Fecha fin</th><th>Avance</th><th>Salud</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-proyectos">
                     {% for p in proyectos_filtrados %}
-                    <tr data-estado="{{ p.estado }}"
-                        data-responsable="{{ p.responsable }}">
-                        <td class="ticket-id">#{{ p.id_proyecto }}</td>
-                        <td>{{ p.nombre }}</td>
+                    <tr data-estado="{{ p.estado }}" data-responsable="{{ p.responsable }}"
+                        class="{{ 'rep-fila-eliminada' if p.estado2 == 0 else '' }}"
+                        id="fila-proy-{{ p.id_proyecto }}">
+                        <td class="rep-td-id">#{{ p.id_proyecto }}</td>
+                        <td>
+                            {{ p.nombre }}
+                            {% if p.estado2 == 0 %}<span class="rep-chip rep-chip-eliminado" style="margin-left:6px;">🗑 Eliminado</span>{% endif %}
+                        </td>
                         <td>{{ p.responsable }}</td>
                         <td>
-                            <span class="badge {{ 'badge-verde' if p.estado == 'completado' else 'badge-rojo' if p.estado == 'pausado' else '' }}">
+                            <span class="rep-chip {{ 'rep-chip-verde' if p.estado == 'completado' else 'rep-chip-rojo' if p.estado == 'pausado' else 'rep-chip-azul' }}">
                                 {{ p.estado | replace('_',' ') | capitalize }}
                             </span>
                         </td>
                         <td>{{ p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—' }}</td>
                         <td>{{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}</td>
                         <td>
-                            <span class="badge {{ 'badge-verde' if (p.pct_avance or 0) >= 70 else 'badge-rojo' if (p.pct_avance or 0) < 30 else '' }}">
+                            <span class="rep-chip {{ 'rep-chip-verde' if (p.pct_avance or 0) >= 70 else 'rep-chip-rojo' if (p.pct_avance or 0) < 30 else 'rep-chip-naranja' }}">
                                 {{ p.pct_avance or 0 }}%
                             </span>
                         </td>
                         <td>
-                            {% if p.salud == 'completado' %}<span class="badge badge-verde">✅ Completado</span>
-                            {% elif p.salud == 'vencido' %}<span class="badge badge-rojo">🔴 Vencido</span>
-                            {% elif p.salud == 'por_vencer' %}<span class="badge badge-rojo">⚠️ Por vencer</span>
-                            {% else %}<span class="badge badge-verde">✅ OK</span>
+                            {% if p.estado2 == 0 %}<span class="rep-chip rep-chip-eliminado">Eliminado</span>
+                            {% elif p.salud == 'completado' %}<span class="rep-chip rep-chip-verde">Completado</span>
+                            {% elif p.salud == 'vencido' %}<span class="rep-chip rep-chip-rojo">Vencido</span>
+                            {% elif p.salud == 'por_vencer' %}<span class="rep-chip rep-chip-naranja">Por vencer</span>
+                            {% else %}<span class="rep-chip rep-chip-verde">OK</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            <button class="rep-btn-expandir" onclick="toggleActividades(this)" data-id="{{ p.id_proyecto }}" title="Ver actividades">▼</button>
+                        </td>
+                    </tr>
+                    <tr id="panel-act-{{ p.id_proyecto }}" class="rep-panel-actividades" style="display:none;">
+                        <td colspan="9" style="padding:0;">
+                            <div class="rep-act-wrap" id="contenido-act-{{ p.id_proyecto }}">
+                                <div class="rep-act-cargando">Cargando actividades...</div>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            <div id="sin-resultados-proyectos" class="sin-datos" style="display:none;">
+            <div id="sin-resultados-proyectos" class="rep-sin-datos" style="display:none;">
                 No se encontraron proyectos con los filtros seleccionados.
             </div>
             {% else %}
-            <div class="sin-datos">No hay proyectos registrados.</div>
+            <div class="rep-sin-datos">No hay proyectos registrados.</div>
             {% endif %}
         </div>
     </div>
- 
+
 </div><!-- fin seccion-proyectos -->
+
+</div><!-- fin documento-pdf -->
 
 {% endblock %}

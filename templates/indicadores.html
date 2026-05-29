@@ -13,163 +13,190 @@
      data-velocity='{{ velocity_sprints | tojson if velocity_sprints else "[]" }}'>
 </div>
 
-<div class="page-header">
-    <div>
-        <h1>📊 Indicadores de Soporte</h1>
-        <p>Panel de KPIs para el Jefe TI · Área de Sistemas AgroVisión</p>
+<!-- HEADER INDICADORES -->
+<div class="ind-hero">
+    <div class="ind-hero-texto">
+        <div class="ind-hero-badge">PANEL EN VIVO</div>
+        <h1 class="ind-hero-titulo" id="ind-hero-titulo">Indicadores<br><span>de Soporte</span></h1>
+        <p class="ind-hero-sub" id="ind-hero-sub">KPIs · Área de Sistemas · AgroVisión</p>
     </div>
-    <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">🎫 Ver tickets</a>
+    <div class="ind-hero-acciones">
+        <a id="ind-hero-btn" class="ind-btn-secundario"
+           data-url-tickets="{{ url_for('listar_tickets') }}"
+           data-url-proyectos="{{ url_for('listar_proyectos') }}"
+           href="{{ url_for('listar_tickets') }}">🎫 Ver tickets</a>
+    </div>
 </div>
 
-<!-- SELECTOR TICKETS / PROYECTOS -->
-<div class="reporte-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
-    <button id="tab-tickets" class="btn btn-verde" onclick="mostrarSeccionInd('tickets')">🎫 Tickets</button>
-    <button id="tab-proyectos" class="btn btn-outline" onclick="mostrarSeccionInd('proyectos')">📁 Proyectos</button>
+<!-- TABS -->
+<div class="ind-tabs">
+    <button id="tab-tickets"   class="ind-tab ind-tab-activo" onclick="mostrarSeccionInd('tickets')">🎫 Tickets</button>
+    <button id="tab-proyectos" class="ind-tab"                onclick="mostrarSeccionInd('proyectos')">📁 Proyectos</button>
 </div>
 
 <!-- ══════════════════ SECCIÓN TICKETS ══════════════════ -->
 <div id="seccion-ind-tickets">
 
-    <div class="kpi-fila">
-        <div class="kpi-card total">
-            <div class="etiqueta">Total tickets</div>
-            <div class="numero">{{ resumen.total or 0 }}</div>
-        </div>
-        <div class="kpi-card pendiente">
-            <div class="etiqueta">Pendientes</div>
-            <div class="numero">{{ (resumen.abiertos or 0) + (resumen.en_progreso or 0) }}</div>
-        </div>
-        <div class="kpi-card resuelto">
-            <div class="etiqueta">Resueltos / Cerrados</div>
-            <div class="numero">{{ (resumen.resueltos or 0) + (resumen.cerrados or 0) }}</div>
-        </div>
-        <div class="kpi-card promedio">
-            <div class="etiqueta">Tiempo prom. resolución</div>
-            <div class="numero">
-                {{ resumen.promedio_horas_resolucion or '—' }}{% if resumen.promedio_horas_resolucion %}h{% endif %}
+    <!-- KPI CARDS: DISEÑO ÚNICO CON ACENTO LATERAL + ÍCONO GRANDE -->
+    <div class="ind-kpi-grid">
+        <div class="ind-kpi-card ind-kpi-total">
+            <div class="ind-kpi-icono">🎫</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ resumen.total or 0 }}</div>
+                <div class="ind-kpi-label">Total tickets</div>
             </div>
+            <div class="ind-kpi-barra"></div>
         </div>
-        <div class="kpi-card sla">
-            <div class="etiqueta">SLA cumplido</div>
-            <div class="numero">{{ resumen.pct_sla or 0 }}%</div>
+        <div class="ind-kpi-card ind-kpi-pendiente">
+            <div class="ind-kpi-icono">⏳</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ (resumen.abiertos or 0) + (resumen.en_progreso or 0) }}</div>
+                <div class="ind-kpi-label">Pendientes</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
+        </div>
+        <div class="ind-kpi-card ind-kpi-resuelto">
+            <div class="ind-kpi-icono">✅</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ (resumen.resueltos or 0) + (resumen.cerrados or 0) }}</div>
+                <div class="ind-kpi-label">Resueltos / Cerrados</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
+        </div>
+        <div class="ind-kpi-card ind-kpi-tiempo">
+            <div class="ind-kpi-icono">⏱</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">
+                    {{ resumen.promedio_horas_resolucion or '—' }}{% if resumen.promedio_horas_resolucion %}<span class="ind-kpi-unidad">h</span>{% endif %}
+                </div>
+                <div class="ind-kpi-label">Tiempo prom. resolución</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
+        </div>
+        <div class="ind-kpi-card ind-kpi-sla">
+            <div class="ind-kpi-icono">🎯</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ resumen.pct_sla or 0 }}<span class="ind-kpi-unidad">%</span></div>
+                <div class="ind-kpi-label">SLA cumplido</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
         </div>
     </div>
 
-    <div class="kpi-fila kpi-fila-secundaria">
-        <div class="kpi-card satisfaccion">
-            <div class="etiqueta">Satisfacción promedio</div>
-            <div class="numero">
-                {{ satisfaccion.promedio_estrellas or '—' }}{% if satisfaccion.promedio_estrellas %}<span class="numero-sufijo">/5</span>{% endif %}
-            </div>
+    <!-- SATISFACCIÓN: FILA SECUNDARIA -->
+    <div class="ind-satisf-fila">
+        <div class="ind-satisf-card ind-satisf-promedio">
+            <div class="ind-satisf-estrella">⭐</div>
+            <div class="ind-satisf-num">{{ satisfaccion.promedio_estrellas or '—' }}{% if satisfaccion.promedio_estrellas %}<span class="ind-satisf-de">/5</span>{% endif %}</div>
+            <div class="ind-satisf-label">Satisfacción promedio</div>
         </div>
-        <div class="kpi-card cobertura">
-            <div class="etiqueta">Tickets calificados</div>
-            <div class="numero">{{ satisfaccion.total_calificados or 0 }}</div>
-            <div class="kpi-subtexto">de {{ satisfaccion.total_atendidos or 0 }} tickets atendidos</div>
+        <div class="ind-satisf-card ind-satisf-calificados">
+            <div class="ind-satisf-estrella">📋</div>
+            <div class="ind-satisf-num">{{ satisfaccion.total_calificados or 0 }}</div>
+            <div class="ind-satisf-label">Tickets calificados</div>
+            <div class="ind-satisf-sub">de {{ satisfaccion.total_atendidos or 0 }} atendidos</div>
         </div>
-        <div class="kpi-card favorabilidad">
-            <div class="etiqueta">Valoraciones positivas</div>
-            <div class="numero">{{ satisfaccion.pct_positivas or 0 }}%</div>
-            <div class="kpi-subtexto">4 y 5 estrellas</div>
+        <div class="ind-satisf-card ind-satisf-positivas">
+            <div class="ind-satisf-estrella">👍</div>
+            <div class="ind-satisf-num">{{ satisfaccion.pct_positivas or 0 }}<span class="ind-satisf-de">%</span></div>
+            <div class="ind-satisf-label">Valoraciones positivas</div>
+            <div class="ind-satisf-sub">4 y 5 estrellas</div>
         </div>
     </div>
 
-    <div class="fila-dos">
-        <div class="seccion">
-            <div class="seccion-titulo">🖥 Tickets por aplicación</div>
-            <div class="seccion-cuerpo">
+    <!-- GRÁFICAS -->
+    <div class="ind-charts-grid">
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Tickets por aplicación</div>
+            <div class="ind-chart-cuerpo">
                 {% if por_app %}<canvas id="grafico-app"></canvas>
-                {% else %}<div class="sin-datos">Sin datos aún</div>{% endif %}
+                {% else %}<div class="ind-sin-datos">Sin datos aún</div>{% endif %}
             </div>
         </div>
-        <div class="seccion">
-            <div class="seccion-titulo">🚨 Distribución por prioridad</div>
-            <div class="seccion-cuerpo">
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-rojo"></span>Distribución por prioridad</div>
+            <div class="ind-chart-cuerpo">
                 {% if por_prioridad %}<canvas id="grafico-prioridad"></canvas>
-                {% else %}<div class="sin-datos">Sin datos aún</div>{% endif %}
+                {% else %}<div class="ind-sin-datos">Sin datos aún</div>{% endif %}
             </div>
         </div>
     </div>
 
-    <div class="fila-dos">
-        <div class="seccion">
-            <div class="seccion-titulo">👨‍💻 Carga por agente de soporte</div>
-            <div class="seccion-cuerpo">
+    <!-- AGENTES + SATISFACCIÓN DETALLE -->
+    <div class="ind-charts-grid">
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-verde"></span>Carga por agente de soporte</div>
+            <div class="ind-chart-cuerpo ind-chart-lista">
                 {% if por_agente %}
                     {% for a in por_agente %}
-                    <div class="agente-item">
-                        <div class="agente-avatar">
+                    <div class="ind-agente-row">
+                        <div class="ind-agente-avatar">
                             {{ a.agente.split()[0][0] }}{{ a.agente.split()[-1][0] if a.agente.split()|length > 1 else '' }}
                         </div>
-                        <div class="agente-info">
-                            <div class="agente-nombre">{{ a.agente }}</div>
-                            <div class="agente-dato">
+                        <div class="ind-agente-info">
+                            <div class="ind-agente-nombre">{{ a.agente }}</div>
+                            <div class="ind-agente-dato">
                                 {{ a.resueltos }} resueltos ·
-                                {% if a.promedio_horas %}promedio {{ a.promedio_horas }}h{% else %}sin datos{% endif %}
+                                {% if a.promedio_horas %}{{ a.promedio_horas }}h promedio{% else %}sin datos{% endif %}
                             </div>
                         </div>
-                        <div class="agente-total">{{ a.total_atendidos }}</div>
+                        <div class="ind-agente-badge">{{ a.total_atendidos }}</div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <div class="sin-datos">Sin agentes asignados aún.</div>
+                    <div class="ind-sin-datos">Sin agentes asignados aún.</div>
                 {% endif %}
             </div>
         </div>
-        <div class="seccion">
-            <div class="seccion-titulo">⭐ Satisfacción del servicio</div>
-            <div class="seccion-cuerpo">
-                <div class="satisfaccion-resumen">
-                    <div class="satisfaccion-item">
-                        <span class="satisfaccion-valor">{{ satisfaccion.promedio_estrellas or '—' }}</span>
-                        <span class="satisfaccion-texto">promedio general</span>
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-acento"></span>Satisfacción del servicio</div>
+            <div class="ind-chart-cuerpo">
+                <div class="ind-satisf-resumen">
+                    <div class="ind-satisf-mini">
+                        <span class="ind-satisf-mini-num">{{ satisfaccion.promedio_estrellas or '—' }}</span>
+                        <span class="ind-satisf-mini-txt">promedio general</span>
                     </div>
-                    <div class="satisfaccion-item">
-                        <span class="satisfaccion-valor">{{ satisfaccion.total_calificados or 0 }}</span>
-                        <span class="satisfaccion-texto">respuestas de usuarios</span>
+                    <div class="ind-satisf-mini">
+                        <span class="ind-satisf-mini-num">{{ satisfaccion.total_calificados or 0 }}</span>
+                        <span class="ind-satisf-mini-txt">respuestas de usuarios</span>
                     </div>
-                    <div class="satisfaccion-item">
-                        <span class="satisfaccion-valor">{{ (satisfaccion.total_atendidos or 0) - (satisfaccion.total_calificados or 0) }}</span>
-                        <span class="satisfaccion-texto">tickets sin feedback</span>
+                    <div class="ind-satisf-mini">
+                        <span class="ind-satisf-mini-num">{{ (satisfaccion.total_atendidos or 0) - (satisfaccion.total_calificados or 0) }}</span>
+                        <span class="ind-satisf-mini-txt">sin feedback</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="tendencia-wrap">
-        <div class="seccion">
-            <div class="seccion-titulo">📈 Tendencia de tickets — últimos 6 meses</div>
-            <div class="seccion-cuerpo">
-                {% if por_mes %}<canvas id="grafico-tendencia"></canvas>
-                {% else %}<div class="sin-datos">Sin datos de tendencia aún.</div>{% endif %}
-            </div>
+    <!-- TENDENCIA FULL WIDTH -->
+    <div class="ind-chart-panel ind-chart-wide">
+        <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Tendencia de tickets — últimos 6 meses</div>
+        <div class="ind-chart-cuerpo">
+            {% if por_mes %}<canvas id="grafico-tendencia"></canvas>
+            {% else %}<div class="ind-sin-datos">Sin datos de tendencia aún.</div>{% endif %}
         </div>
     </div>
 
-    <div class="seccion">
-        <div class="seccion-titulo">💬 Comentarios recientes de atención</div>
-        <div class="seccion-cuerpo comentarios-lista">
+    <!-- COMENTARIOS -->
+    <div class="ind-chart-panel ind-chart-wide">
+        <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-verde"></span>Comentarios recientes de atención</div>
+        <div class="ind-chart-cuerpo ind-comentarios-wrap">
             {% if comentarios %}
                 {% for c in comentarios %}
-                <div class="comentario-item">
-                    <div class="comentario-cabecera">
+                <div class="ind-comentario">
+                    <div class="ind-comentario-head">
                         <div>
-                            <div class="comentario-ticket">SD-{{ c.id_ticket }} · {{ c.titulo }}</div>
-                            <div class="comentario-meta">
-                                {{ c.solicitante }} · {{ c.agente or 'Sin agente asignado' }}
-                                {% if c.fecha_calificacion %}· {{ c.fecha_calificacion.strftime('%d/%m/%Y') }}{% endif %}
-                            </div>
+                            <div class="ind-comentario-ticket">SD-{{ c.id_ticket }} · {{ c.titulo }}</div>
+                            <div class="ind-comentario-meta">{{ c.solicitante }} · {{ c.agente or 'Sin agente' }}{% if c.fecha_calificacion %} · {{ c.fecha_calificacion.strftime('%d/%m/%Y') }}{% endif %}</div>
                         </div>
-                        <div class="comentario-stars">
-                            {% for n in range(1, 6) %}{% if n <= c.estrellas %}★{% else %}☆{% endif %}{% endfor %}
-                        </div>
+                        <div class="ind-comentario-stars">{% for n in range(1, 6) %}{% if n <= c.estrellas %}★{% else %}☆{% endif %}{% endfor %}</div>
                     </div>
-                    <div class="comentario-texto">{{ c.observacion or 'Sin observación adicional.' }}</div>
+                    <div class="ind-comentario-texto">{{ c.observacion or 'Sin observación adicional.' }}</div>
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="sin-datos">Aún no se registran comentarios de satisfacción.</div>
+                <div class="ind-sin-datos">Aún no se registran comentarios de satisfacción.</div>
             {% endif %}
         </div>
     </div>
@@ -178,35 +205,46 @@
 
 <!-- ══════════════════ SECCIÓN PROYECTOS ══════════════════ -->
 <div id="seccion-ind-proyectos" style="display:none;">
- 
-    <div class="kpi-fila">
-        <div class="kpi-card promedio">
-            <div class="etiqueta">Total proyectos</div>
-            <div class="numero">{{ proyectos_estado | sum(attribute='total') if proyectos_estado else 0 }}</div>
+
+    <div class="ind-kpi-grid">
+        <div class="ind-kpi-card ind-kpi-tiempo">
+            <div class="ind-kpi-icono">📁</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ proyectos_estado | sum(attribute='total') if proyectos_estado else 0 }}</div>
+                <div class="ind-kpi-label">Total proyectos</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
         </div>
-        <div class="kpi-card sla">
-            <div class="etiqueta">Sprints activos</div>
-            <div class="numero">{{ sprint_activo | length }}</div>
+        <div class="ind-kpi-card ind-kpi-sla">
+            <div class="ind-kpi-icono">⚡</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ sprint_activo | length }}</div>
+                <div class="ind-kpi-label">Sprints activos</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
         </div>
-        <div class="kpi-card resuelto">
-            <div class="etiqueta">Programadores con carga</div>
-            <div class="numero">{{ carga_programador | length }}</div>
+        <div class="ind-kpi-card ind-kpi-resuelto">
+            <div class="ind-kpi-icono">👨‍💻</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ carga_programador | length }}</div>
+                <div class="ind-kpi-label">Programadores con carga</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
         </div>
     </div>
- 
-    <div class="proyectos-layout">
-        <div class="proyectos-columna">
-            <div class="seccion">
-                <div class="seccion-titulo">📁 Proyectos por estado</div>
-                <div class="seccion-cuerpo">
+
+    <div class="ind-proy-layout">
+        <div class="ind-proy-col">
+            <div class="ind-chart-panel">
+                <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Proyectos por estado</div>
+                <div class="ind-chart-cuerpo">
                     {% if proyectos_estado %}<canvas id="grafico-ind-proyectos"></canvas>
-                    {% else %}<div class="sin-datos">Sin proyectos aún</div>{% endif %}
+                    {% else %}<div class="ind-sin-datos">Sin proyectos aún</div>{% endif %}
                 </div>
             </div>
-
-            <div class="seccion">
-                <div class="seccion-titulo">⚡ Avance de sprints activos</div>
-                <div class="seccion-cuerpo">
+            <div class="ind-chart-panel">
+                <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-verde"></span>Avance de sprints activos</div>
+                <div class="ind-chart-cuerpo ind-chart-lista">
                     {% if sprint_activo %}
                         {% for s in sprint_activo %}
                         {% set pct_sp = ((s.pts_completados / s.capacidad_pts) * 100) | int if s.capacidad_pts else 0 %}
@@ -234,47 +272,44 @@
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="sin-datos">No hay sprints activos.</div>
+                        <div class="ind-sin-datos">No hay sprints activos.</div>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <div class="proyectos-columna">
-            <div class="seccion">
-                <div class="seccion-titulo">👨‍💻 Carga actual por programador</div>
-                <div class="seccion-cuerpo">
+        <div class="ind-proy-col">
+            <div class="ind-chart-panel">
+                <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-verde"></span>Carga actual por programador</div>
+                <div class="ind-chart-cuerpo ind-chart-lista">
                     {% if carga_programador %}
                         {% for p in carga_programador %}
-                        <div class="agente-item">
-                            <div class="agente-avatar">
+                        <div class="ind-agente-row">
+                            <div class="ind-agente-avatar">
                                 {{ p.programador.split()[0][0] }}{{ p.programador.split()[-1][0] if p.programador.split()|length > 1 else '' }}
                             </div>
-                            <div class="agente-info">
-                                <div class="agente-nombre">{{ p.programador }}</div>
-                                <div class="agente-dato">
-                                    {{ p.en_progreso }} en progreso · {{ p.por_hacer }} por hacer · {{ p.pts_asignados }} pts
-                                </div>
+                            <div class="ind-agente-info">
+                                <div class="ind-agente-nombre">{{ p.programador }}</div>
+                                <div class="ind-agente-dato">{{ p.en_progreso }} en progreso · {{ p.por_hacer }} por hacer · {{ p.pts_asignados }} pts</div>
                             </div>
-                            <div class="agente-total">{{ p.total_activas }}</div>
+                            <div class="ind-agente-badge">{{ p.total_activas }}</div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="sin-datos">Sin actividades activas asignadas.</div>
+                        <div class="ind-sin-datos">Sin actividades activas asignadas.</div>
                     {% endif %}
                 </div>
             </div>
-
-            <div class="seccion">
-                <div class="seccion-titulo">🚀 Velocity por sprint</div>
-                <div class="seccion-cuerpo">
+            <div class="ind-chart-panel">
+                <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Velocity por sprint</div>
+                <div class="ind-chart-cuerpo">
                     {% if velocity_sprints %}<canvas id="grafico-velocity"></canvas>
-                    {% else %}<div class="sin-datos">Sin sprints registrados aún.</div>{% endif %}
+                    {% else %}<div class="ind-sin-datos">Sin sprints registrados aún.</div>{% endif %}
                 </div>
             </div>
         </div>
     </div>
- 
+
 </div><!-- fin seccion-ind-proyectos -->
 
 {% endblock %}

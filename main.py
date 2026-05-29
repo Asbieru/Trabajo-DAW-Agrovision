@@ -31,7 +31,8 @@ from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorT
                          reporteTicketsFiltrados, obtenerAplicaciones,
                          reporteProyectosPorEstado, reporteProyectosEnRiesgo,
                          reporteRendimientoPorSprint, reporteProyectosFiltrados,
-                         obtenerResponsables)
+                         obtenerResponsables,
+                         reporteActividadesPorProyecto, resumenActividadesReporte)
 
 app = Flask(__name__)
 app.secret_key = 'agrovision-clave-secreta-2024'
@@ -363,6 +364,13 @@ def api_eliminar_proyecto(id_proyecto):
     if ok:
         return jsonify({'ok': True})
     return jsonify({'ok': False, 'mensaje': 'No se pudo eliminar el proyecto.'})
+
+
+@app.route('/api/reporte/proyecto/<int:id_proyecto>/actividades')
+def api_reporte_actividades(id_proyecto):
+    actividades = reporteActividadesPorProyecto(id_proyecto)
+    resumen     = resumenActividadesReporte(id_proyecto)
+    return jsonify({'ok': True, 'actividades': actividades, 'resumen': resumen})
 
 
 @app.route('/proyecto/<int:id_proyecto>/gestion')
