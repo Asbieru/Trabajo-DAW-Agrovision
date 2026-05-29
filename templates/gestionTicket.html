@@ -48,121 +48,123 @@
             <tbody id="tbody-tickets">
                 {% if tickets %}
                     {% for t in tickets %}
-                    <tr data-texto="{{ (t.titulo ~ ' ' ~ t.nombre_solicitante ~ ' ' ~ t.aplicacion ~ ' SD-' ~ t.id_ticket)|lower }}"
-                        data-estado="{{ t.estado }}"
-                        data-id-solicitante="{{ t.id_solicitante }}">
+                    {% if t.estado != 'eliminado' %}
+                        <tr data-texto="{{ (t.titulo ~ ' ' ~ t.nombre_solicitante ~ ' ' ~ t.aplicacion ~ ' SD-' ~ t.id_ticket)|lower }}"
+                            data-estado="{{ t.estado }}"
+                            data-id-solicitante="{{ t.id_solicitante }}">
 
-                        <td class="td-id ticket-id" data-label="ID">
-                            SD-{{ t.id_ticket }}
-                        </td>
-                        <td class="td-titulo" data-label="Título">
-                            <strong>{{ t.titulo }}</strong>
-                        </td>
-                        <td data-label="Tipo">
-                            {% if t.tipo == 'incidencia' %}
-                                <span class="badge badge-rojo">Incidencia</span>
-                            {% elif t.tipo == 'peticion' %}
-                                <span class="badge badge-azul">Petición</span>
-                            {% else %}
-                                <span class="badge badge-gris">Consulta</span>
-                            {% endif %}
-                        </td>
-                        <td data-label="Prioridad">
-                            {% if t.prioridad == 'critica' %}
-                                <span class="badge badge-rojo">🚨 Crítica</span>
-                            {% elif t.prioridad == 'alta' %}
-                                <span class="badge badge-rojo">Alta</span>
-                            {% elif t.prioridad == 'media' %}
-                                <span class="badge badge-acento">Media</span>
-                            {% else %}
-                                <span class="badge badge-verde">Baja</span>
-                            {% endif %}
-                        </td>
-                        <td class="col-aplicacion" data-label="Aplicación"
-                            style="color:var(--gris-texto); font-size:0.84rem;">
-                            {{ t.aplicacion }}
-                        </td>
-                        <td data-label="Estado">
-                            {% if t.estado == 'abierto' %}
-                                <span class="badge badge-rojo">Abierto</span>
-                            {% elif t.estado == 'en_progreso' %}
-                                <span class="badge badge-acento">En progreso</span>
-                            {% elif t.estado == 'resuelto' %}
-                                <span class="badge badge-verde">Resuelto</span>
-                            {% elif t.estado == 'base_proyecto' %}
-                                <span class="badge badge-azul">🚀 Base proyecto</span>
-                            {% else %}
-                                <span class="badge badge-gris">Cerrado</span>
-                            {% endif %}
-                        </td>
-                        <td data-label="Solicitante">{{ t.nombre_solicitante }}</td>
-                        <td class="col-agente" data-label="Agente"
-                            style="font-size:0.84rem; color:var(--gris-texto);">
-                            {{ t.nombre_agente or '—' }}
-                        </td>
-                        <td class="col-apertura" data-label="Apertura"
-                            style="font-size:0.8rem; color:var(--gris-texto);">
-                            {{ t.fecha_apertura.strftime('%d/%m/%Y %H:%M') if t.fecha_apertura else '—' }}
-                        </td>
-                        <td class="td-accion">
-                            {% if t.estado in ('abierto', 'en_progreso') %}
-                                <div class="ticket-actions">
-                                    <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
-                                       class="btn btn-sm btn-verde">🔧 Resolver</a>
-                                    <a href="{{ url_for('form_editar_ticket', id_ticket=t.id_ticket) }}"
-                                       class="btn btn-sm btn-outline btn-editar-ticket"
-                                       data-id-solicitante="{{ t.id_solicitante }}">✏️ Editar</a>
-                                </div>
-                            {% elif t.estado == 'resuelto' %}
-                                <div class="ticket-actions">
-                                    <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
-                                    {% if t.calificacion_estrellas %}
-                                    <button type="button" class="btn btn-sm btn-outline" disabled>
-                                        ⭐ {{ t.calificacion_estrellas }}/5
-                                    </button>
-                                    {% else %}
-                                    <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
-                                       class="btn btn-sm btn-outline">
-                                        ⭐ Calificar
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            {% elif t.estado == 'base_proyecto' %}
-                                <div class="ticket-actions">
-                                    <a href="{{ url_for('form_proyecto') }}"
-                                       class="btn btn-sm btn-azul">🚀 Ver proyecto</a>
-                                    {% if t.calificacion_estrellas %}
-                                    <button type="button" class="btn btn-sm btn-outline" disabled>
-                                        ⭐ {{ t.calificacion_estrellas }}/5
-                                    </button>
-                                    {% else %}
-                                    <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
-                                       class="btn btn-sm btn-outline">
-                                        ⭐ Calificar
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            {% else %}
-                                <div class="ticket-actions">
-                                    <span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>
-                                    {% if t.calificacion_estrellas %}
-                                    <button type="button" class="btn btn-sm btn-outline" disabled>
-                                        ⭐ {{ t.calificacion_estrellas }}/5
-                                    </button>
-                                    {% else %}
-                                    <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
-                                       class="btn btn-sm btn-outline">
-                                        ⭐ Calificar
-                                    </a>
-                                    {% endif %}
-                                    <button type="button" class="btn btn-sm btn-rojo"
-                                            onclick="mostrarModalEliminarTicket({{ t.id_ticket }})">
-                                        🗑️ Eliminar
-                                    </button>
-                                </div>
-                            {% endif %}
-                        </td>
-                    </tr>
+                            <td class="td-id ticket-id" data-label="ID">
+                                SD-{{ t.id_ticket }}
+                            </td>
+                            <td class="td-titulo" data-label="Título">
+                                <strong>{{ t.titulo }}</strong>
+                            </td>
+                            <td data-label="Tipo">
+                                {% if t.tipo == 'incidencia' %}
+                                    <span class="badge badge-rojo">Incidencia</span>
+                                {% elif t.tipo == 'peticion' %}
+                                    <span class="badge badge-azul">Petición</span>
+                                {% else %}
+                                    <span class="badge badge-gris">Consulta</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Prioridad">
+                                {% if t.prioridad == 'critica' %}
+                                    <span class="badge badge-rojo">🚨 Crítica</span>
+                                {% elif t.prioridad == 'alta' %}
+                                    <span class="badge badge-rojo">Alta</span>
+                                {% elif t.prioridad == 'media' %}
+                                    <span class="badge badge-acento">Media</span>
+                                {% else %}
+                                    <span class="badge badge-verde">Baja</span>
+                                {% endif %}
+                            </td>
+                            <td class="col-aplicacion" data-label="Aplicación"
+                                style="color:var(--gris-texto); font-size:0.84rem;">
+                                {{ t.aplicacion }}
+                            </td>
+                            <td data-label="Estado">
+                                {% if t.estado == 'abierto' %}
+                                    <span class="badge badge-rojo">Abierto</span>
+                                {% elif t.estado == 'en_progreso' %}
+                                    <span class="badge badge-acento">En progreso</span>
+                                {% elif t.estado == 'resuelto' %}
+                                    <span class="badge badge-verde">Resuelto</span>
+                                {% elif t.estado == 'base_proyecto' %}
+                                    <span class="badge badge-azul">🚀 Base proyecto</span>
+                                {% else %}
+                                    <span class="badge badge-gris">Cerrado</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Solicitante">{{ t.nombre_solicitante }}</td>
+                            <td class="col-agente" data-label="Agente"
+                                style="font-size:0.84rem; color:var(--gris-texto);">
+                                {{ t.nombre_agente or '—' }}
+                            </td>
+                            <td class="col-apertura" data-label="Apertura"
+                                style="font-size:0.8rem; color:var(--gris-texto);">
+                                {{ t.fecha_apertura.strftime('%d/%m/%Y %H:%M') if t.fecha_apertura else '—' }}
+                            </td>
+                            <td class="td-accion">
+                                {% if t.estado in ('abierto', 'en_progreso') %}
+                                    <div class="ticket-actions">
+                                        <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
+                                        class="btn btn-sm btn-verde">🔧 Resolver</a>
+                                        <a href="{{ url_for('form_editar_ticket', id_ticket=t.id_ticket) }}"
+                                        class="btn btn-sm btn-outline btn-editar-ticket"
+                                        data-id-solicitante="{{ t.id_solicitante }}">✏️ Editar</a>
+                                    </div>
+                                {% elif t.estado == 'resuelto' %}
+                                    <div class="ticket-actions">
+                                        <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
+                                        {% if t.calificacion_estrellas %}
+                                        <button type="button" class="btn btn-sm btn-outline" disabled>
+                                            ⭐ {{ t.calificacion_estrellas }}/5
+                                        </button>
+                                        {% else %}
+                                        <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
+                                        class="btn btn-sm btn-outline">
+                                            ⭐ Calificar
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                {% elif t.estado == 'base_proyecto' %}
+                                    <div class="ticket-actions">
+                                        <a href="{{ url_for('form_proyecto') }}"
+                                        class="btn btn-sm btn-azul">🚀 Ver proyecto</a>
+                                        {% if t.calificacion_estrellas %}
+                                        <button type="button" class="btn btn-sm btn-outline" disabled>
+                                            ⭐ {{ t.calificacion_estrellas }}/5
+                                        </button>
+                                        {% else %}
+                                        <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
+                                        class="btn btn-sm btn-outline">
+                                            ⭐ Calificar
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <div class="ticket-actions">
+                                        <span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>
+                                        {% if t.calificacion_estrellas %}
+                                        <button type="button" class="btn btn-sm btn-outline" disabled>
+                                            ⭐ {{ t.calificacion_estrellas }}/5
+                                        </button>
+                                        {% else %}
+                                        <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
+                                        class="btn btn-sm btn-outline">
+                                            ⭐ Calificar
+                                        </a>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-sm btn-rojo"
+                                                onclick="mostrarModalEliminarTicket({{ t.id_ticket }})">
+                                            🗑️ Eliminar
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
                     {% endfor %}
                 {% else %}
                     <tr>

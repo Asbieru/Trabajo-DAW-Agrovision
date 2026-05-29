@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS proyectos (
     id_proyecto INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(200) NOT NULL,
     id_responsable INT NOT NULL,
-    estado ENUM('planificado','en_desarrollo','qa','completado','pausado')
+    estado ENUM('planificado','en_desarrollo','qa','completado','pausado', 'eliminado')
     NOT NULL DEFAULT 'planificado',
     fecha_inicio DATE NOT NULL,
     fecha_fin_plan DATE NOT NULL,

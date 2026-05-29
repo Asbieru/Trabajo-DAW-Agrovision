@@ -129,7 +129,8 @@ def eliminarTicket(id_ticket):
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                DELETE FROM tickets
+                UPDATE tickets
+                   SET estado    = 'eliminado'
                  WHERE id_ticket = %s
                    AND estado    = 'cerrado'
             """, (id_ticket,))
