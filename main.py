@@ -778,6 +778,43 @@ def api_eliminar_actividad(id_actividad):
         return jsonify({'ok': True})
     return jsonify({'ok': False, 'mensaje': 'Solo se pueden eliminar actividades canceladas.'})
 
+@app.route('/api/proyecto/<int:id_proyecto>/porcentaje')
+def api_porcentaje_proyecto(id_proyecto):
+    resumen     = resumenActividadesPorProyecto()
+    fila_actual = next((r for r in resumen
+                        if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
+    if fila_actual:
+        if isinstance(fila_actual, dict):
+            valor_raw = fila_actual.get('porcentaje_avance_real')
+        else:
+            valor_raw = fila_actual[3]
+        pct = round(float(valor_raw)) if valor_raw is not None else 0
+    else:
+        pct = 0
+
+    proyecto = obtenerProyecto(id_proyecto)
+    if proyecto and proyecto.get('estado') == 'completado':
+        pct = 100
+
+    return jsonify({'porcentaje': pct})
+
+@app.route('/api/proyecto/<int:id_proyecto>/avances-grafico')
+def api_avances_grafico(id_proyecto):
+    avances = listarAvances(id_proyecto)
+    avances_cronologicos = list(reversed(avances))
+    fechas      = [av['fecha_reporte'].strftime('%d/%m') for av in avances_cronologicos]
+    porcentajes = [float(av['porcentaje_avance']) for av in avances_cronologicos]
+    return jsonify({'fechas': fechas, 'porcentajes': porcentajes})
+
+@app.route('/api/avance/<int:id_avance>/eliminar', methods=['POST'])
+def api_eliminar_avance(id_avance):
+    try:
+        # Intenta eliminar. Si tu BD tiene restricciones, saltará una excepción
+        eliminarAvance(id_avance)
+        return jsonify({'ok': True})
+    except Exception as e:
+        print(f"Error de integridad al eliminar avance: {e}")
+        return jsonify({'ok': False, 'mensaje': 'No se puede eliminar por restricciones de integridad en la base de datos.'})
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE

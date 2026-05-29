@@ -21,14 +21,12 @@
 
 <div id="documento-pdf" style="background:white; padding:20px; border-radius:10px;">
 
-    <!-- Cabecera solo para PDF -->
     <div class="solo-pdf" style="display:none; text-align:center; margin-bottom:20px;">
         <h2>Reporte de Avance: {{ proyecto.nombre }}</h2>
         <p style="color:#666; font-size:0.9rem;">Generado el: <span id="fecha-hoy"></span></p>
         <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
     </div>
 
-    <!-- KPI Cards -->
     <div class="stats-grid" style="margin-bottom:24px;">
         <div class="stat-card" style="border-left:4px solid var(--azul);">
             <div class="stat-label">Total de Reportes</div>
@@ -40,13 +38,10 @@
             <div class="stat-num" id="avance-actual-num">
                 {% if avances %}{{ avances[0].porcentaje_avance }}%{% else %}0%{% endif %}
             </div>
-            <!-- Barra de avance actual -->
             {% if avances %}
-            <div style="margin-top:8px; background:var(--gris-borde); border-radius:20px;
-                        height:6px; overflow:hidden;">
+            <div style="margin-top:8px; background:var(--gris-borde); border-radius:20px; height:6px; overflow:hidden;">
                 <div style="height:100%; border-radius:20px; background:var(--verde);
-                            width:{{ avances[0].porcentaje_avance }}%;
-                            transition:width 0.6s ease;"></div>
+                            width:{{ avances[0].porcentaje_avance }}%; transition:width 0.6s ease;"></div>
             </div>
             {% endif %}
         </div>
@@ -67,7 +62,6 @@
             </div>
         </div>
 
-        <!-- Card extra: fecha último reporte -->
         <div class="stat-card" style="border-left:4px solid var(--gris-texto);">
             <div class="stat-label">Último Reporte</div>
             <div class="stat-num" style="font-size:1.1rem; color:var(--negro);">
@@ -83,15 +77,12 @@
         </div>
     </div>
 
-    <!-- Gráfico de curva -->
     <div class="card" style="margin-bottom:24px;">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
             <span>📈 Curva de Avance del Proyecto</span>
             <button type="button" class="reporte-no-print"
                     onclick="refrescarGrafico()"
-                    style="background:none; border:none; cursor:pointer;
-                           color:var(--verde); font-size:0.82rem;
-                           display:flex; align-items:center; gap:4px;">
+                    style="background:none; border:none; cursor:pointer; color:var(--verde); font-size:0.82rem; display:flex; align-items:center; gap:4px;">
                 🔄 <span id="txt-refresh-grafico">Refrescar</span>
             </button>
         </div>
@@ -106,7 +97,6 @@
         </div>
     </div>
 
-    <!-- Tabla de revisiones -->
     <div class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
             <span>📋 Detalle de Revisiones</span>
@@ -152,24 +142,18 @@
                                     <span style="color:var(--rojo); font-weight:600;">🔴 Retrasado</span>
                                 {% endif %}
                             </td>
-                            <td data-label="Logros"
-                                style="font-size:0.85rem; max-width:260px; line-height:1.5;">
+                            <td data-label="Logros" style="font-size:0.85rem; max-width:260px; line-height:1.5;">
                                 {{ av.logros_periodo }}
                             </td>
-                            <td data-label="Pendientes"
-                                style="font-size:0.83rem; max-width:200px;
-                                       color:var(--gris-texto); line-height:1.5;">
+                            <td data-label="Pendientes" style="font-size:0.83rem; max-width:200px; color:var(--gris-texto); line-height:1.5;">
                                 {{ av.pendientes_next or '—' }}
                             </td>
                             <td data-label="Acción" class="td-accion reporte-no-print">
-                                <form action="{{ url_for('eliminar_avance_ruta', id_proyecto=proyecto.id_proyecto, id_avance=av.id_avance) }}"
-                                      method="POST"
-                                      onsubmit="return confirm('¿Eliminar este reporte? Esta acción no se puede deshacer.');">
-                                    <button type="submit" class="btn btn-sm btn-rojo"
-                                            style="padding:5px 10px; font-size:0.75rem;">
-                                        🗑️ Eliminar
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-rojo"
+                                        style="padding:5px 10px; font-size:0.75rem;"
+                                        onclick="mostrarModalEliminarAvance({{ av.id_avance }}, '{{ av.fecha_reporte.strftime('%d/%m/%Y') }}')">
+                                    🗑️ Eliminar
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -184,7 +168,17 @@
         </div>
     </div>
 
-</div><!-- fin #documento-pdf -->
+</div><div id="modal-eliminar-avance" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div class="modal-content" style="background:white; padding:20px; border-radius:8px; max-width:400px; width:90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        <h3 style="color:var(--rojo); margin-top:0;">⚠️ Confirmar Eliminación</h3>
+        <p>¿Estás seguro de que deseas eliminar el reporte de avance del <strong id="lbl-fecha-avance"></strong>?</p>
+        <p style="font-size: 0.85rem; color: var(--gris-texto);">Esta acción no se puede deshacer y alterará la curva gráfica de avance del proyecto.</p>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+            <button class="btn btn-outline" onclick="cerrarModalEliminarAvance()">Cancelar</button>
+            <button class="btn btn-rojo" id="btn-confirmar-eliminar-avance">Sí, eliminar</button>
+        </div>
+    </div>
+</div>
 
 <script>
 const ID_PROYECTO = {{ proyecto.id_proyecto }};
@@ -288,5 +282,52 @@ function exportarPDF() {
         noPrint.forEach(function(el) { el.style.display = ''; });
     });
 }
+
+// ── 4. Lógica del Modal para Eliminar (Confirmación JS) ───────
+var _avanceEliminarId = null;
+
+function mostrarModalEliminarAvance(idAvance, fecha) {
+    _avanceEliminarId = idAvance;
+    document.getElementById('lbl-fecha-avance').textContent = fecha;
+    document.getElementById('modal-eliminar-avance').style.display = 'flex';
+}
+
+function cerrarModalEliminarAvance() {
+    _avanceEliminarId = null;
+    document.getElementById('modal-eliminar-avance').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var btnConf = document.getElementById('btn-confirmar-eliminar-avance');
+    if(btnConf) {
+        btnConf.addEventListener('click', function() {
+            if(!_avanceEliminarId) return;
+            
+            btnConf.textContent = 'Eliminando...';
+            btnConf.disabled = true;
+
+            // Llama a la nueva ruta API que debes colocar en main.py
+            fetch('/api/avance/' + _avanceEliminarId + '/eliminar', {
+                method: 'POST'
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if(data.ok) {
+                    // Recarga la página para refrescar tabla y gráficos
+                    location.reload(); 
+                } else {
+                    alert(data.mensaje || 'No se puede eliminar por restricciones de integridad.');
+                    btnConf.textContent = 'Sí, eliminar';
+                    btnConf.disabled = false;
+                }
+            })
+            .catch(function() {
+                alert('Error de conexión al intentar eliminar el reporte.');
+                btnConf.textContent = 'Sí, eliminar';
+                btnConf.disabled = false;
+            });
+        });
+    }
+});
 </script>
 {% endblock %}

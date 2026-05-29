@@ -18,14 +18,12 @@
 
             <div class="form-grid form-section-spacing">
 
-                <!-- Fecha -->
                 <div class="form-group">
                     <label>Fecha de registro</label>
                     <input type="text" value="{{ hoy_mostrar }}" disabled
                            style="background-color: var(--gris-bg); color: var(--gris-texto); font-weight: 600;">
                 </div>
 
-                <!-- Autor -->
                 <div class="form-group">
                     <label for="id_autor">Reportado por (Autor) *</label>
                     <select id="id_autor" name="id_autor" required>
@@ -36,43 +34,33 @@
                     </select>
                 </div>
 
-                <!-- % Avance en tiempo real -->
                 <div class="form-group">
                     <label style="display:flex; align-items:center; justify-content:space-between;">
                         % de Avance automatizado
                         <button type="button" id="btn-refrescar-pct"
                                 onclick="refrescarPorcentaje()"
-                                style="background:none; border:none; cursor:pointer;
-                                       color:var(--verde); font-size:0.8rem; padding:0;
-                                       display:flex; align-items:center; gap:4px;">
+                                style="background:none; border:none; cursor:pointer; color:var(--verde); font-size:0.8rem; padding:0; display:flex; align-items:center; gap:4px;">
                             🔄 <span>Actualizar</span>
                         </button>
                     </label>
                     <div style="display:flex; flex-direction:column; gap:8px;">
-                        <!-- Badge numérico -->
                         <div style="display:flex; align-items:center; gap:10px;">
                             <span id="badge-pct" class="badge badge-verde"
                                   style="font-size:1rem; padding:6px 12px;">
                                 {{ pct_calculado }}%
                             </span>
-                            <span id="pct-estado-texto"
-                                  style="font-size:0.78rem; color:var(--gris-texto);">
+                            <span id="pct-estado-texto" style="font-size:0.78rem; color:var(--gris-texto);">
                                 Basado en actividades del proyecto
                             </span>
                         </div>
-                        <!-- Barra de progreso -->
-                        <div style="background:var(--gris-borde); border-radius:20px;
-                                    height:10px; overflow:hidden;">
+                        <div style="background:var(--gris-borde); border-radius:20px; height:10px; overflow:hidden;">
                             <div id="barra-pct"
-                                 style="height:100%; border-radius:20px;
-                                        background:var(--verde);
-                                        width:{{ pct_calculado }}%;
-                                        transition: width 0.6s ease;"></div>
+                                 style="height:100%; border-radius:20px; background:var(--verde);
+                                        width:{{ pct_calculado }}%; transition: width 0.6s ease;"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Salud del proyecto -->
                 <div class="form-group">
                     <label for="estado_salud">Salud del proyecto *</label>
                     <select id="estado_salud" name="estado_salud" required>
@@ -84,13 +72,10 @@
 
             </div>
 
-            <!-- Logros -->
             <div class="form-group form-section-spacing">
-                <label for="logros_periodo"
-                       style="display:flex; justify-content:space-between; align-items:center;">
+                <label for="logros_periodo" style="display:flex; justify-content:space-between; align-items:center;">
                     ¿Qué se avanzó en este periodo? (Logros) *
-                    <span id="contador-logros"
-                          style="font-size:0.75rem; color:var(--gris-texto); font-weight:400;">
+                    <span id="contador-logros" style="font-size:0.75rem; color:var(--gris-texto); font-weight:400;">
                         0 / 1000
                     </span>
                 </label>
@@ -100,13 +85,10 @@
                           placeholder="Describe las tareas completadas o los hitos alcanzados..."></textarea>
             </div>
 
-            <!-- Pendientes -->
             <div class="form-group form-section-spacing">
-                <label for="pendientes_next"
-                       style="display:flex; justify-content:space-between; align-items:center;">
+                <label for="pendientes_next" style="display:flex; justify-content:space-between; align-items:center;">
                     ¿Cuáles son los siguientes pasos o bloqueos? (Opcional)
-                    <span id="contador-pendientes"
-                          style="font-size:0.75rem; color:var(--gris-texto); font-weight:400;">
+                    <span id="contador-pendientes" style="font-size:0.75rem; color:var(--gris-texto); font-weight:400;">
                         0 / 600
                     </span>
                 </label>
@@ -151,12 +133,10 @@ function refrescarPorcentaje() {
                 barra.style.background = 'var(--rojo)';
             }
 
-            document.getElementById('pct-estado-texto').textContent =
-                'Actualizado hace un momento ✓';
+            document.getElementById('pct-estado-texto').textContent = 'Actualizado hace un momento ✓';
         })
         .catch(function() {
-            document.getElementById('pct-estado-texto').textContent =
-                '⚠️ No se pudo actualizar';
+            document.getElementById('pct-estado-texto').textContent = '⚠️ No se pudo actualizar';
         })
         .finally(function() {
             span.textContent = 'Actualizar';

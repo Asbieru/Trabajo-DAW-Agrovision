@@ -17,6 +17,10 @@ class Proyecto:
 
 
 def _calcularEstado(estado_bd, total_acts, completadas, en_progreso):
+    """
+    Calcula el estado real de un proyecto basándose en sus actividades.
+    Si no hay actividades, respeta el estado guardado en la BD.
+    """
     if total_acts == 0:
         return estado_bd
     if completadas == total_acts:

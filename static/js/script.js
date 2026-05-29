@@ -1825,4 +1825,46 @@ function exportarConActividades() {
         });
         Promise.all(promesas).then(generarPDF).catch(generarPDF);
     }
+    var _avanceEliminarId = null;
+
+function mostrarModalEliminarAvance(idAvance, fecha) {
+    _avanceEliminarId = idAvance;
+    document.getElementById('lbl-fecha-avance').textContent = fecha;
+    document.getElementById('modal-eliminar-avance').style.display = 'flex';
+}
+
+function cerrarModalEliminarAvance() {
+    _avanceEliminarId = null;
+    document.getElementById('modal-eliminar-avance').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var btnConf = document.getElementById('btn-confirmar-eliminar-avance');
+    if(btnConf) {
+        btnConf.addEventListener('click', function() {
+            if(!_avanceEliminarId) return;
+            btnConf.textContent = 'Eliminando...';
+            btnConf.disabled = true;
+
+            fetch('/api/avance/' + _avanceEliminarId + '/eliminar', {
+                method: 'POST'
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if(data.ok) {
+                    location.reload(); // Recarga para actualizar gráficos y tabla
+                } else {
+                    alert(data.mensaje || 'Error al eliminar el reporte. Conflicto de integridad.');
+                    btnConf.textContent = 'Sí, eliminar';
+                    btnConf.disabled = false;
+                }
+            })
+            .catch(function() {
+                alert('Error de conexión.');
+                btnConf.textContent = 'Sí, eliminar';
+                btnConf.disabled = false;
+            });
+        });
+    }
+});
 }
