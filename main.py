@@ -19,13 +19,19 @@ from actividadAD import (Actividad, listarActividades, insertarActividad,
                          resumenActividadesPorProyecto, proximoCodigo)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
-                        listarAvances, insertarAvance, eliminarAvance)
+                        listarAvances, insertarAvance, eliminarAvance,
+                        eliminarProyecto, tieneActividadesPendientes)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos,
-                            kpiSatisfaccion, comentariosCalificacionesRecientes)
+                            kpiSatisfaccion, comentariosCalificacionesRecientes,
+                            kpiProyectosPorEstado, kpiVelocityPorSprint,
+                            kpiCargaPorProgramador)
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
-                         reporteTicketsFiltrados, obtenerAplicaciones)
+                         reporteTicketsFiltrados, obtenerAplicaciones,
+                         reporteProyectosPorEstado, reporteProyectosEnRiesgo,
+                         reporteRendimientoPorSprint, reporteProyectosFiltrados,
+                         obtenerResponsables)
 
 app = Flask(__name__)
 app.secret_key = 'agrovision-clave-secreta-2024'
@@ -300,13 +306,57 @@ def guardar_proyecto():
     except Exception as e:
         print(f'Error al guardar proyecto: {e}')
         abort(500)
-    return redirect(url_for('form_proyecto'))
+    return redirect(url_for('form_proyecto') + '?creado=1')
+
+
+@app.route('/proyecto/<int:id_proyecto>/editar')
+def form_editar_proyecto(id_proyecto):
+    proyecto = obtenerProyecto(id_proyecto)
+    if not proyecto:
+        abort(404)
+    responsables = obtenerUsuarios()
+    from proyectoAD import obtenerResponsablesProyecto
+    ids_responsables_actuales = obtenerResponsablesProyecto(id_proyecto)
+    return render_template('editarProyecto.html',
+                           proyecto=proyecto,
+                           responsables=responsables,
+                           ids_responsables_actuales=ids_responsables_actuales)
+
+
+@app.route('/proyecto/<int:id_proyecto>/editar', methods=['POST'])
+def guardar_edicion_proyecto(id_proyecto):
+    try:
+        from proyectoAD import actualizarProyectoCompleto
+        ids_responsables = request.form.getlist('responsables')
+        if not ids_responsables:
+            abort(400)
+        nombre         = request.form['nombre']
+        estado         = request.form['estado']
+        fecha_fin_plan = request.form['fecha_fin_plan']
+        descripcion    = request.form['descripcion']
+        actualizarProyectoCompleto(id_proyecto, nombre, ids_responsables, estado,
+                                   fecha_fin_plan, descripcion)
+    except KeyError:
+        abort(400)
+    except Exception as e:
+        print(f'Error al editar proyecto: {e}')
+        abort(500)
+    return redirect(url_for('form_editar_proyecto', id_proyecto=id_proyecto) + '?editado=1')
 
 
 @app.route('/proyectos')
 def listar_proyectos():
     proyectos = listarProyectos()
     return render_template('listaProyectos.html', proyectos=proyectos)
+
+@app.route('/api/proyecto/<int:id_proyecto>/eliminar', methods=['POST'])
+def api_eliminar_proyecto(id_proyecto):
+    if tieneActividadesPendientes(id_proyecto):
+        return jsonify({'ok': False, 'mensaje': 'No se puede eliminar: el proyecto tiene actividades pendientes.'})
+    ok = eliminarProyecto(id_proyecto)
+    if ok:
+        return jsonify({'ok': True})
+    return jsonify({'ok': False, 'mensaje': 'No se pudo eliminar el proyecto.'})
 
 
 @app.route('/proyecto/<int:id_proyecto>/gestion')
@@ -414,14 +464,17 @@ def indicadores_soporte():
     mes_fin     = request.args.get('mes_fin', '')     or None
     anio_fin    = request.args.get('anio_fin', '')    or None
 
-    resumen       = resumenKPI()
-    por_app       = kpiPorAplicacion()
-    por_prioridad = kpiPorPrioridad()
-    por_agente    = kpiPorAgente()
-    por_mes       = kpiPorMes()
-    sprint_activo = kpiSprintsActivos()
-    satisfaccion  = kpiSatisfaccion()
-    comentarios   = comentariosCalificacionesRecientes()
+    resumen           = resumenKPI()
+    por_app           = kpiPorAplicacion()
+    por_prioridad     = kpiPorPrioridad()
+    por_agente        = kpiPorAgente()
+    por_mes           = kpiPorMes()
+    sprint_activo     = kpiSprintsActivos()
+    satisfaccion      = kpiSatisfaccion()
+    comentarios       = comentariosCalificacionesRecientes()
+    proyectos_estado  = kpiProyectosPorEstado()
+    velocity_sprints  = kpiVelocityPorSprint()
+    carga_programador = kpiCargaPorProgramador()
 
     return render_template('indicadores.html',
                            resumen=resumen,
@@ -432,6 +485,9 @@ def indicadores_soporte():
                            sprint_activo=sprint_activo,
                            satisfaccion=satisfaccion,
                            comentarios=comentarios,
+                           proyectos_estado=proyectos_estado,
+                           velocity_sprints=velocity_sprints,
+                           carga_programador=carga_programador,
                            mes_inicio=mes_inicio   or '',
                            anio_inicio=anio_inicio or '',
                            mes_fin=mes_fin         or '',
@@ -457,14 +513,19 @@ def gestion_reportes():
     estado       = limpiar(request.args.get('estado', ''))
     prioridad    = limpiar(request.args.get('prioridad', ''))
 
-    resumen           = reporteResumen()
-    tickets_app       = reporteTicketsPorApp()
-    tickets_tipo      = reporteTicketsPorTipo()
-    story_points      = reporteStoryPointsPorProgramador()
-    carryover         = reporteCarryoverPorProgramador()
-    aplicaciones      = obtenerAplicaciones()
-    tickets_filtrados = reporteTicketsFiltrados(fecha_inicio, fecha_fin,
-                                                aplicacion, estado, prioridad)
+    resumen             = reporteResumen()
+    tickets_app         = reporteTicketsPorApp()
+    tickets_tipo        = reporteTicketsPorTipo()
+    story_points        = reporteStoryPointsPorProgramador()
+    carryover           = reporteCarryoverPorProgramador()
+    aplicaciones        = obtenerAplicaciones()
+    tickets_filtrados   = reporteTicketsFiltrados(fecha_inicio, fecha_fin,
+                                                  aplicacion, estado, prioridad)
+    proyectos_estado    = reporteProyectosPorEstado()
+    proyectos_riesgo    = reporteProyectosEnRiesgo()
+    rendimiento_sprint  = reporteRendimientoPorSprint()
+    proyectos_filtrados = reporteProyectosFiltrados()
+    responsables        = obtenerResponsables()
 
     return render_template('reportes.html',
                            resumen=resumen,
@@ -474,6 +535,11 @@ def gestion_reportes():
                            carryover=carryover,
                            aplicaciones=aplicaciones,
                            tickets_filtrados=tickets_filtrados,
+                           proyectos_estado=proyectos_estado,
+                           proyectos_riesgo=proyectos_riesgo,
+                           rendimiento_sprint=rendimiento_sprint,
+                           proyectos_filtrados=proyectos_filtrados,
+                           responsables=responsables,
                            fecha_inicio=fecha_inicio or '',
                            fecha_fin=fecha_fin       or '',
                            aplicacion=aplicacion     or '',
@@ -528,7 +594,51 @@ def guardar_actividad():
     except Exception as e:
         print(f'Error al guardar actividad: {e}')
         abort(500)
-    return redirect(url_for('gestion_proyecto', id_proyecto=id_proyecto))
+    return redirect(url_for('form_actividad', id_proyecto=id_proyecto) + '&actividad_creada=1')
+
+
+@app.route('/actividad/<int:id_actividad>/editar')
+def form_editar_actividad(id_actividad):
+    from actividadAD import obtenerActividad
+    actividad = obtenerActividad(id_actividad)
+    if not actividad:
+        abort(404)
+    proyectos  = listarProyectos()
+    sprints    = listarTodosSprints()
+    asignados_json = {}
+    for p in proyectos:
+        pid   = p['id_proyecto']
+        lista = listarAsignadosPorProyecto(pid)
+        asignados_json[pid] = [{'id_usuario': u['id_usuario'],
+                                'nombre_completo': u['nombre_completo']}
+                               for u in lista]
+    return render_template('editarActividad.html',
+                           actividad=actividad,
+                           proyectos=proyectos,
+                           sprints=sprints,
+                           asignados_json=asignados_json)
+
+
+@app.route('/actividad/<int:id_actividad>/editar', methods=['POST'])
+def guardar_edicion_actividad(id_actividad):
+    try:
+        from actividadAD import actualizarActividad
+        actualizarActividad(
+            id_actividad = id_actividad,
+            id_proyecto  = request.form['id_proyecto'],
+            id_sprint    = request.form.get('id_sprint') or None,
+            id_asignado  = request.form.get('id_asignado') or None,
+            titulo       = request.form['titulo'],
+            prioridad    = request.form['prioridad'],
+            estado       = request.form['estado'],
+            story_points = request.form.get('story_points') or 0,
+        )
+    except KeyError:
+        abort(400)
+    except Exception as e:
+        print(f'Error al editar actividad: {e}')
+        abort(500)
+    return redirect(url_for('form_editar_actividad', id_actividad=id_actividad) + '?editado=1')
 
 
 @app.route('/actividad/<int:id_actividad>/estado', methods=['POST'])
@@ -645,8 +755,10 @@ def api_estado_actividad(id_actividad):
 
 @app.route('/api/actividad/<int:id_actividad>/eliminar', methods=['POST'])
 def api_eliminar_actividad(id_actividad):
-    eliminarActividad(id_actividad)
-    return jsonify({'ok': True})
+    ok = eliminarActividad(id_actividad)
+    if ok:
+        return jsonify({'ok': True})
+    return jsonify({'ok': False, 'mensaje': 'Solo se pueden eliminar actividades canceladas.'})
 
 
 # ──────────────────────────────────────────────────────────────

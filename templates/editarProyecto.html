@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Editar Proyecto · {{ proyecto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>✏️ Editar proyecto</h1>
+        <p>PR-{{ proyecto.id_proyecto }} · {{ proyecto.nombre }}</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Ver proyectos</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Datos del proyecto</div>
+    <div class="card-body">
+        <form action="{{ url_for('guardar_edicion_proyecto', id_proyecto=proyecto.id_proyecto) }}" method="POST">
+
+            <!-- Nombre del proyecto -->
+            <div class="form-group form-section-spacing">
+                <label for="nombre">Nombre del proyecto *</label>
+                <input type="text" id="nombre" name="nombre"
+                       value="{{ proyecto.nombre }}"
+                       placeholder="Ej. App Móvil de Registro de Plagas"
+                       required>
+            </div>
+
+            <!-- Responsables: checkboxes -->
+            <div class="form-group form-section-spacing">
+                <label>Responsables del proyecto *</label>
+                <div class="checkbox-lista">
+                    {% for r in responsables %}
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="responsables" value="{{ r.id_usuario }}"
+                               {% if r.id_usuario|string in ids_responsables_actuales %}checked{% endif %}>
+                        <span>{{ r.nombre_completo }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <span class="form-hint">Marca uno o más responsables para este proyecto</span>
+            </div>
+
+            <!-- Estado -->
+            <div class="form-group form-section-spacing">
+                <label for="estado">Estado del proyecto *</label>
+                <select id="estado" name="estado" required>
+                    <option value="planificado"   {% if proyecto.estado_bd == 'planificado'   %}selected{% endif %}>📋 Planificado</option>
+                    <option value="en_desarrollo" {% if proyecto.estado_bd == 'en_desarrollo' %}selected{% endif %}>⚙️ En desarrollo</option>
+                    <option value="qa"            {% if proyecto.estado_bd == 'qa'            %}selected{% endif %}>🔍 QA / Pruebas</option>
+                    <option value="completado"    {% if proyecto.estado_bd == 'completado'    %}selected{% endif %}>✅ Completado</option>
+                    <option value="pausado"       {% if proyecto.estado_bd == 'pausado'       %}selected{% endif %}>⏸ Pausado</option>
+                </select>
+            </div>
+
+            <!-- Fecha de fin planificada -->
+            <div class="form-group form-section-spacing">
+                <label for="fecha_fin_plan">Fecha de fin planificada *</label>
+                <input type="date" id="fecha_fin_plan" name="fecha_fin_plan"
+                       value="{{ proyecto.fecha_fin_plan.strftime('%Y-%m-%d') if proyecto.fecha_fin_plan else '' }}"
+                       required>
+                <span class="form-hint">Fecha objetivo de entrega en producción.</span>
+            </div>
+
+            <!-- Descripción / Alcance -->
+            <div class="form-group form-section-spacing">
+                <label for="descripcion">Descripción y alcance *</label>
+                <textarea id="descripcion" name="descripcion" rows="5"
+                          placeholder="Describe el objetivo del proyecto..."
+                          required>{{ proyecto.descripcion }}</textarea>
+            </div>
+
+            <!-- ACCIONES -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">💾 Guardar cambios</button>
+                <a href="{{ url_for('listar_proyectos') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- ══ MODAL PROYECTO EDITADO ══ -->
+<div id="modal-proyecto-editado" class="av-modal-overlay" style="display:none;">
+    <div class="av-modal-box">
+        <div style="font-size:2.5rem;margin-bottom:10px;">✅</div>
+        <h3 style="margin:0 0 8px 0;font-size:1.1rem;color:var(--verde-oscuro);">¡Datos editados correctamente!</h3>
+        <p style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;">Los cambios del proyecto fueron guardados.</p>
+        <button onclick="cerrarModalProyectoEditado()"
+                class="btn btn-verde btn-sm"
+                style="padding:8px 28px;font-size:0.88rem;">
+            Aceptar
+        </button>
+    </div>
+</div>
+
+<script>
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('editado') === '1') {
+        document.getElementById('modal-proyecto-editado').style.display = 'flex';
+    }
+})();
+function cerrarModalProyectoEditado() {
+    document.getElementById('modal-proyecto-editado').style.display = 'none';
+    var url = window.location.pathname;
+    window.history.replaceState({}, '', url);
+}
+</script>
+
+{% endblock %}

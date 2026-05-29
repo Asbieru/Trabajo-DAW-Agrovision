@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Editar Actividad · {{ actividad.codigo }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>✏️ Editar actividad</h1>
+        <p>{{ actividad.codigo }} · {{ actividad.nombre_proyecto }}</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('gestion_proyecto', id_proyecto=actividad.id_proyecto) }}">← Volver al proyecto</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Datos de la actividad</div>
+    <div class="card-body">
+        <form action="{{ url_for('guardar_edicion_actividad', id_actividad=actividad.id_actividad) }}" method="POST">
+
+            <!-- Código (solo lectura) y Título -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label for="codigo">Código</label>
+                    <input type="text" id="codigo" value="{{ actividad.codigo }}" disabled
+                           style="background:var(--gris-fondo);color:var(--gris-texto);cursor:not-allowed;">
+                    <span class="form-hint">No editable</span>
+                </div>
+                <div class="form-group">
+                    <label for="titulo">Título de la actividad *</label>
+                    <input type="text" id="titulo" name="titulo"
+                           value="{{ actividad.titulo }}"
+                           placeholder="Ej. Implementar módulo de KPIs" required>
+                </div>
+            </div>
+
+            <!-- Proyecto y Sprint -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label for="id_proyecto">Proyecto *</label>
+                    <select id="id_proyecto" name="id_proyecto" required
+                            onchange="filtrarSprints(); cargarAsignados();">
+                        <option value="">— Selecciona proyecto —</option>
+                        {% for p in proyectos %}
+                        <option value="{{ p.id_proyecto }}"
+                            {% if p.id_proyecto == actividad.id_proyecto %}selected{% endif %}>
+                            {{ p.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_sprint">Sprint (opcional)</label>
+                    <select id="id_sprint" name="id_sprint">
+                        <option value="">— Sin sprint asignado —</option>
+                        {% for s in sprints %}
+                        <option value="{{ s.id_sprint }}"
+                                data-proyecto="{{ s.id_proyecto }}"
+                                {% if s.id_sprint == actividad.id_sprint %}selected{% endif %}>
+                            [{{ s.nombre_proyecto }}] {{ s.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-hint">Solo se muestran sprints del proyecto seleccionado</span>
+                </div>
+            </div>
+
+            <!-- Prioridad y Estado -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label for="prioridad">Prioridad *</label>
+                    <select id="prioridad" name="prioridad" required>
+                        <option value="critica" {% if actividad.prioridad == 'critica' %}selected{% endif %}>🔴 Crítica</option>
+                        <option value="alta"    {% if actividad.prioridad == 'alta'    %}selected{% endif %}>🟠 Alta</option>
+                        <option value="media"   {% if actividad.prioridad == 'media'   %}selected{% endif %}>🟡 Media</option>
+                        <option value="baja"    {% if actividad.prioridad == 'baja'    %}selected{% endif %}>🟢 Baja</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="estado">Estado *</label>
+                    <select id="estado" name="estado" required>
+                        <option value="backlog"     {% if actividad.estado == 'backlog'     %}selected{% endif %}>📥 Backlog</option>
+                        <option value="por_hacer"   {% if actividad.estado == 'por_hacer'   %}selected{% endif %}>📝 Por hacer</option>
+                        <option value="en_progreso" {% if actividad.estado == 'en_progreso' %}selected{% endif %}>⚙️ En progreso</option>
+                        <option value="completada"  {% if actividad.estado == 'completada'  %}selected{% endif %}>✅ Completada</option>
+                        <option value="cancelada"   {% if actividad.estado == 'cancelada'   %}selected{% endif %}>🚫 Cancelada</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Asignado y Story Points -->
+            <div class="form-grid form-section-spacing">
+                <div class="form-group">
+                    <label for="id_asignado">Asignar a *</label>
+                    <select id="id_asignado" name="id_asignado" required>
+                        <option value="">— Selecciona encargado —</option>
+                    </select>
+                    <span class="form-hint">Solo responsables asignados a ese proyecto</span>
+                </div>
+                <div class="form-group">
+                    <label for="story_points">Story Points</label>
+                    <input type="number" id="story_points" name="story_points"
+                           min="0" max="100"
+                           value="{{ actividad.story_points }}"
+                           placeholder="0">
+                    <span class="form-hint">Estimación del esfuerzo relativo (0–100)</span>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">💾 Guardar cambios</button>
+                <a href="{{ url_for('gestion_proyecto', id_proyecto=actividad.id_proyecto) }}" class="btn btn-outline">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- Datos para filtrar sprints y asignados -->
+<script>
+var asignadosPorProyecto = {{ asignados_json | tojson }};
+var _actividadAsignadoActual = {{ actividad.id_asignado | tojson }};
+
+// Al cargar, filtrar sprints y asignados del proyecto actual
+document.addEventListener('DOMContentLoaded', function() {
+    filtrarSprints();
+    cargarAsignadosConSeleccion(_actividadAsignadoActual);
+});
+
+function cargarAsignadosConSeleccion(idAsignadoActual) {
+    var proyectoId = document.getElementById('id_proyecto').value;
+    var sel = document.getElementById('id_asignado');
+    if (!sel) return;
+    sel.innerHTML = '';
+
+    if (!proyectoId) {
+        sel.innerHTML = '<option value="">— Selecciona primero un proyecto —</option>';
+        return;
+    }
+
+    var lista = (typeof asignadosPorProyecto !== 'undefined' && asignadosPorProyecto[proyectoId]) || [];
+    if (lista.length === 0) {
+        sel.innerHTML = '<option value="">— Sin responsables asignados —</option>';
+        return;
+    }
+
+    var opDefault = document.createElement('option');
+    opDefault.value = '';
+    opDefault.textContent = '— Selecciona encargado —';
+    sel.appendChild(opDefault);
+
+    lista.forEach(function(u) {
+        var op = document.createElement('option');
+        op.value = u.id_usuario;
+        op.textContent = u.nombre_completo;
+        if (idAsignadoActual && u.id_usuario == idAsignadoActual) {
+            op.selected = true;
+        }
+        sel.appendChild(op);
+    });
+}
+</script>
+
+<!-- ══ MODAL ACTIVIDAD EDITADA ══ -->
+<div id="modal-actividad-editada" class="av-modal-overlay" style="display:none;">
+    <div class="av-modal-box">
+        <div style="font-size:2.5rem;margin-bottom:10px;">✅</div>
+        <h3 style="margin:0 0 8px 0;font-size:1.1rem;color:var(--verde-oscuro);">¡Datos editados correctamente!</h3>
+        <p style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;">Los cambios de la actividad fueron guardados.</p>
+        <button onclick="cerrarModalActividadEditada()"
+                class="btn btn-verde btn-sm"
+                style="padding:8px 28px;font-size:0.88rem;">
+            Aceptar
+        </button>
+    </div>
+</div>
+
+<script>
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('editado') === '1') {
+        document.getElementById('modal-actividad-editada').style.display = 'flex';
+    }
+})();
+function cerrarModalActividadEditada() {
+    document.getElementById('modal-actividad-editada').style.display = 'none';
+    var url = window.location.pathname;
+    window.history.replaceState({}, '', url);
+}
+</script>
+
+{% endblock %}

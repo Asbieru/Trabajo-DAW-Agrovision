@@ -74,4 +74,34 @@
         </form>
     </div>
 </div>
+
+<!-- ══ MODAL PROYECTO CREADO ══ -->
+<div id="modal-proyecto-creado" class="av-modal-overlay" style="display:none;">
+    <div class="av-modal-box">
+        <div style="font-size:2.5rem;margin-bottom:10px;">✅</div>
+        <h3 style="margin:0 0 8px 0;font-size:1.1rem;color:var(--verde-oscuro);">¡Nuevo proyecto agregado!</h3>
+        <p style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;">El proyecto fue registrado correctamente.</p>
+        <button onclick="cerrarModalProyectoCreado()"
+                class="btn btn-verde btn-sm"
+                style="padding:8px 28px;font-size:0.88rem;">
+            Aceptar
+        </button>
+    </div>
+</div>
+
+<script>
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('creado') === '1') {
+        document.getElementById('modal-proyecto-creado').style.display = 'flex';
+    }
+})();
+function cerrarModalProyectoCreado() {
+    document.getElementById('modal-proyecto-creado').style.display = 'none';
+    // Limpiar el parámetro de la URL sin recargar
+    var url = window.location.pathname;
+    window.history.replaceState({}, '', url);
+}
+</script>
+
 {% endblock %}

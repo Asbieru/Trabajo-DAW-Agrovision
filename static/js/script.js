@@ -640,29 +640,65 @@ function cancelarActividad(idActividad, btn) {
     });
 }
 
-function eliminarActividad(idActividad, btn) {
-    btn.textContent = '…';
-    btn.disabled    = true;
+// Variable para almacenar el botón y el id al confirmar eliminación de actividad
+var _elimActividadId  = null;
+var _elimActividadBtn = null;
 
-    fetch('/api/actividad/' + idActividad + '/eliminar', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-        if (data.ok) {
-            location.reload();
-        } else {
-            alert('Error al eliminar actividad.');
-            btn.textContent = '🗑 Eliminar';
-            btn.disabled    = false;
-        }
-    })
-    .catch(function () {
-        alert('Error de conexión.');
-        btn.textContent = '🗑 Eliminar';
-        btn.disabled    = false;
+function confirmarEliminarActividad(idActividad, btn) {
+    _elimActividadId  = idActividad;
+    _elimActividadBtn = btn;
+    var modal = document.getElementById('modal-eliminar-actividad');
+    if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalEliminarActividad() {
+    var modal = document.getElementById('modal-eliminar-actividad');
+    if (modal) modal.style.display = 'none';
+    _elimActividadId  = null;
+    _elimActividadBtn = null;
+}
+
+(function bindEliminarActividadSi() {
+    document.addEventListener('DOMContentLoaded', function () {
+        var btnSi = document.getElementById('modal-elim-act-si');
+        if (!btnSi) return;
+        btnSi.addEventListener('click', function () {
+            if (!_elimActividadId) return;
+            var idParaEliminar = _elimActividadId;   // guardar antes de cerrar
+            var btn = _elimActividadBtn;
+            if (btn) { btn.textContent = '…'; btn.disabled = true; }
+
+            // cerrar modal manualmente sin limpiar la variable todavía
+            var modal = document.getElementById('modal-eliminar-actividad');
+            if (modal) modal.style.display = 'none';
+
+            fetch('/api/actividad/' + idParaEliminar + '/eliminar', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    location.reload();
+                } else {
+                    alert(data.mensaje || 'Error al eliminar actividad.');
+                    if (btn) { btn.textContent = '🗑 Eliminar'; btn.disabled = false; }
+                }
+            })
+            .catch(function () {
+                alert('Error de conexión.');
+                if (btn) { btn.textContent = '🗑 Eliminar'; btn.disabled = false; }
+            });
+
+            _elimActividadId  = null;
+            _elimActividadBtn = null;
+        });
     });
+})();
+
+function eliminarActividad(idActividad, btn) {
+    // Compatibilidad: redirige a la función con modal
+    confirmarEliminarActividad(idActividad, btn);
 }
 
 
@@ -950,3 +986,84 @@ function limpiarFiltrosProyecto() {
 function limpiarFiltrosProyectoInd() {
     window.location.href = window.location.pathname + '?_tab=proyectos';
 }
+
+/* ============================================================
+   10. MODALES PROYECTOS – listaProyectos.html
+   ============================================================ */
+
+var _elimProyectoId = null;
+
+function confirmarEliminarProyecto(idProyecto, nombreProyecto) {
+    _elimProyectoId = idProyecto;
+    var modal = document.getElementById('modal-eliminar-proyecto');
+    var lbl   = document.getElementById('modal-elim-nombre-proy');
+    if (lbl) lbl.textContent = nombreProyecto;
+    if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalEliminarProyecto() {
+    var modal = document.getElementById('modal-eliminar-proyecto');
+    if (modal) modal.style.display = 'none';
+    _elimProyectoId = null;
+}
+
+(function bindEliminarProyectoSi() {
+    document.addEventListener('DOMContentLoaded', function () {
+        var btnSi = document.getElementById('modal-elim-si');
+        if (!btnSi) return;
+        btnSi.addEventListener('click', function () {
+            if (!_elimProyectoId) return;
+            var idParaEliminar = _elimProyectoId;   // guardar antes de cerrar
+            btnSi.textContent = '…';
+            btnSi.disabled    = true;
+
+            // cerrar modal manualmente sin limpiar la variable todavía
+            var modal = document.getElementById('modal-eliminar-proyecto');
+            if (modal) modal.style.display = 'none';
+
+            fetch('/api/proyecto/' + idParaEliminar + '/eliminar', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    location.reload();
+                } else {
+                    alert(data.mensaje || 'No se pudo eliminar el proyecto.');
+                    btnSi.textContent = 'Sí, eliminar';
+                    btnSi.disabled    = false;
+                }
+            })
+            .catch(function () {
+                alert('Error de conexión.');
+                btnSi.textContent = 'Sí, eliminar';
+                btnSi.disabled    = false;
+            });
+
+            _elimProyectoId = null;
+        });
+    });
+})();
+
+
+/* ============================================================
+   11. MODAL ACTIVIDAD CREADA – nuevaActividad.html
+   ============================================================ */
+
+function cerrarModalActividadCreada() {
+    var modal = document.getElementById('modal-actividad-creada');
+    if (modal) modal.style.display = 'none';
+    var url = window.location.pathname + window.location.search.replace(/[?&]actividad_creada=1/, '');
+    window.history.replaceState({}, '', url);
+}
+
+(function chequearActividadCreada() {
+    document.addEventListener('DOMContentLoaded', function () {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('actividad_creada') === '1') {
+            var modal = document.getElementById('modal-actividad-creada');
+            if (modal) modal.style.display = 'flex';
+        }
+    });
+})();
