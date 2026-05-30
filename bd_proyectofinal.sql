@@ -106,11 +106,11 @@ CREATE TABLE IF NOT EXISTS proyectos (
 ) ENGINE=InnoDB;
 
 INSERT INTO proyectos
-(nombre, descripcion, estado, id_responsable, fecha_inicio, fecha_fin_plan, estado2)
+(nombre, descripcion, estado, id_responsable, fecha_inicio, fecha_fin_plan)
 VALUES
-('Sistema AgroVision v2','Sistema de soporte','en_desarrollo',1,'2025-01-01','2025-12-31',1),
-('App Movil Tecnicos','Aplicacion movil','planificado',1,'2025-02-01','2025-09-30',1),
-('Portal Reportes','Dashboard gerencial','planificado',1,'2025-03-01','2025-10-31',1);
+('Sistema AgroVision v2','Sistema de soporte','en_desarrollo',1,'2025-01-01','2025-12-31'),
+('App Movil Tecnicos','Aplicacion movil','planificado',1,'2025-02-01','2025-09-30'),
+('Portal Reportes','Dashboard gerencial','planificado',1,'2025-03-01','2025-10-31');
 
 -- ============================================================
 -- TABLA SPRINTS
@@ -193,7 +193,7 @@ CREATE TABLE IF NOT EXISTS actividades (
     codigo VARCHAR(30) NOT NULL UNIQUE,
     titulo VARCHAR(200) NOT NULL,
     prioridad ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
-    estado ENUM('backlog','por_hacer','en_progreso','completada','cancelada')
+    estado ENUM('backlog','por_hacer','en_progreso','completada','cancelada','eliminado')
     NOT NULL DEFAULT 'backlog',
     story_points SMALLINT DEFAULT 0,
     estado2 TINYINT(1) NOT NULL DEFAULT 1,
@@ -207,11 +207,11 @@ CREATE TABLE IF NOT EXISTS actividades (
 ) ENGINE=InnoDB;
 
 INSERT INTO actividades
-(id_proyecto, id_sprint, id_asignado, codigo, titulo, prioridad, estado, story_points, estado2)
+(id_proyecto, id_sprint, id_asignado, codigo, titulo, prioridad, estado, story_points)
 VALUES
-(1,1,3,'ACT-001','Panel KPIs','alta','completada',8,1),
-(1,1,2,'ACT-002','Exportar PDF','media','en_progreso',5,1),
-(2,2,3,'ACT-003','Login movil','critica','completada',8,1);
+(1,1,3,'ACT-001','Panel KPIs','alta','completada',8),
+(1,1,2,'ACT-002','Exportar PDF','media','en_progreso',5),
+(2,2,3,'ACT-003','Login movil','critica','completada',8);
 
 -- ============================================================
 -- FIN

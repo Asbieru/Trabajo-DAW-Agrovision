@@ -36,7 +36,7 @@ def _generarCodigo():
 
 
 def listarActividades(id_proyecto=None):
-    """Lista actividades activas (estado2=1) con nombre de proyecto, sprint y asignado."""
+    """Lista actividades no eliminadas con nombre de proyecto, sprint y asignado."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -50,7 +50,7 @@ def listarActividades(id_proyecto=None):
                 JOIN proyectos p ON a.id_proyecto = p.id_proyecto
                 LEFT JOIN sprints  s ON a.id_sprint   = s.id_sprint
                 LEFT JOIN usuarios u ON a.id_asignado = u.id_usuario
-                WHERE a.estado2 = 1
+                WHERE a.estado != 'eliminado'
             """
             if id_proyecto:
                 sql += " AND a.id_proyecto = %s ORDER BY a.created_at DESC"
@@ -70,8 +70,8 @@ def insertarActividad(obj):
             cursor.execute("""
                 INSERT INTO actividades
                     (id_proyecto, id_sprint, id_asignado,
-                     codigo, titulo, prioridad, estado, story_points, estado2)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)
+                     codigo, titulo, prioridad, estado, story_points)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 obj.id_proyecto, obj.id_sprint, obj.id_asignado,
                 codigo, obj.titulo,
@@ -93,7 +93,7 @@ def actualizarEstadoActividad(id_actividad, nuevo_estado):
 
 
 def eliminarActividad(id_actividad):
-    """Elimina lógicamente una actividad (estado2 = 0). Solo si está en estado 'cancelada'."""
+    """Elimina lógicamente una actividad (estado = 'eliminado'). Solo si está en estado 'cancelada'."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -106,7 +106,7 @@ def eliminarActividad(id_actividad):
             if not row or row['estado'] != 'cancelada':
                 return False
             cursor.execute(
-                "UPDATE actividades SET estado2 = 0 WHERE id_actividad = %s",
+                "UPDATE actividades SET estado = 'eliminado' WHERE id_actividad = %s",
                 (id_actividad,)
             )
         conn.commit()
@@ -162,7 +162,7 @@ def resumenActividadesPorProyecto():
                         FROM proyectos p
                         LEFT JOIN actividades a ON p.id_proyecto = a.id_proyecto
                             AND a.estado != 'cancelada'
-                            AND a.estado2 = 1
+                            AND a.estado != 'eliminado'
                         GROUP BY p.id_proyecto, p.nombre
                     """
                     cursor.execute(sql)
@@ -187,7 +187,7 @@ def obtenerActividad(id_actividad):
                 JOIN proyectos p ON a.id_proyecto = p.id_proyecto
                 LEFT JOIN sprints  s ON a.id_sprint   = s.id_sprint
                 LEFT JOIN usuarios u ON a.id_asignado = u.id_usuario
-                WHERE a.id_actividad = %s AND a.estado2 = 1
+                WHERE a.id_actividad = %s AND a.estado != 'eliminado'
             """, (id_actividad,))
             return cursor.fetchone()
 

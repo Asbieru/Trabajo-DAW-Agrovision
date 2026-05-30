@@ -175,7 +175,7 @@ def kpiProyectosPorEstado():
             cursor.execute("""
                 SELECT estado, COUNT(*) AS total
                 FROM proyectos
-                WHERE estado2 = 1
+                WHERE estado != 'eliminado'
                 GROUP BY estado
                 ORDER BY FIELD(estado,'en_desarrollo','planificado','qa','pausado','completado')
             """)
@@ -218,7 +218,7 @@ def kpiCargaPorProgramador():
                 FROM usuarios u
                 JOIN actividades a ON a.id_asignado = u.id_usuario
                 WHERE a.estado IN ('en_progreso','por_hacer','backlog')
-                  AND a.estado2 = 1
+                  AND a.estado != 'eliminado'
                 GROUP BY u.id_usuario
                 ORDER BY total_activas DESC
             """)

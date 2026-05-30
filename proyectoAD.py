@@ -31,7 +31,7 @@ def _calcularEstado(estado_bd, total_acts, completadas, en_progreso):
 
 
 def listarProyectos():
-    """Retorna proyectos activos (estado2=1) con estado calculado y responsables agrupados."""
+    """Retorna proyectos no eliminados con estado calculado y responsables agrupados."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -44,9 +44,8 @@ def listarProyectos():
                 FROM proyectos p
                 LEFT JOIN actividades a
                        ON p.id_proyecto = a.id_proyecto
-                      AND a.estado != 'cancelada'
-                      AND a.estado2 = 1
-                WHERE p.estado2 = 1
+                      AND a.estado NOT IN ('cancelada', 'eliminado')
+                WHERE p.estado != 'eliminado'
                 GROUP BY p.id_proyecto, p.nombre, p.estado,
                          p.fecha_inicio, p.fecha_fin_plan, p.id_responsable
                 ORDER BY p.created_at DESC
@@ -99,8 +98,8 @@ def insertarProyecto(obj):
             cursor.execute("""
                 INSERT INTO proyectos
                     (nombre, id_responsable, estado,
-                     fecha_inicio, fecha_fin_plan, descripcion, estado2)
-                VALUES (%s, %s, %s, %s, %s, %s, 1)
+                     fecha_inicio, fecha_fin_plan, descripcion)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, (
                 obj.nombre, obj.id_responsable, obj.estado,
                 obj.fecha_inicio, obj.fecha_fin_plan, obj.descripcion
@@ -132,8 +131,7 @@ def obtenerProyecto(id_proyecto):
                 JOIN usuarios u ON p.id_responsable = u.id_usuario
                 LEFT JOIN actividades a
                        ON p.id_proyecto = a.id_proyecto
-                      AND a.estado != 'cancelada'
-                      AND a.estado2 = 1
+                      AND a.estado NOT IN ('cancelada', 'eliminado')
                 WHERE p.id_proyecto = %s
                 GROUP BY p.id_proyecto, p.nombre, p.estado,
                          p.fecha_inicio, p.fecha_fin_plan, p.descripcion,
@@ -212,28 +210,28 @@ def actualizarProyectoCompleto(id_proyecto, nombre, ids_responsables, estado,
 
 
 def tieneActividadesPendientes(id_proyecto):
-    """Retorna True si el proyecto tiene actividades activas (estado2=1)."""
+    """Retorna True si el proyecto tiene actividades no eliminadas."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT COUNT(*) AS total
                 FROM actividades
-                WHERE id_proyecto = %s AND estado2 = 1
+                WHERE id_proyecto = %s AND estado != 'eliminado'
             """, (id_proyecto,))
             row = cursor.fetchone()
     return int(row['total'] or 0) > 0
 
 
 def eliminarProyecto(id_proyecto):
-    """Elimina lógicamente un proyecto (estado2 = 0). Solo si no tiene actividades activas."""
+    """Elimina lógicamente un proyecto (estado = 'eliminado'). Solo si no tiene actividades activas."""
     if tieneActividadesPendientes(id_proyecto):
         return False
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                UPDATE proyectos SET estado2 = 0 WHERE id_proyecto = %s
+                UPDATE proyectos SET estado = 'eliminado' WHERE id_proyecto = %s
             """, (id_proyecto,))
         conn.commit()
     return True

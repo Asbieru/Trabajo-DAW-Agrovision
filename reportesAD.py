@@ -160,11 +160,11 @@ def reporteProyectosEnRiesgo():
                        p.fecha_fin_plan,
                        u.nombre_completo AS responsable,
                        DATEDIFF(CURDATE(), p.fecha_fin_plan) AS dias_vencido,
-                       p.estado2
+                       CASE WHEN p.estado = 'eliminado' THEN 0 ELSE 1 END AS estado2
                 FROM proyectos p
                 JOIN usuarios u ON p.id_responsable = u.id_usuario
                 WHERE p.fecha_fin_plan < CURDATE()
-                  AND p.estado != 'completado'
+                  AND p.estado NOT IN ('completado', 'eliminado')
                 ORDER BY dias_vencido DESC
             """)
             return cursor.fetchall()
@@ -184,7 +184,7 @@ def reporteRendimientoPorSprint():
                        COALESCE(SUM(CASE WHEN a.estado != 'completada' AND a.estado != 'cancelada'
                            THEN a.story_points ELSE 0 END), 0) AS pts_pendientes,
                        s.estado AS estado_sprint,
-                       p.estado2
+                       CASE WHEN p.estado = 'eliminado' THEN 0 ELSE 1 END AS estado2
                 FROM sprints s
                 JOIN proyectos p ON s.id_proyecto = p.id_proyecto
                 LEFT JOIN actividades a ON a.id_sprint = s.id_sprint
@@ -218,7 +218,7 @@ def reporteProyectosFiltrados(estado=None, id_responsable=None):
                        p.fecha_inicio, p.fecha_fin_plan,
                        u.nombre_completo AS responsable,
                        DATEDIFF(p.fecha_fin_plan, CURDATE()) AS dias_restantes,
-                       p.estado2,
+                       CASE WHEN p.estado = 'eliminado' THEN 0 ELSE 1 END AS estado2,
                        CASE
                            WHEN p.estado = 'completado' THEN 'completado'
                            WHEN p.fecha_fin_plan < CURDATE() THEN 'vencido'
@@ -255,14 +255,14 @@ def reporteActividadesPorProyecto(id_proyecto):
                        a.prioridad,
                        a.estado,
                        a.story_points,
-                       a.estado2,
+                       CASE WHEN a.estado = 'eliminado' THEN 0 ELSE 1 END AS estado2,
                        COALESCE(s.nombre, '—') AS sprint,
                        COALESCE(u.nombre_completo, '—') AS asignado
                 FROM actividades a
                 LEFT JOIN sprints  s ON a.id_sprint   = s.id_sprint
                 LEFT JOIN usuarios u ON a.id_asignado = u.id_usuario
                 WHERE a.id_proyecto = %s
-                ORDER BY a.estado2 DESC, a.created_at DESC
+                ORDER BY (a.estado != 'eliminado') DESC, a.created_at DESC
             """, (id_proyecto,))
             return [dict(r) for r in cursor.fetchall()]
 

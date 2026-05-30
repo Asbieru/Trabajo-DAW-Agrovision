@@ -1091,12 +1091,12 @@ function cerrarModalEliminarActividad() {
                 if (data.ok) {
                     location.reload();
                 } else {
-                    alert(data.mensaje || 'Error al eliminar actividad.');
+                    mostrarModalAviso(data.mensaje || 'Error al eliminar actividad.');
                     if (btn) { btn.textContent = '🗑 Eliminar'; btn.disabled = false; }
                 }
             })
             .catch(function () {
-                alert('Error de conexión.');
+                mostrarModalAviso('Error de conexión.');
                 if (btn) { btn.textContent = '🗑 Eliminar'; btn.disabled = false; }
             });
 
@@ -1419,6 +1419,24 @@ function limpiarFiltrosProyectoInd() {
    10. MODALES PROYECTOS – listaProyectos.html
    ============================================================ */
 
+/* Modal de aviso genérico (reemplaza alert nativo) */
+function mostrarModalAviso(mensaje) {
+    var overlay = document.getElementById('modal-aviso-global');
+    var txt     = document.getElementById('modal-aviso-mensaje');
+    if (!overlay || !txt) {
+        // Fallback si la plantilla no tiene el modal aún
+        window.alert(mensaje);
+        return;
+    }
+    txt.textContent = mensaje;
+    overlay.style.display = 'flex';
+}
+
+function cerrarModalAviso() {
+    var overlay = document.getElementById('modal-aviso-global');
+    if (overlay) overlay.style.display = 'none';
+}
+
 var _elimProyectoId = null;
 
 function confirmarEliminarProyecto(idProyecto, nombreProyecto) {
@@ -1458,13 +1476,13 @@ function cerrarModalEliminarProyecto() {
                 if (data.ok) {
                     location.reload();
                 } else {
-                    alert(data.mensaje || 'No se pudo eliminar el proyecto.');
+                    mostrarModalAviso(data.mensaje || 'No se pudo eliminar el proyecto.');
                     btnSi.textContent = 'Sí, eliminar';
                     btnSi.disabled    = false;
                 }
             })
             .catch(function () {
-                alert('Error de conexión.');
+                mostrarModalAviso('Error de conexión.');
                 btnSi.textContent = 'Sí, eliminar';
                 btnSi.disabled    = false;
             });
@@ -1854,7 +1872,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if(data.ok) {
                     location.reload(); // Recarga para actualizar gráficos y tabla
                 } else {
-                    alert(data.mensaje || 'Error al eliminar el reporte. Conflicto de integridad.');
+                    mostrarModalAviso(data.mensaje || 'Error al eliminar el reporte. Conflicto de integridad.');
                     btnConf.textContent = 'Sí, eliminar';
                     btnConf.disabled = false;
                 }
