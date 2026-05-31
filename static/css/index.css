@@ -458,6 +458,8 @@ body {
 
 /* Estilos específicos para celdas de tickets */
 .ticket-id { color: var(--azul); font-weight: 600; font-size: 0.8rem; }
+a.ticket-link, a.ticket-link:hover { color: inherit; text-decoration: none; }
+a.ticket-link:hover strong { text-decoration: underline; }
 .ticket-aplicacion, .ticket-agente, .ticket-apertura { color: var(--gris-texto); font-size: 0.84rem; }
 .ticket-apertura { font-size: 0.8rem; }
 .badge-opacity-80 { opacity: 0.8; }

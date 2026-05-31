@@ -58,20 +58,14 @@
                         <option value="Portal RRHH">Portal RR.HH.</option>
                         <option value="Dashboard BI">Dashboard BI / Power BI</option>
                         <option value="Otro">Otro sistema</option>
+                        <option value="Problema hardware">Problema hardware</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Solicitante (automático desde localStorage) y SLA -->
-            <div class="form-grid form-section-spacing">
-                <div class="form-group">
-                    <label>Solicitante</label>
-                    <input type="text" id="solicitante-nombre" disabled
-                           style="background:var(--gris-fondo);color:var(--gris-texto);cursor:not-allowed;">
-                    <input type="hidden" id="id_solicitante" name="id_solicitante">
-                    <span class="form-hint">Se asigna automáticamente con tu sesión</span>
-                </div>
+            <input type="hidden" id="id_solicitante" name="id_solicitante">
 
+            <div class="form-grid form-section-spacing">
                 <div class="form-group">
                     <label for="sla_horas">SLA esperado (horas)</label>
                     <select id="sla_horas" name="sla_horas">
@@ -89,6 +83,14 @@
                 <label for="descripcion">Descripción detallada *</label>
                 <textarea id="descripcion" name="descripcion" rows="4"
                           placeholder="Describe el problema con detalle: qué pasó, cuándo, qué pasos realizaste, qué mensaje de error aparece..." required></textarea>
+            </div>
+
+            <div class="form-group form-section-spacing">
+                <label for="link_img_descripcion">Link de imagen descriptiva</label>
+                <input type="url" id="link_img_descripcion" name="link_img_descripcion"
+                       placeholder="https://ejemplo.com/imagen.png (opcional)"
+                       style="font-size:0.88rem;">
+                <span class="form-hint">Opcional. URL de una captura o imagen que ayude a describir el problema</span>
             </div>
 
             <!-- ACCIONES -->
@@ -109,10 +111,6 @@
         var u = JSON.parse(raw);
         if (u.id_usuario != null) {
             document.getElementById('id_solicitante').value = u.id_usuario;
-        }
-        var nombreEl = document.getElementById('solicitante-nombre');
-        if (nombreEl && u.nombre_completo) {
-            nombreEl.value = u.nombre_completo;
         }
     } catch(e) {}
 })();

@@ -152,13 +152,14 @@ def form_ticket():
 def guardar_ticket():
     try:
         obj = Ticket(
-            titulo         = request.form['titulo'],
-            tipo           = request.form['tipo'],
-            prioridad      = request.form['prioridad'],
-            aplicacion     = request.form['aplicacion'],
-            id_solicitante = request.form['id_solicitante'],
-            sla_horas      = request.form['sla_horas'],
-            descripcion    = request.form['descripcion'],
+            titulo                = request.form['titulo'],
+            tipo                  = request.form['tipo'],
+            prioridad             = request.form['prioridad'],
+            aplicacion            = request.form['aplicacion'],
+            id_solicitante        = request.form['id_solicitante'],
+            sla_horas             = request.form['sla_horas'],
+            descripcion           = request.form['descripcion'],
+            link_img_descripcion  = request.form.get('link_img_descripcion', '').strip() or None,
         )
         insertarTicket(obj)
     except KeyError:
@@ -186,6 +187,14 @@ def resolver_tickets():
     return render_template('resolverTicket.html', tickets_pendientes=pendientes)
 
 
+@app.route('/ticket/<int:id_ticket>')
+def ver_ticket(id_ticket):
+    ticket = obtenerTicket(id_ticket)
+    if not ticket:
+        abort(404)
+    return render_template('verTicket.html', ticket=ticket)
+
+
 @app.route('/ticket/<int:id_ticket>/resolver')
 def form_resolver_ticket(id_ticket):
     ticket   = obtenerTicket(id_ticket)
@@ -197,10 +206,11 @@ def form_resolver_ticket(id_ticket):
 
 @app.route('/ticket/<int:id_ticket>/resolver', methods=['POST'])
 def guardar_resolucion(id_ticket):
-    id_agente = request.form.get('id_agente')
-    estado    = request.form.get('estado')
-    notas     = request.form.get('notas_resolucion', '').strip()
-    resolverTicket(id_ticket, id_agente, estado, notas)
+    id_agente            = request.form.get('id_agente')
+    estado               = request.form.get('estado')
+    notas                = request.form.get('notas_resolucion', '').strip()
+    link_img_resolucion  = request.form.get('link_img_resolucion', '').strip() or None
+    resolverTicket(id_ticket, id_agente, estado, notas, link_img_resolucion)
     return redirect(url_for('listar_tickets'))
 
 
@@ -255,17 +265,18 @@ def guardar_edicion_ticket(id_ticket):
     if not ticket or ticket['estado'] not in ('abierto', 'en_progreso'):
         return redirect(url_for('listar_tickets'))
 
-    titulo      = request.form.get('titulo', '').strip()
-    tipo        = request.form.get('tipo', '')
-    prioridad   = request.form.get('prioridad', '')
-    aplicacion  = request.form.get('aplicacion', '')
-    sla_horas   = request.form.get('sla_horas', 24)
-    descripcion = request.form.get('descripcion', '').strip()
+    titulo                = request.form.get('titulo', '').strip()
+    tipo                  = request.form.get('tipo', '')
+    prioridad             = request.form.get('prioridad', '')
+    aplicacion            = request.form.get('aplicacion', '')
+    sla_horas             = request.form.get('sla_horas', 24)
+    descripcion           = request.form.get('descripcion', '').strip()
+    link_img_descripcion  = request.form.get('link_img_descripcion', '').strip() or None
 
     if not titulo:
         return redirect(url_for('form_editar_ticket', id_ticket=id_ticket))
 
-    editarTicket(id_ticket, titulo, tipo, prioridad, aplicacion, sla_horas, descripcion)
+    editarTicket(id_ticket, titulo, tipo, prioridad, aplicacion, sla_horas, descripcion, link_img_descripcion)
     return redirect(url_for('listar_tickets'))
 
 

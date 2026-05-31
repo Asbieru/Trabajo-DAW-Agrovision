@@ -59,15 +59,8 @@
                 </div>
             </div>
 
-            <!-- Solicitante (solo lectura) y SLA -->
+            <!-- SLA -->
             <div class="form-grid form-section-spacing">
-                <div class="form-group">
-                    <label>Solicitante</label>
-                    <input type="text" value="{{ ticket.nombre_solicitante }}" disabled
-                           style="background:var(--fondo); color:var(--gris-texto); cursor:not-allowed;">
-                    <span class="form-hint">El solicitante no se puede cambiar</span>
-                </div>
-
                 <div class="form-group">
                     <label for="sla_horas">SLA esperado (horas)</label>
                     <select id="sla_horas" name="sla_horas">
@@ -84,6 +77,15 @@
             <div class="form-group form-section-spacing">
                 <label for="descripcion">Descripción detallada *</label>
                 <textarea id="descripcion" name="descripcion" rows="4" required>{{ ticket.descripcion }}</textarea>
+            </div>
+
+            <div class="form-group form-section-spacing">
+                <label for="link_img_descripcion">Link de imagen descriptiva</label>
+                <input type="url" id="link_img_descripcion" name="link_img_descripcion"
+                       value="{{ ticket.link_img_descripcion or '' }}"
+                       placeholder="https://ejemplo.com/imagen.png (opcional)"
+                       style="font-size:0.88rem;">
+                <span class="form-hint">Opcional. URL de una captura o imagen que ayude a describir el problema</span>
             </div>
 
             <!-- ACCIONES -->

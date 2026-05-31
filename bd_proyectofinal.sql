@@ -48,11 +48,13 @@ CREATE TABLE IF NOT EXISTS tickets (
     id_solicitante INT NOT NULL,
     sla_horas SMALLINT NOT NULL DEFAULT 24,
     descripcion TEXT NOT NULL,
-    estado ENUM('abierto','en_progreso','resuelto','cerrado','base_proyecto') NOT NULL DEFAULT 'abierto',
+    estado ENUM('abierto','en_progreso','resuelto','cerrado','base_proyecto','eliminado') NOT NULL DEFAULT 'abierto',
     fecha_apertura DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_resolucion DATETIME,
     id_agente INT NULL,
     notas_resolucion TEXT NULL,
+    link_img_descripcion TEXT NULL,
+    link_img_resolucion TEXT NULL,
     CONSTRAINT fk_ticket_solic FOREIGN KEY (id_solicitante) REFERENCES usuarios(id_usuario),
     CONSTRAINT fk_ticket_agente FOREIGN KEY (id_agente) REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;

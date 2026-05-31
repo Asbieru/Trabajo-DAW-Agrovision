@@ -2,7 +2,7 @@
 {% block title %}
     {% if ticket is defined %}Resolver Ticket SD-{{ ticket.id_ticket }}
     {% else %}Tickets pendientes
-    {% endif %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -177,33 +177,15 @@
     <div class="card-body">
         <form action="{{ url_for('guardar_resolucion', id_ticket=ticket.id_ticket) }}" method="POST">
 
-            <!-- Agente y nuevo estado -->
-            <div class="form-grid ticket-resolution-form-grid">
-                <div class="form-group">
-                    <label for="id_agente">Agente que resuelve *</label>
-                    <select id="id_agente" name="id_agente" required>
-                        <option value="">— Selecciona el agente —</option>
-                        {% for u in usuarios %}
-                        <option value="{{ u.id_usuario }}">
-                            {{ u.nombre_completo }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <span class="form-hint">Por defecto queda preseleccionado tu usuario</span>
-                </div>
+            <input type="hidden" id="id_agente" name="id_agente" value="">
 
-                <div class="form-group">
-                                    <label for="estado">Nuevo estado *</label>
-                                    <select id="estado" name="estado" required>
-                                        <option value="en_progreso" {{ 'selected' if ticket.estado == 'en_progreso' }}>⚙️ En progreso</option>
-                                        <option value="resuelto"    {{ 'selected' if ticket.estado in ('abierto','en_progreso') }}>✅ Resuelto</option>
-                                        <option value="base_proyecto">🚀 Base de nuevo proyecto</option>
-                                        <option value="cerrado"     {{ 'selected' if ticket.estado == 'resuelto' }}>🔒 Cerrado</option>
-                                    </select>
-                                    <span class="form-hint">
-                                        «Base de nuevo proyecto» cierra el ticket y abre el formulario de proyecto con los datos pre-rellenados.
-                                    </span>
-                                </div>
+            <div class="form-group">
+                <label for="estado">Nuevo estado *</label>
+                <select id="estado" name="estado" required>
+                    <option value="en_progreso" {{ 'selected' if ticket.estado == 'en_progreso' }}>⚙️ En progreso</option>
+                    <option value="resuelto"    {{ 'selected' if ticket.estado in ('abierto','en_progreso') }}>✅ Resuelto</option>
+                    <option value="cerrado"     {{ 'selected' if ticket.estado == 'resuelto' }}>🔒 Cerrado</option>
+                </select>
             </div>
 
             <!-- Notas de resolución -->
@@ -212,6 +194,15 @@
                 <textarea id="notas_resolucion" name="notas_resolucion" rows="5"
                           placeholder="Describe qué se hizo para resolver el problema: pasos ejecutados, causa raíz, solución aplicada, pruebas realizadas..."
                           required>{{ ticket.notas_resolucion or '' }}</textarea>
+            </div>
+
+            <div class="form-group form-section-spacing">
+                <label for="link_img_resolucion">Link de imagen de resolución</label>
+                <input type="url" id="link_img_resolucion" name="link_img_resolucion"
+                       value="{{ ticket.link_img_resolucion or '' }}"
+                       placeholder="https://ejemplo.com/imagen-resolucion.png (opcional)"
+                       style="font-size:0.88rem;">
+                <span class="form-hint">Opcional. URL de una captura o imagen que evidencie la resolución</span>
             </div>
 
             <!-- ACCIONES -->
@@ -224,4 +215,18 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+(function() {
+    try {
+        var raw = localStorage.getItem('usuario');
+        if (!raw) return;
+        var u = JSON.parse(raw);
+        if (u.id_usuario != null) {
+            document.getElementById('id_agente').value = u.id_usuario;
+        }
+    } catch(e) {}
+})();
+</script>
+
 {% endblock %}
