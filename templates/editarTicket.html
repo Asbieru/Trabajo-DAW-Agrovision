@@ -5,13 +5,13 @@
 <div class="page-header">
     <div>
         <h1>✏️ Editar ticket <span style="color:var(--verde);">SD-{{ ticket.id_ticket }}</span></h1>
-        <p>Solo disponible mientras el ticket está <strong>abierto o en progreso</strong></p>
+        <p>Solo disponible mientras el ticket está <strong>solicitado o en progreso</strong></p>
     </div>
     <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
 </div>
 
 <div class="alerta alerta-info" style="margin-bottom:1.5rem;">
-    ⚠️ <strong>Nota:</strong> Solo puedes editar tickets en estado <em>Abierto</em> o <em>En progreso</em>. El estado y el solicitante no se pueden cambiar aquí.
+    ⚠️ <strong>Nota:</strong> Solo puedes editar tickets en estado <em>Solicitado</em> o <em>En progreso</em>.
 </div>
 
 <div class="card">
@@ -27,8 +27,8 @@
                        placeholder="Resume el problema en una línea clara" required>
             </div>
 
-            <!-- Tipo, Prioridad, Aplicación -->
-            <div class="form-grid tres form-section-spacing">
+            <!-- Tipo, Prioridad, Intensidad, Aplicación -->
+            <div class="form-grid cuatro form-section-spacing">
                 <div class="form-group">
                     <label for="tipo">Tipo de solicitud *</label>
                     <select id="tipo" name="tipo" required>
@@ -49,26 +49,22 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="aplicacion">Aplicación afectada *</label>
-                    <select id="aplicacion" name="aplicacion" required>
-                        <option value="">— Selecciona —</option>
-                        {% for app in ['Sistema Empaque', 'App Móvil Campo', 'API Ventas', 'Portal RRHH', 'Dashboard BI', 'Otro'] %}
-                        <option value="{{ app }}" {% if ticket.aplicacion == app %}selected{% endif %}>{{ app }}</option>
-                        {% endfor %}
+                    <label for="intensidad">Intensidad *</label>
+                    <select id="intensidad" name="intensidad" required>
+                        <option value="critica" {% if ticket.intensidad == 'critica' %}selected{% endif %}>🔴 Crítica</option>
+                        <option value="alta"    {% if ticket.intensidad == 'alta'    %}selected{% endif %}>🟠 Alta</option>
+                        <option value="media"   {% if ticket.intensidad == 'media'   %}selected{% endif %}>🟡 Media</option>
+                        <option value="baja"    {% if ticket.intensidad == 'baja'    %}selected{% endif %}>🟢 Baja</option>
                     </select>
                 </div>
-            </div>
 
-            <!-- SLA -->
-            <div class="form-grid form-section-spacing">
                 <div class="form-group">
-                    <label for="sla_horas">SLA esperado (horas)</label>
-                    <select id="sla_horas" name="sla_horas">
-                        <option value="4"  {% if ticket.sla_horas == 4  %}selected{% endif %}>4 horas (crítico)</option>
-                        <option value="8"  {% if ticket.sla_horas == 8  %}selected{% endif %}>8 horas (alto)</option>
-                        <option value="24" {% if ticket.sla_horas == 24 %}selected{% endif %}>24 horas (estándar)</option>
-                        <option value="48" {% if ticket.sla_horas == 48 %}selected{% endif %}>48 horas (bajo)</option>
-                        <option value="72" {% if ticket.sla_horas == 72 %}selected{% endif %}>72 horas (consulta)</option>
+                    <label for="id_aplicacion">Aplicación afectada *</label>
+                    <select id="id_aplicacion" name="id_aplicacion" required>
+                        <option value="">— Selecciona —</option>
+                        {% for app in aplicaciones %}
+                        <option value="{{ app.id_aplicacion }}" {% if ticket.id_aplicacion == app.id_aplicacion %}selected{% endif %}>{{ app.nombre }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>

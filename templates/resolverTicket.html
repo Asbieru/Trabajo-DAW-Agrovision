@@ -16,7 +16,7 @@
 <div class="page-header">
     <div>
         <h1>🔧 Resolver tickets</h1>
-        <p>Tickets abiertos o en progreso · Selecciona uno para gestionarlo</p>
+        <p>Tickets en progreso asignados a ti · Selecciona uno para resolverlo</p>
     </div>
 </div>
 
@@ -32,7 +32,7 @@
                     <th class="col-aplicacion">Aplicación</th>
                     <th>Estado</th>
                     <th>Solicitante</th>
-                    <th class="col-apertura">Apertura</th>
+                    <th class="col-apertura">Registro</th>
                     <th></th>
                 </tr>
             </thead>
@@ -64,19 +64,19 @@
                         </td>
                         <td class="col-aplicacion" data-label="Aplicación"
                             style="color:var(--gris-texto); font-size:0.84rem;">
-                            {{ t.aplicacion }}
+                            {{ t.nombre_aplicacion }}
                         </td>
                         <td data-label="Estado">
-                            {% if t.estado == 'abierto' %}
-                                <span class="badge badge-rojo">Abierto</span>
+                            {% if t.estado == 'solicitado' %}
+                                <span class="badge badge-rojo">Solicitado</span>
                             {% else %}
                                 <span class="badge badge-acento">En progreso</span>
                             {% endif %}
                         </td>
                         <td data-label="Solicitante">{{ t.nombre_solicitante }}</td>
-                        <td class="col-apertura" data-label="Apertura"
+                        <td class="col-apertura" data-label="Registro"
                             style="font-size:0.8rem; color:var(--gris-texto);">
-                            {{ t.fecha_apertura.strftime('%d/%m/%Y %H:%M') if t.fecha_apertura else '—' }}
+                            {{ t.f_registro.strftime('%d/%m/%Y %H:%M') if t.f_registro else '—' }}
                         </td>
                         <td class="td-accion">
                             <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
@@ -101,13 +101,12 @@
 
 {# ══════════════════════════════════════════════════════
    VISTA B: Formulario de resolución de un ticket concreto
-   Se activa cuando se llega desde "Resolver" en la tabla.
    ══════════════════════════════════════════════════════ #}
 {% else %}
 <div class="page-header">
     <div>
         <h1>🔧 Resolver ticket <span class="ticket-id-header">SD-{{ ticket.id_ticket }}</span></h1>
-        <p>Mesa de ayuda · Actualizar estado y registrar resolución</p>
+        <p>Mesa de ayuda · Registrar resolución del ticket</p>
     </div>
     <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
 </div>
@@ -127,7 +126,7 @@
             </div>
         </div>
 
-        <div class="form-grid tres ticket-summary-grid">
+        <div class="form-grid cuatro ticket-summary-grid">
             <div>
                 <div class="ticket-summary-label">Tipo</div>
                 {% if ticket.tipo == 'incidencia' %}
@@ -151,9 +150,21 @@
                 {% endif %}
             </div>
             <div>
+                <div class="ticket-summary-label">Intensidad</div>
+                {% if ticket.intensidad == 'critica' %}
+                    <span class="badge badge-rojo">🔴 Crítica</span>
+                {% elif ticket.intensidad == 'alta' %}
+                    <span class="badge badge-rojo">🟠 Alta</span>
+                {% elif ticket.intensidad == 'media' %}
+                    <span class="badge badge-acento">🟡 Media</span>
+                {% else %}
+                    <span class="badge badge-verde">🟢 Baja</span>
+                {% endif %}
+            </div>
+            <div>
                 <div class="ticket-summary-label">Estado actual</div>
-                {% if ticket.estado == 'abierto' %}
-                    <span class="badge badge-rojo">Abierto</span>
+                {% if ticket.estado == 'solicitado' %}
+                    <span class="badge badge-rojo">Solicitado</span>
                 {% elif ticket.estado == 'en_progreso' %}
                     <span class="badge badge-acento">En progreso</span>
                 {% elif ticket.estado == 'resuelto' %}
@@ -178,15 +189,7 @@
         <form action="{{ url_for('guardar_resolucion', id_ticket=ticket.id_ticket) }}" method="POST">
 
             <input type="hidden" id="id_agente" name="id_agente" value="">
-
-            <div class="form-group">
-                <label for="estado">Nuevo estado *</label>
-                <select id="estado" name="estado" required>
-                    <option value="en_progreso" {{ 'selected' if ticket.estado == 'en_progreso' }}>⚙️ En progreso</option>
-                    <option value="resuelto"    {{ 'selected' if ticket.estado in ('abierto','en_progreso') }}>✅ Resuelto</option>
-                    <option value="cerrado"     {{ 'selected' if ticket.estado == 'resuelto' }}>🔒 Cerrado</option>
-                </select>
-            </div>
+            <input type="hidden" name="estado" value="resuelto">
 
             <!-- Notas de resolución -->
             <div class="form-group ticket-resolution-form-group">

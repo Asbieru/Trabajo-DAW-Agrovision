@@ -13,7 +13,7 @@
 <div class="card">
     <div class="card-header">📋 Información general</div>
     <div class="card-body">
-        <div class="form-grid tres">
+        <div class="form-grid cuatro">
             <div>
                 <div class="ticket-summary-label">Tipo</div>
                 {% if ticket.tipo == 'incidencia' %}
@@ -37,15 +37,27 @@
                 {% endif %}
             </div>
             <div>
+                <div class="ticket-summary-label">Intensidad</div>
+                {% if ticket.intensidad == 'critica' %}
+                    <span class="badge badge-rojo">🔴 Crítica</span>
+                {% elif ticket.intensidad == 'alta' %}
+                    <span class="badge badge-rojo">🟠 Alta</span>
+                {% elif ticket.intensidad == 'media' %}
+                    <span class="badge badge-acento">🟡 Media</span>
+                {% else %}
+                    <span class="badge badge-verde">🟢 Baja</span>
+                {% endif %}
+            </div>
+            <div>
                 <div class="ticket-summary-label">Estado</div>
-                {% if ticket.estado == 'abierto' %}
-                    <span class="badge badge-rojo">Abierto</span>
+                {% if ticket.estado == 'solicitado' %}
+                    <span class="badge badge-rojo">Solicitado</span>
                 {% elif ticket.estado == 'en_progreso' %}
                     <span class="badge badge-acento">En progreso</span>
                 {% elif ticket.estado == 'resuelto' %}
                     <span class="badge badge-verde">Resuelto</span>
-                {% elif ticket.estado == 'base_proyecto' %}
-                    <span class="badge badge-azul">🚀 Base proyecto</span>
+                {% elif ticket.estado == 'cancelado' %}
+                    <span class="badge badge-gris">Cancelado</span>
                 {% else %}
                     <span class="badge badge-gris">Cerrado</span>
                 {% endif %}
@@ -54,10 +66,10 @@
 
         <hr style="margin:1.5rem 0;border-color:var(--gris-borde);">
 
-        <div class="form-grid">
+        <div class="form-grid dos">
             <div>
                 <div class="ticket-summary-label">Aplicación afectada</div>
-                <div>{{ ticket.aplicacion }}</div>
+                <div>{{ ticket.nombre_aplicacion }}</div>
             </div>
             <div>
                 <div class="ticket-summary-label">SLA esperado</div>
@@ -77,18 +89,34 @@
                 <div>{{ ticket.nombre_agente or '—' }}</div>
             </div>
             <div>
-                <div class="ticket-summary-label">Fecha de apertura</div>
-                <div>{{ ticket.fecha_apertura.strftime('%d/%m/%Y %H:%M') if ticket.fecha_apertura else '—' }}</div>
+                <div class="ticket-summary-label">Fecha de registro</div>
+                <div>{{ ticket.f_registro.strftime('%d/%m/%Y %H:%M') if ticket.f_registro else '—' }}</div>
             </div>
         </div>
 
-        {% if ticket.fecha_resolucion %}
         <hr style="margin:1.5rem 0;border-color:var(--gris-borde);">
 
+        <div class="form-grid tres">
+            <div>
+                <div class="ticket-summary-label">Asignación agente</div>
+                <div>{{ ticket.f_asignacion_agente.strftime('%d/%m/%Y %H:%M') if ticket.f_asignacion_agente else '—' }}</div>
+            </div>
+            <div>
+                <div class="ticket-summary-label">Solución</div>
+                <div>{{ ticket.f_solucion.strftime('%d/%m/%Y %H:%M') if ticket.f_solucion else '—' }}</div>
+            </div>
+            <div>
+                <div class="ticket-summary-label">Revisión</div>
+                <div>{{ ticket.f_revision.strftime('%d/%m/%Y %H:%M') if ticket.f_revision else '—' }}</div>
+            </div>
+        </div>
+
+        {% if ticket.f_cierre %}
+        <hr style="margin:1.5rem 0;border-color:var(--gris-borde);">
         <div class="form-grid">
             <div>
-                <div class="ticket-summary-label">Fecha de resolución</div>
-                <div>{{ ticket.fecha_resolucion.strftime('%d/%m/%Y %H:%M') if ticket.fecha_resolucion else '—' }}</div>
+                <div class="ticket-summary-label">Fecha de cierre</div>
+                <div>{{ ticket.f_cierre.strftime('%d/%m/%Y %H:%M') if ticket.f_cierre else '—' }}</div>
             </div>
             {% if ticket.calificacion_estrellas %}
             <div>
@@ -119,22 +147,23 @@
 </div>
 {% endif %}
 
-{% if ticket.notas_resolucion %}
+{% if ticket.notas_resolucion or ticket.f_solucion or ticket.f_asignacion_agente or ticket.link_img_resolucion %}
 <div class="card">
-    <div class="card-header">✅ Notas de resolución</div>
+    <div class="card-header">✅ Resolución</div>
     <div class="card-body">
-        <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.6;">{{ ticket.notas_resolucion }}</div>
-    </div>
-</div>
-{% endif %}
-
-{% if ticket.link_img_resolucion %}
-<div class="card">
-    <div class="card-header">🖼️ Imagen de resolución</div>
-    <div class="card-body" style="text-align:center;">
-        <img src="{{ ticket.link_img_resolucion }}" alt="Imagen de resolución del ticket"
-             style="max-width:100%;max-height:500px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);"
-             onerror="this.parentElement.innerHTML='<span style=\'color:var(--rojo);\'>⚠️ No se pudo cargar la imagen: {{ ticket.link_img_resolucion }}</span>'">
+        {% if ticket.notas_resolucion %}
+        <div class="form-group form-section-spacing">
+            <div class="ticket-summary-label">Notas de resolución</div>
+            <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.6;">{{ ticket.notas_resolucion }}</div>
+        </div>
+        {% endif %}
+        {% if ticket.link_img_resolucion %}
+        <div class="form-group form-section-spacing" style="text-align:center;">
+            <img src="{{ ticket.link_img_resolucion }}" alt="Imagen de resolución del ticket"
+                 style="max-width:100%;max-height:500px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);"
+                 onerror="this.parentElement.innerHTML='<span style=\'color:var(--rojo);\'>⚠️ No se pudo cargar la imagen: {{ ticket.link_img_resolucion }}</span>'">
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endif %}
@@ -149,13 +178,30 @@
 {% endif %}
 
 <div class="form-actions" style="margin-top:1.5rem;">
-    {% if ticket.estado in ('abierto', 'en_progreso') %}
-        <a href="{{ url_for('form_resolver_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-verde" data-vis-resolver="programador admin">🔧 Resolver</a>
+    {% if ticket.estado == 'solicitado' %}
         <a href="{{ url_for('form_editar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline">✏️ Editar</a>
-    {% elif ticket.estado in ('resuelto', 'cerrado', 'base_proyecto') and not ticket.calificacion_estrellas %}
-        <a href="{{ url_for('calificar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline">⭐ Calificar</a>
+    {% elif ticket.estado == 'en_progreso' %}
+        <a href="{{ url_for('form_resolver_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-verde btn-resolver" data-id-agente="{{ ticket.id_agente or '' }}">🔧 Resolver</a>
+    {% elif ticket.estado == 'resuelto' and not ticket.calificacion_estrellas %}
+        <a href="{{ url_for('calificar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline btn-calificar" data-id-solicitante="{{ ticket.id_solicitante }}">⭐ Calificar</a>
     {% endif %}
     <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">← Volver</a>
 </div>
 
+<script>
+(function() {
+    try {
+        var raw = localStorage.getItem('usuario');
+        if (!raw) return;
+        var u = JSON.parse(raw);
+        var uid = String(u.id_usuario).trim();
+        document.querySelectorAll('.btn-calificar').forEach(function(el) {
+            var sid = el.getAttribute('data-id-solicitante');
+            if (!sid || String(sid).trim() !== uid) {
+                el.style.display = 'none';
+            }
+        });
+    } catch(e) {}
+})();
+</script>
 {% endblock %}

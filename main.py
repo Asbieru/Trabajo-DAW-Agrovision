@@ -12,7 +12,9 @@ from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuario
                        resumenHistorialUsuario)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       resolverTicket, guardarCalificacionTicket,
-                      editarTicket, eliminarTicket)
+                      editarTicket, cancelarTicket, listarAplicaciones,
+                      listarPosiblesAgentes, asignarTicket,
+                      obtenerAplicacion, calcularSLA)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
                          actualizarEstadoActividad, eliminarActividad,
                          listarTodosSprints, listarAsignadosPorProyecto,
@@ -145,19 +147,28 @@ def index():
 
 @app.route('/ticket/nuevo')
 def form_ticket():
-    return render_template('NuevoTicket.html')
+    aplicaciones = listarAplicaciones()
+    return render_template('NuevoTicket.html', aplicaciones=aplicaciones)
 
 
 @app.route('/ticket/guardar', methods=['POST'])
 def guardar_ticket():
     try:
+        prioridad     = request.form['prioridad']
+        intensidad    = request.form['intensidad']
+        id_aplicacion = request.form['id_aplicacion']
+        app_data      = obtenerAplicacion(id_aplicacion)
+        sla_horas     = calcularSLA(prioridad, intensidad,
+                                    app_data['peso'] if app_data else 3,
+                                    app_data['participantes_promedio'] if app_data else 5)
         obj = Ticket(
             titulo                = request.form['titulo'],
             tipo                  = request.form['tipo'],
-            prioridad             = request.form['prioridad'],
-            aplicacion            = request.form['aplicacion'],
+            prioridad             = prioridad,
+            intensidad            = intensidad,
             id_solicitante        = request.form['id_solicitante'],
-            sla_horas             = request.form['sla_horas'],
+            id_aplicacion         = id_aplicacion,
+            sla_horas             = sla_horas,
             descripcion           = request.form['descripcion'],
             link_img_descripcion  = request.form.get('link_img_descripcion', '').strip() or None,
         )
@@ -183,7 +194,7 @@ def listar_tickets():
 @app.route('/tickets/resolver')
 def resolver_tickets():
     todos = listarTickets()
-    pendientes = [t for t in todos if t['estado'] in ('abierto', 'en_progreso')]
+    pendientes = [t for t in todos if t['estado'] == 'en_progreso']
     return render_template('resolverTicket.html', tickets_pendientes=pendientes)
 
 
@@ -198,19 +209,19 @@ def ver_ticket(id_ticket):
 @app.route('/ticket/<int:id_ticket>/resolver')
 def form_resolver_ticket(id_ticket):
     ticket   = obtenerTicket(id_ticket)
-    if not ticket:
-        abort(404)
+    if not ticket or ticket['estado'] != 'en_progreso':
+        return redirect(url_for('listar_tickets'))
     usuarios = obtenerUsuarios()
-    return render_template('resolverTicket.html', ticket=ticket, usuarios=usuarios)
+    aplicaciones = listarAplicaciones()
+    return render_template('resolverTicket.html', ticket=ticket, usuarios=usuarios, aplicaciones=aplicaciones)
 
 
 @app.route('/ticket/<int:id_ticket>/resolver', methods=['POST'])
 def guardar_resolucion(id_ticket):
     id_agente            = request.form.get('id_agente')
-    estado               = request.form.get('estado')
     notas                = request.form.get('notas_resolucion', '').strip()
     link_img_resolucion  = request.form.get('link_img_resolucion', '').strip() or None
-    resolverTicket(id_ticket, id_agente, estado, notas, link_img_resolucion)
+    resolverTicket(id_ticket, id_agente, 'resuelto', notas, link_img_resolucion)
     return redirect(url_for('listar_tickets'))
 
 
@@ -220,7 +231,7 @@ def calificar_ticket(id_ticket):
     if not ticket:
         abort(404)
 
-    if ticket['estado'] not in ('resuelto', 'cerrado', 'base_proyecto'):
+    if ticket['estado'] != 'resuelto':
         abort(400)
 
     mensaje = None
@@ -250,42 +261,70 @@ def calificar_ticket(id_ticket):
                            tipo=tipo)
 
 
-# ── EDITAR TICKET (abierto o en_progreso) ─────────────────────────────────────
+# ── EDITAR TICKET (solicitado o en_progreso) ──────────────────────────────────
 @app.route('/ticket/<int:id_ticket>/editar', methods=['GET'])
 def form_editar_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
-    if not ticket or ticket['estado'] not in ('abierto', 'en_progreso'):
+    if not ticket or ticket['estado'] != 'solicitado':
         return redirect(url_for('listar_tickets'))
-    return render_template('editarTicket.html', ticket=ticket)
+    aplicaciones = listarAplicaciones()
+    return render_template('editarTicket.html', ticket=ticket, aplicaciones=aplicaciones)
 
 
 @app.route('/ticket/<int:id_ticket>/editar', methods=['POST'])
 def guardar_edicion_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
-    if not ticket or ticket['estado'] not in ('abierto', 'en_progreso'):
+    if not ticket or ticket['estado'] != 'solicitado':
         return redirect(url_for('listar_tickets'))
 
     titulo                = request.form.get('titulo', '').strip()
     tipo                  = request.form.get('tipo', '')
     prioridad             = request.form.get('prioridad', '')
-    aplicacion            = request.form.get('aplicacion', '')
-    sla_horas             = request.form.get('sla_horas', 24)
+    intensidad            = request.form.get('intensidad', '')
+    id_aplicacion         = request.form.get('id_aplicacion', '')
     descripcion           = request.form.get('descripcion', '').strip()
     link_img_descripcion  = request.form.get('link_img_descripcion', '').strip() or None
 
     if not titulo:
         return redirect(url_for('form_editar_ticket', id_ticket=id_ticket))
 
-    editarTicket(id_ticket, titulo, tipo, prioridad, aplicacion, sla_horas, descripcion, link_img_descripcion)
+    app_data  = obtenerAplicacion(id_aplicacion)
+    sla_horas = calcularSLA(prioridad, intensidad,
+                            app_data['peso'] if app_data else 3,
+                            app_data['participantes_promedio'] if app_data else 5)
+    editarTicket(id_ticket, titulo, tipo, prioridad, intensidad, id_aplicacion, sla_horas, descripcion, link_img_descripcion)
     return redirect(url_for('listar_tickets'))
 
 
-# ── ELIMINAR TICKET (solo cerrado) ────────────────────────────────────────────
-@app.route('/ticket/<int:id_ticket>/eliminar', methods=['POST'])
-def eliminar_ticket(id_ticket):
+# ── CANCELAR TICKET ───────────────────────────────────────────────────────────
+@app.route('/ticket/<int:id_ticket>/cancelar', methods=['POST'])
+def cancelar_ticket(id_ticket):
+    cancelarTicket(id_ticket)
+    return redirect(url_for('listar_tickets'))
+
+
+# ── ASIGNAR AGENTE ────────────────────────────────────────────────────────────
+@app.route('/ticket/<int:id_ticket>/asignar')
+def form_asignar_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
-    if ticket and ticket['estado'] == 'cerrado':
-        eliminarTicket(id_ticket)
+    if not ticket or ticket['estado'] != 'solicitado':
+        return redirect(url_for('listar_tickets'))
+    agentes = listarPosiblesAgentes()
+    return render_template('asignarTicket.html', ticket=ticket, agentes=agentes)
+
+
+@app.route('/ticket/<int:id_ticket>/asignar', methods=['POST'])
+def guardar_asignacion(id_ticket):
+    id_agente = request.form.get('id_agente')
+    if not id_agente:
+        return redirect(url_for('form_asignar_ticket', id_ticket=id_ticket))
+    try:
+        asignarTicket(id_ticket, int(id_agente))
+    except ValueError:
+        return redirect(url_for('listar_tickets'))
+    except Exception as e:
+        print(f'Error al asignar ticket: {e}')
+        abort(500)
     return redirect(url_for('listar_tickets'))
 
 
@@ -762,7 +801,7 @@ def api_tickets():
     if texto:
         texto = texto.lower()
         todos = [t for t in todos if texto in (t['titulo'] or '').lower()
-                                  or texto in (t['aplicacion'] or '').lower()
+                                  or texto in (t['nombre_aplicacion'] or '').lower()
                                   or texto in (t['nombre_solicitante'] or '').lower()]
     # Convertir fechas a string para que jsonify las serialice
     for t in todos:

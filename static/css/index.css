@@ -192,6 +192,8 @@ body {
 .btn-outline { background: transparent; color: var(--verde); border: 1.5px solid var(--verde); }
 .btn-outline:hover { background: var(--verde-claro); }
 .btn-rojo { background: var(--rojo); color: var(--blanco); }
+.btn-acento { background: var(--acento); color: var(--blanco); }
+.btn-acento:hover { background: #c98a00; transform: translateY(-1px); box-shadow: var(--sombra); }
 .btn-sm { padding: 5px 13px; font-size: 0.8rem; }
 .btn-full {
     display: block;
@@ -278,6 +280,13 @@ body {
     font-size: 0.74rem; font-weight: 700; color: var(--gris-texto); border-bottom: 1px solid var(--gris-borde);
 }
 .tabla td { padding: 11px 14px; border-bottom: 1px solid var(--gris-borde); }
+.tabla th.sortable { cursor: pointer; user-select: none; }
+.tabla th.sortable:hover { background: #e8eaed; }
+.tabla th.sort-active { color: var(--verde); }
+.sort-indicator { font-size: 0.65rem; margin-left: 3px; display: inline-block; }
+th.sort-active.sort-asc .sort-indicator::after { content: '▲'; }
+th.sort-active.sort-desc .sort-indicator::after { content: '▼'; }
+th.sortable:not(.sort-active) .sort-indicator::after { content: '⇅'; opacity: 0.3; }
 
 /* ── STAT CARDS ─────────────────────── */
 .stat-card {
@@ -336,10 +345,12 @@ body {
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-    align-items: start; /* CORRECCIÓN: Evita el estiramiento */
+    gap: 24px;
+    margin-bottom: 28px;
+    align-items: start;
 }
+
+#tickets-pendientes-resolver { margin-bottom: 28px; }
 
 /* Cards de acceso rápido: adaptable */
 .accesos-grid-container {
@@ -530,7 +541,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
         margin-top: 4px;
     }
     .td-accion::before { display: none; }
-    .col-aplicacion, .col-agente, .col-apertura { display: none !important; }
+    .col-aplicacion, .col-agente, .col-apertura, .col-calificacion { display: none !important; }
 }
 
 /* ── INDICADORES ESPECÍFICO ─────────── */
@@ -1796,6 +1807,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
 
 .badge-azul   { background: var(--azul-claro);   color: var(--azul); }
 .badge-acento { background: var(--acento-claro);  color: #7a5200; }
+.estrella-badge { cursor: default; font-size: 0.78rem; padding: 3px 10px; }
 .stat-num.acento { color: var(--acento); }
 .tabla tbody tr:hover td { background: var(--gris-bg); }
 .filtro-tipo { transition: all 0.15s; }

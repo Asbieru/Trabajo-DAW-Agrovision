@@ -12,20 +12,22 @@
 <!-- STATS -->
 <div class="stats-grid">
     <div class="stat-card" data-vis="soporte programador admin">
-        <div class="stat-num verde">3,000</div>
-        <div class="stat-label">Hectáreas monitoreadas</div>
-    </div>
-    <div class="stat-card" data-vis="soporte programador admin">
         <div class="stat-num azul">40</div>
         <div class="stat-label">Sistemas en producción</div>
     </div>
     <div class="stat-card" data-vis="soporte programador admin">
-        <div class="stat-num acento">12</div>
+        <div class="stat-num acento" id="stat-tickets-abiertos">—</div>
         <div class="stat-label">Tickets abiertos</div>
     </div>
-    <div class="stat-card" data-vis="soporte programador admin">
-        <div class="stat-num verde">98%</div>
-        <div class="stat-label">Uptime de servicios</div>
+</div>
+
+<!-- TICKETS A RESOLVER -->
+<div class="card" id="tickets-pendientes-resolver" data-vis="programador soporte admin" style="display:none;">
+    <div class="card-header">🔧 Tickets pendientes de resolver</div>
+    <div class="card-body">
+        <div id="tickets-resolver-lista">
+            <p style="color:var(--gris-texto);">No tienes tickets asignados pendientes de resolver.</p>
+        </div>
     </div>
 </div>
 
@@ -106,12 +108,48 @@
         if (!raw) return;
         var u = JSON.parse(raw);
         var rol = u.rol || '';
-        document.querySelectorAll('#accesos-rapidos .card[data-vis], #info-adicional .card[data-vis], .stats-grid .stat-card[data-vis]').forEach(function(el) {
+        var uid = String(u.id_usuario).trim();
+
+        // Filtro por rol
+        document.querySelectorAll('#accesos-rapidos .card[data-vis], #info-adicional .card[data-vis], .stats-grid .stat-card[data-vis], #tickets-pendientes-resolver[data-vis]').forEach(function(el) {
             var rolesPermitidos = (el.getAttribute('data-vis') || '').split(' ');
             if (rolesPermitidos.indexOf(rol) === -1) {
                 el.style.display = 'none';
             }
         });
+
+        // Cargar tickets desde la API
+        fetch('/api/tickets')
+            .then(function(r) { return r.json(); })
+            .then(function(tickets) {
+                // Actualizar contador de tickets abiertos (no cancelados)
+                var abiertos = tickets.filter(function(t) { return t.estado !== 'cancelado'; }).length;
+                var statEl = document.getElementById('stat-tickets-abiertos');
+                if (statEl) statEl.textContent = abiertos;
+
+                // Mostrar tickets en_progreso asignados al usuario actual
+                var misPendientes = tickets.filter(function(t) { return t.estado === 'en_progreso' && String(t.id_agente).trim() === uid; });
+                var container = document.getElementById('tickets-pendientes-resolver');
+                var lista = document.getElementById('tickets-resolver-lista');
+                if (container && lista) {
+                    if (misPendientes.length > 0) {
+                        container.style.display = '';
+                        var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+                        misPendientes.forEach(function(t) {
+                            html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--gris-bg);border-radius:8px;">' +
+                                    '<span><strong>SD-' + t.id_ticket + '</strong> — ' + (t.titulo || '') + '</span>' +
+                                    '<a href="/ticket/' + t.id_ticket + '/resolver" class="btn btn-sm btn-verde">🔧 Resolver</a>' +
+                                    '</div>';
+                        });
+                        html += '</div>';
+                        lista.innerHTML = html;
+                    } else {
+                        container.style.display = '';
+                        lista.innerHTML = '<p style="color:var(--gris-texto);">No tienes tickets asignados pendientes de resolver. ✅</p>';
+                    }
+                }
+            })
+            .catch(function() {});
     } catch(e) {}
 })();
 </script>

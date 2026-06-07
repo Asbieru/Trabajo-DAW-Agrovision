@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Asignar agente · SD-{{ ticket.id_ticket }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>👤 Asignar agente</h1>
+        <p>Ticket SD-{{ ticket.id_ticket }} · {{ ticket.titulo }}</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Mesa de ayuda</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Detalle del ticket</div>
+    <div class="card-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
+            <div><strong>Título:</strong> {{ ticket.titulo }}</div>
+            <div><strong>Tipo:</strong> {{ ticket.tipo }}</div>
+            <div><strong>Prioridad:</strong> {{ ticket.prioridad }}</div>
+            <div><strong>Intensidad:</strong> {{ ticket.intensidad }}</div>
+            <div><strong>Aplicación:</strong> {{ ticket.nombre_aplicacion }}</div>
+            <div><strong>Solicitante:</strong> {{ ticket.nombre_solicitante }}</div>
+            <div><strong>Registro:</strong> {{ ticket.f_registro.strftime('%d/%m/%Y %H:%M') if ticket.f_registro else '—' }}</div>
+            <div><strong>SLA:</strong> {{ ticket.sla_horas }}h</div>
+        </div>
+        <div style="margin-bottom:24px;">
+            <strong>Descripción:</strong><br>
+            {{ ticket.descripcion or '—' }}
+        </div>
+        {% if ticket.link_img_descripcion %}
+        <div style="margin-bottom:24px;">
+            <strong>Imagen:</strong><br>
+            <a href="{{ ticket.link_img_descripcion }}" target="_blank">{{ ticket.link_img_descripcion }}</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Seleccionar agente</div>
+    <div class="card-body">
+        <form action="{{ url_for('guardar_asignacion', id_ticket=ticket.id_ticket) }}" method="POST">
+            <div class="form-group">
+                <label for="id_agente">Agente a asignar *</label>
+                <select id="id_agente" name="id_agente" required>
+                    <option value="">— Selecciona un agente —</option>
+                    {% for a in agentes %}
+                        <option value="{{ a.id_usuario }}">{{ a.nombre_completo }} ({{ a.rol }})</option>
+                    {% endfor %}
+                </select>
+                <span class="form-hint">Solo se muestran usuarios con rol soporte o programador</span>
+            </div>
+            <div class="form-actions" style="margin-top:20px;">
+                <button type="submit" class="btn btn-verde">✓ Asignar y pasar a En progreso</button>
+                <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

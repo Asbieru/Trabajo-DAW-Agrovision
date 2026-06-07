@@ -1924,8 +1924,11 @@ function filtrarFilasPorRol() {
     if (usuario.rol === 'admin') return;
     var userId = String(usuario.id_usuario).trim();
     document.querySelectorAll('#tbody-tickets tr').forEach(function(tr) {
-        var sid = tr.getAttribute('data-id-solicitante');
-        if (!sid || String(sid).trim() !== userId) {
+        var sid   = tr.getAttribute('data-id-solicitante');
+        var aid   = tr.getAttribute('data-id-agente');
+        var esSolicitante = sid && String(sid).trim() === userId;
+        var esAgente      = aid && String(aid).trim() === userId;
+        if (!esSolicitante && !esAgente) {
             tr.style.display = 'none';
         }
     });
@@ -1935,13 +1938,31 @@ function filtrarBotonesAccion() {
     var usuario = obtenerUsuarioSesion();
     if (!usuario) return;
     var rol = usuario.rol || '';
-    document.querySelectorAll('[data-vis-resolver]').forEach(function(el) {
-        var roles = (el.getAttribute('data-vis-resolver') || '').split(' ');
+    var uid = String(usuario.id_usuario).trim();
+
+    // Resolver: solo visible al agente asignado
+    document.querySelectorAll('.btn-resolver').forEach(function(el) {
+        var aid = el.getAttribute('data-id-agente');
+        if (!aid || String(aid).trim() !== uid) {
+            el.style.display = 'none';
+        }
+    });
+
+    document.querySelectorAll('[data-vis-asignar]').forEach(function(el) {
+        var roles = (el.getAttribute('data-vis-asignar') || '').split(' ');
         if (roles.indexOf(rol) === -1) el.style.display = 'none';
     });
-    document.querySelectorAll('[data-vis-calificar]').forEach(function(el) {
-        var roles = (el.getAttribute('data-vis-calificar') || '').split(' ');
-        if (roles.indexOf(rol) === -1) el.style.display = 'none';
+}
+
+function filtrarBotonesCalificar() {
+    var usuario = obtenerUsuarioSesion();
+    if (!usuario || usuario.id_usuario == null) return;
+    var uid = String(usuario.id_usuario).trim();
+    document.querySelectorAll('.btn-calificar').forEach(function(el) {
+        var sid = el.getAttribute('data-id-solicitante');
+        if (!sid || String(sid).trim() !== uid) {
+            el.style.display = 'none';
+        }
     });
 }
 
@@ -1960,56 +1981,67 @@ function renderizarFilas(tickets) {
     var badgeTipo = { incidencia: 'rojo', peticion: 'azul', consulta: 'gris' };
     var badgePrio = { critica: 'rojo', alta: 'rojo', media: 'acento', baja: 'verde' };
     var labelPrio = { critica: '🚨 Crítica', alta: 'Alta', media: 'Media', baja: 'Baja' };
-    var badgeEst  = { abierto: 'rojo', en_progreso: 'acento', resuelto: 'verde',
-                      base_proyecto: 'azul', cerrado: 'gris' };
-    var labelEst  = { abierto: 'Abierto', en_progreso: 'En progreso', resuelto: 'Resuelto',
-                      base_proyecto: '🚀 Base proyecto', cerrado: 'Cerrado' };
+    var badgeEst  = { solicitado: 'rojo', en_progreso: 'acento', resuelto: 'verde',
+                      cerrado: 'gris', cancelado: 'gris' };
+    var labelEst  = { solicitado: 'Solicitado', en_progreso: 'En progreso', resuelto: 'Resuelto',
+                      cerrado: 'Cerrado', cancelado: 'Cancelado' };
 
     tbody.innerHTML = tickets.map(function(t) {
-        var fecha = t.fecha_apertura ? t.fecha_apertura.replace('T', ' ').slice(0, 16) : '—';
+        var fecha = t.f_registro ? t.f_registro.replace('T', ' ').slice(0, 16) : '—';
 
+        // Columna acciones
         var accion = '';
-        if (t.estado === 'abierto' || t.estado === 'en_progreso') {
+        if (t.estado === 'solicitado') {
             accion = '<div class="ticket-actions">' +
-                     '<a href="/ticket/' + t.id_ticket + '/resolver" class="btn btn-sm btn-verde" data-vis-resolver="programador admin">🔧 Resolver</a>' +
+                     '<a href="/ticket/' + t.id_ticket + '/asignar" class="btn btn-sm btn-acento" data-vis-asignar="admin soporte">👤 Asignar</a>' +
                      '<a href="/ticket/' + t.id_ticket + '/editar" class="btn btn-sm btn-outline btn-editar-ticket" data-id-solicitante="' + t.id_solicitante + '">✏️ Editar</a>' +
                      '</div>';
+        } else if (t.estado === 'en_progreso') {
+            accion = '<div class="ticket-actions">' +
+                     '<a href="/ticket/' + t.id_ticket + '/resolver" class="btn btn-sm btn-verde btn-resolver" data-id-agente="' + (t.id_agente || '') + '">🔧 Resolver</a>' +
+                     '</div>';
         } else if (t.estado === 'resuelto') {
-            var cal = t.calificacion_estrellas
-                ? '<button class="btn btn-sm btn-outline" disabled>⭐ ' + t.calificacion_estrellas + '/5</button>'
-                : '<a href="/ticket/' + t.id_ticket + '/calificar" class="btn btn-sm btn-outline" data-vis-calificar="soporte programador admin">⭐ Calificar</a>';
-            accion = '<div class="ticket-actions"><span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>' + cal + '</div>';
-        } else if (t.estado === 'base_proyecto') {
-            var cal = t.calificacion_estrellas
-                ? '<button class="btn btn-sm btn-outline" disabled>⭐ ' + t.calificacion_estrellas + '/5</button>'
-                : '<a href="/ticket/' + t.id_ticket + '/calificar" class="btn btn-sm btn-outline" data-vis-calificar="soporte programador admin">⭐ Calificar</a>';
-            accion = '<div class="ticket-actions"><a href="/proyecto/nuevo" class="btn btn-sm btn-azul">🚀 Ver proyecto</a>' + cal + '</div>';
+            accion = '<span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>';
         } else {
-            var cal = t.calificacion_estrellas
-                ? '<button class="btn btn-sm btn-outline" disabled>⭐ ' + t.calificacion_estrellas + '/5</button>'
-                : '<a href="/ticket/' + t.id_ticket + '/calificar" class="btn btn-sm btn-outline" data-vis-calificar="soporte programador admin">⭐ Calificar</a>';
-            var delBtn = '<button type="button" class="btn btn-sm btn-rojo" ' +
-                         'onclick="mostrarModalEliminarTicket(' + t.id_ticket + ', \'' + (t.titulo || '').replace(/'/g, "\\'") + '\')">' +
-                         '🗑️ Eliminar</button>';
-            accion = '<div class="ticket-actions"><span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>' + cal + delBtn + '</div>';
+            var isCanc = t.estado === 'cancelado';
+            var badgeLabel = isCanc ? '🚫 Cancelado' : '🔒 Cerrado';
+            accion = '<span class="badge badge-gris" style="opacity:.8;">' + badgeLabel + '</span>';
         }
 
-        return '<tr data-id-solicitante="' + (t.id_solicitante || '') + '">' +
+        // Columna calificación
+        var calCell = '';
+        if (t.calificacion_estrellas) {
+            calCell = '<span class="badge badge-acento estrella-badge">⭐ ' + t.calificacion_estrellas + '/5</span>';
+        } else if (t.estado === 'resuelto') {
+            calCell = '<a href="/ticket/' + t.id_ticket + '/calificar" class="btn btn-sm btn-outline btn-calificar" data-id-solicitante="' + t.id_solicitante + '">⭐ Calificar</a>';
+        } else {
+            calCell = '<span style="color:var(--gris-texto);">—</span>';
+        }
+
+        return '<tr data-id-solicitante="' + (t.id_solicitante || '') + '" data-id-agente="' + (t.id_agente || '') + '"' +
+            ' data-sort-id_ticket="' + (t.id_ticket || 0) + '"' +
+            ' data-sort-prioridad="' + (t.prioridad || 'baja') + '"' +
+            ' data-sort-estado="' + (t.estado || '') + '"' +
+            ' data-sort-f_registro="' + (t.f_registro || '') + '"' +
+            ' data-sort-calificacion_estrellas="' + (t.calificacion_estrellas || 0) + '">' +
             '<td class="td-id ticket-id" data-label="ID"><a href="/ticket/' + t.id_ticket + '" class="ticket-link">SD-' + t.id_ticket + '</a></td>' +
             '<td class="td-titulo" data-label="Título"><a href="/ticket/' + t.id_ticket + '" class="ticket-link"><strong>' + (t.titulo || '') + '</strong></a></td>' +
             '<td data-label="Tipo"><span class="badge badge-' + (badgeTipo[t.tipo] || 'gris') + '">' + (t.tipo || '—') + '</span></td>' +
             '<td data-label="Prioridad"><span class="badge badge-' + (badgePrio[t.prioridad] || 'gris') + '">' + (labelPrio[t.prioridad] || t.prioridad) + '</span></td>' +
-            '<td class="col-aplicacion" data-label="Aplicación" style="color:var(--gris-texto);font-size:0.84rem;">' + (t.aplicacion || '—') + '</td>' +
+            '<td class="col-aplicacion" data-label="Aplicación" style="color:var(--gris-texto);font-size:0.84rem;">' + (t.nombre_aplicacion || '—') + '</td>' +
             '<td data-label="Estado"><span class="badge badge-' + (badgeEst[t.estado] || 'gris') + '">' + (labelEst[t.estado] || t.estado) + '</span></td>' +
+            '<td class="col-calificacion" data-label="Calificación">' + calCell + '</td>' +
             '<td data-label="Solicitante">' + (t.nombre_solicitante || '—') + '</td>' +
             '<td class="col-agente" data-label="Agente" style="font-size:0.84rem;color:var(--gris-texto);">' + (t.nombre_agente || '—') + '</td>' +
-            '<td class="col-apertura" data-label="Apertura" style="font-size:0.8rem;color:var(--gris-texto);">' + fecha + '</td>' +
+            '<td class="col-apertura" data-label="Registro" style="font-size:0.8rem;color:var(--gris-texto);">' + fecha + '</td>' +
             '<td class="td-accion">' + accion + '</td>' +
         '</tr>';
     }).join('');
+    ordenarTabla();
     filtrarBotonesEditarTicket();
     filtrarFilasPorRol();
     filtrarBotonesAccion();
+    filtrarBotonesCalificar();
 }
 
 var _timerFiltroTicket = null;
@@ -2030,9 +2062,74 @@ function filtrarTicketsAPI() {
     }, 300);
 }
 
+// ── ORDENAR TABLA ───────────────────────────────────────────────────────────
+var _sortState = { key: 'f_registro', dir: 'desc' };
+var _sortPriority = { critica: 5, alta: 4, media: 3, baja: 2 };
+var _sortEstado   = { solicitado: 1, en_progreso: 2, resuelto: 3, cerrado: 4, cancelado: 5 };
+
+function ordenarTabla() {
+    var tbody = document.getElementById('tbody-tickets');
+    if (!tbody) return;
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+    if (rows.length === 0) return;
+
+    var key = _sortState.key;
+    var dir = _sortState.dir === 'asc' ? 1 : -1;
+    var type = null;
+    var header = document.querySelector('th.sortable[data-sort-key="' + key + '"]');
+    if (header) type = header.getAttribute('data-sort-type');
+
+    rows.sort(function(a, b) {
+        var va = (a.getAttribute('data-sort-' + key) || a.querySelector('[data-label]') && a.querySelector('[data-label]').textContent.trim() || '').toLowerCase();
+        var vb = (b.getAttribute('data-sort-' + key) || b.querySelector('[data-label]') && b.querySelector('[data-label]').textContent.trim() || '').toLowerCase();
+
+        // fallback: buscar texto interno de la celda por índice
+        if (!va && !vb) {
+            var idx = Array.prototype.indexOf.call(header.parentNode.children, header);
+            if (idx >= 0) {
+                va = (a.children[idx] && a.children[idx].textContent.trim() || '').toLowerCase();
+                vb = (b.children[idx] && b.children[idx].textContent.trim() || '').toLowerCase();
+            }
+        }
+
+        if (type === 'number') return dir * (parseFloat(va) - parseFloat(vb));
+        if (type === 'priority') return dir * ((_sortPriority[va] || 0) - (_sortPriority[vb] || 0));
+        if (type === 'date') return dir * (new Date(va) - new Date(vb));
+
+        // Sort estado by custom order
+        if (key === 'estado') return dir * ((_sortEstado[va] || 9) - (_sortEstado[vb] || 9));
+
+        return dir * va.localeCompare(vb);
+    });
+
+    rows.forEach(function(r) { tbody.appendChild(r); });
+}
+
+function inicializarOrdenamiento() {
+    document.querySelectorAll('#tabla-tickets th.sortable').forEach(function(th) {
+        th.addEventListener('click', function() {
+            var key = th.getAttribute('data-sort-key');
+            if (_sortState.key === key) {
+                _sortState.dir = _sortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                _sortState.key = key;
+                _sortState.dir = 'asc';
+            }
+            document.querySelectorAll('#tabla-tickets th.sortable').forEach(function(h) {
+                h.classList.remove('sort-active', 'sort-asc', 'sort-desc');
+            });
+            th.classList.add('sort-active', 'sort-' + _sortState.dir);
+            ordenarTabla();
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     if (!document.getElementById('tabla-tickets')) return;
+    inicializarOrdenamiento();
+    ordenarTabla();
     filtrarBotonesEditarTicket();
     filtrarFilasPorRol();
     filtrarBotonesAccion();
+    filtrarBotonesCalificar();
 });

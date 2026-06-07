@@ -27,8 +27,8 @@
                 <span class="form-hint">Resume el problema en una línea clara</span>
             </div>
 
-            <!-- Tipo, Prioridad, Aplicación -->
-            <div class="form-grid tres form-section-spacing">
+            <!-- Tipo, Prioridad, Intensidad, Aplicación -->
+            <div class="form-grid cuatro form-section-spacing">
                 <div class="form-group">
                     <label for="tipo">Tipo de solicitud *</label>
                     <select id="tipo" name="tipo" required>
@@ -49,34 +49,27 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="aplicacion">Aplicación afectada *</label>
-                    <select id="aplicacion" name="aplicacion" required>
+                    <label for="intensidad">Intensidad *</label>
+                    <select id="intensidad" name="intensidad" required>
+                        <option value="critica">🔴 Crítica</option>
+                        <option value="alta">🟠 Alta</option>
+                        <option value="media" selected>🟡 Media</option>
+                        <option value="baja">🟢 Baja</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_aplicacion">Aplicación afectada *</label>
+                    <select id="id_aplicacion" name="id_aplicacion" required>
                         <option value="">— Selecciona —</option>
-                        <option value="Sistema Empaque">Sistema de Empaque</option>
-                        <option value="App Móvil Campo">App Móvil Campo</option>
-                        <option value="API Ventas">API de Ventas</option>
-                        <option value="Portal RRHH">Portal RR.HH.</option>
-                        <option value="Dashboard BI">Dashboard BI / Power BI</option>
-                        <option value="Otro">Otro sistema</option>
-                        <option value="Problema hardware">Problema hardware</option>
+                        {% for app in aplicaciones %}
+                        <option value="{{ app.id_aplicacion }}">{{ app.nombre }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
 
             <input type="hidden" id="id_solicitante" name="id_solicitante">
-
-            <div class="form-grid form-section-spacing">
-                <div class="form-group">
-                    <label for="sla_horas">SLA esperado (horas)</label>
-                    <select id="sla_horas" name="sla_horas">
-                        <option value="4">4 horas (crítico)</option>
-                        <option value="8">8 horas (alto)</option>
-                        <option value="24" selected>24 horas (estándar)</option>
-                        <option value="48">48 horas (bajo)</option>
-                        <option value="72">72 horas (consulta)</option>
-                    </select>
-                </div>
-            </div>
 
             <!-- Descripción -->
             <div class="form-group form-section-spacing">

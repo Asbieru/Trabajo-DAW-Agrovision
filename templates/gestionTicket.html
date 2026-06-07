@@ -21,10 +21,11 @@
                oninput="filtrarTicketsAPI()" autocomplete="off">
         <select class="filtro-estado" id="filtro-estado" onchange="filtrarTicketsAPI()">
             <option value="">Todos los estados</option>
-            <option value="abierto">Abierto</option>
+            <option value="solicitado">Solicitado</option>
             <option value="en_progreso">En progreso</option>
             <option value="resuelto">Resuelto</option>
             <option value="cerrado">Cerrado</option>
+            <option value="cancelado">Cancelado</option>
         </select>
     </div>
 
@@ -32,25 +33,26 @@
         <table class="tabla tabla-tickets" id="tabla-tickets">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Título</th>
-                    <th>Tipo</th>
-                    <th>Prioridad</th>
-                    <th class="col-aplicacion">Aplicación</th>
-                    <th>Estado</th>
-                    <th>Solicitante</th>
-                    <th class="col-agente">Agente</th>
-                    <th class="col-apertura">Apertura</th>
+                    <th class="sortable" data-sort-key="id_ticket" data-sort-type="number">ID <span class="sort-indicator"></span></th>
+                    <th class="sortable" data-sort-key="titulo">Título <span class="sort-indicator"></span></th>
+                    <th class="sortable" data-sort-key="tipo">Tipo <span class="sort-indicator"></span></th>
+                    <th class="sortable" data-sort-key="prioridad" data-sort-type="priority">Prioridad <span class="sort-indicator"></span></th>
+                    <th class="sortable col-aplicacion" data-sort-key="nombre_aplicacion">Aplicación <span class="sort-indicator"></span></th>
+                    <th class="sortable" data-sort-key="estado">Estado <span class="sort-indicator"></span></th>
+                    <th class="col-calificacion sortable" data-sort-key="calificacion_estrellas" data-sort-type="number">Calificación <span class="sort-indicator"></span></th>
+                    <th class="sortable" data-sort-key="nombre_solicitante">Solicitante <span class="sort-indicator"></span></th>
+                    <th class="sortable col-agente" data-sort-key="nombre_agente">Agente <span class="sort-indicator"></span></th>
+                    <th class="sortable col-apertura sort-active sort-desc" data-sort-key="f_registro" data-sort-type="date">Registro <span class="sort-indicator"></span></th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="tbody-tickets">
                 {% if tickets %}
                     {% for t in tickets %}
-                    {% if t.estado != 'eliminado' %}
-                        <tr data-texto="{{ (t.titulo ~ ' ' ~ t.nombre_solicitante ~ ' ' ~ t.aplicacion ~ ' SD-' ~ t.id_ticket)|lower }}"
+                        <tr data-texto="{{ (t.titulo ~ ' ' ~ t.nombre_solicitante ~ ' ' ~ t.nombre_aplicacion ~ ' SD-' ~ t.id_ticket)|lower }}"
                             data-estado="{{ t.estado }}"
-                            data-id-solicitante="{{ t.id_solicitante }}">
+                            data-id-solicitante="{{ t.id_solicitante }}"
+                            data-id-agente="{{ t.id_agente or '' }}">
 
                             <td class="td-id ticket-id" data-label="ID">
                                 <a href="{{ url_for('ver_ticket', id_ticket=t.id_ticket) }}" class="ticket-link">SD-{{ t.id_ticket }}</a>
@@ -82,19 +84,30 @@
                             </td>
                             <td class="col-aplicacion" data-label="Aplicación"
                                 style="color:var(--gris-texto); font-size:0.84rem;">
-                                {{ t.aplicacion }}
+                                {{ t.nombre_aplicacion }}
                             </td>
                             <td data-label="Estado">
-                                {% if t.estado == 'abierto' %}
-                                    <span class="badge badge-rojo">Abierto</span>
+                                {% if t.estado == 'solicitado' %}
+                                    <span class="badge badge-rojo">Solicitado</span>
                                 {% elif t.estado == 'en_progreso' %}
                                     <span class="badge badge-acento">En progreso</span>
                                 {% elif t.estado == 'resuelto' %}
                                     <span class="badge badge-verde">Resuelto</span>
-                                {% elif t.estado == 'base_proyecto' %}
-                                    <span class="badge badge-azul">🚀 Base proyecto</span>
+                                {% elif t.estado == 'cancelado' %}
+                                    <span class="badge badge-gris">Cancelado</span>
                                 {% else %}
                                     <span class="badge badge-gris">Cerrado</span>
+                                {% endif %}
+                            </td>
+                            <td class="col-calificacion" data-label="Calificación">
+                                {% if t.calificacion_estrellas %}
+                                    <span class="badge badge-acento estrella-badge">⭐ {{ t.calificacion_estrellas }}/5</span>
+                                {% elif t.estado == 'resuelto' %}
+                                    <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
+                                    class="btn btn-sm btn-outline btn-calificar"
+                                    data-id-solicitante="{{ t.id_solicitante }}">⭐ Calificar</a>
+                                {% else %}
+                                    <span style="color:var(--gris-texto);">—</span>
                                 {% endif %}
                             </td>
                             <td data-label="Solicitante">{{ t.nombre_solicitante }}</td>
@@ -102,78 +115,41 @@
                                 style="font-size:0.84rem; color:var(--gris-texto);">
                                 {{ t.nombre_agente or '—' }}
                             </td>
-                            <td class="col-apertura" data-label="Apertura"
+                            <td class="col-apertura" data-label="Registro"
                                 style="font-size:0.8rem; color:var(--gris-texto);">
-                                {{ t.fecha_apertura.strftime('%d/%m/%Y %H:%M') if t.fecha_apertura else '—' }}
+                                {{ t.f_registro.strftime('%d/%m/%Y %H:%M') if t.f_registro else '—' }}
                             </td>
                             <td class="td-accion">
-                                {% if t.estado in ('abierto', 'en_progreso') %}
+                                {% if t.estado == 'solicitado' %}
                                     <div class="ticket-actions">
-                                        <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
-                                        class="btn btn-sm btn-verde"
-                                        data-vis-resolver="programador admin">🔧 Resolver</a>
+                                        <a href="{{ url_for('form_asignar_ticket', id_ticket=t.id_ticket) }}"
+                                        class="btn btn-sm btn-acento"
+                                        data-vis-asignar="admin soporte">👤 Asignar</a>
                                         <a href="{{ url_for('form_editar_ticket', id_ticket=t.id_ticket) }}"
                                         class="btn btn-sm btn-outline btn-editar-ticket"
                                         data-id-solicitante="{{ t.id_solicitante }}">✏️ Editar</a>
                                     </div>
+                                {% elif t.estado == 'en_progreso' %}
+                                    <div class="ticket-actions">
+                                        <a href="{{ url_for('form_resolver_ticket', id_ticket=t.id_ticket) }}"
+                                        class="btn btn-sm btn-verde btn-resolver"
+                                        data-id-agente="{{ t.id_agente or '' }}">🔧 Resolver</a>
+                                    </div>
                                 {% elif t.estado == 'resuelto' %}
-                                    <div class="ticket-actions">
-                                        <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
-                                        {% if t.calificacion_estrellas %}
-                                        <button type="button" class="btn btn-sm btn-outline" disabled>
-                                            ⭐ {{ t.calificacion_estrellas }}/5
-                                        </button>
-                                        {% else %}
-                                        <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
-                                        class="btn btn-sm btn-outline"
-                                        data-vis-calificar="soporte programador admin">
-                                            ⭐ Calificar
-                                        </a>
-                                        {% endif %}
-                                    </div>
-                                {% elif t.estado == 'base_proyecto' %}
-                                    <div class="ticket-actions">
-                                        <a href="{{ url_for('form_proyecto') }}"
-                                        class="btn btn-sm btn-azul">🚀 Ver proyecto</a>
-                                        {% if t.calificacion_estrellas %}
-                                        <button type="button" class="btn btn-sm btn-outline" disabled>
-                                            ⭐ {{ t.calificacion_estrellas }}/5
-                                        </button>
-                                        {% else %}
-                                        <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
-                                        class="btn btn-sm btn-outline"
-                                        data-vis-calificar="soporte programador admin">
-                                            ⭐ Calificar
-                                        </a>
-                                        {% endif %}
-                                    </div>
+                                    <span class="badge badge-verde" style="opacity:.8;">✅ Resuelto</span>
                                 {% else %}
-                                    <div class="ticket-actions">
-                                        <span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>
-                                        {% if t.calificacion_estrellas %}
-                                        <button type="button" class="btn btn-sm btn-outline" disabled>
-                                            ⭐ {{ t.calificacion_estrellas }}/5
-                                        </button>
-                                        {% else %}
-                                        <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
-                                        class="btn btn-sm btn-outline"
-                                        data-vis-calificar="soporte programador admin">
-                                            ⭐ Calificar
-                                        </a>
-                                        {% endif %}
-                                        <button type="button" class="btn btn-sm btn-rojo"
-                                                onclick="mostrarModalEliminarTicket({{ t.id_ticket }})">
-                                            🗑️ Eliminar
-                                        </button>
-                                    </div>
+                                    {% if t.estado == 'cancelado' %}
+                                    <span class="badge badge-gris" style="opacity:.8;">🚫 Cancelado</span>
+                                    {% else %}
+                                    <span class="badge badge-gris" style="opacity:.8;">🔒 Cerrado</span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                         </tr>
-                    {% endif %}
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="10" class="tabla-empty">
+                        <td colspan="11" class="tabla-empty">
                             No hay tickets registrados.
                             <a href="{{ url_for('form_ticket') }}" style="color:var(--verde);">
                                 Crea el primer ticket →
@@ -188,28 +164,5 @@
         </p>
     </div>
 </div>
-
-<!-- ══ MODAL CONFIRMAR ELIMINAR TICKET ══ -->
-<div id="modal-confirmar-eliminar-ticket" class="av-modal-overlay" style="display:none;">
-    <div class="av-modal-box">
-        <div style="font-size:2.5rem;margin-bottom:10px;">⚠️</div>
-        <h3 style="margin:0 0 8px 0;font-size:1.1rem;color:var(--rojo);">Eliminar ticket</h3>
-        <p id="modal-eliminar-ticket-msg" style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;">
-            ¿Eliminar permanentemente este ticket? Esta acción no se puede deshacer.
-        </p>
-        <form id="form-eliminar-ticket-modal" method="POST" style="display:inline;">
-            <button type="button" onclick="cerrarModalEliminarTicket()"
-                    class="btn btn-outline btn-sm"
-                    style="padding:8px 28px;font-size:0.88rem;margin-right:8px;">
-                Cancelar
-            </button>
-            <button type="submit" class="btn btn-rojo btn-sm"
-                    style="padding:8px 28px;font-size:0.88rem;">
-                🗑️ Eliminar
-            </button>
-        </form>
-    </div>
-</div>
-
 
 {% endblock %}

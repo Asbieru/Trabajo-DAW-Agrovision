@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     direccion VARCHAR(255),
     correo VARCHAR(120) NOT NULL UNIQUE,
     password_hash VARCHAR(255),
-    rol ENUM('admin','soporte','programador') NOT NULL DEFAULT 'soporte',
+    rol ENUM('admin','soporte','programador','agente') NOT NULL DEFAULT 'soporte',
     foto_url VARCHAR(500),
     activo TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -36,6 +36,30 @@ VALUES
 ('Luis Flores', 'Flores Huanca', 28, '70987654', 'Psje. Los Pinos 12, Surco', 'luis@agrovision.pe', '123456', 'soporte', NULL);
 
 -- ============================================================
+-- TABLA APLICACIONES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS aplicaciones (
+    id_aplicacion INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    peso INT NOT NULL DEFAULT 1,
+    descripcion TEXT NULL,
+    participantes_promedio INT NOT NULL DEFAULT 1
+) ENGINE=InnoDB;
+
+INSERT INTO aplicaciones (nombre, peso, descripcion, participantes_promedio) VALUES
+('Sistema Empaque',    5, 'Sistema de control de empaque y etiquetado', 8),
+('App Móvil Campo',    4, 'Aplicación móvil para trabajadores de campo', 12),
+('API Ventas',         4, 'API de integración de ventas', 6),
+('Portal RRHH',        3, 'Portal de recursos humanos', 5),
+('Dashboard BI',       3, 'Dashboard de inteligencia de negocio', 4),
+('Reportes',           2, 'Sistema de reportes personalizados', 3),
+('Panel',              4, 'Panel de administración general', 7),
+('Usuarios',           3, 'Gestión de usuarios y permisos', 4),
+('Mesa Ayuda',         5, 'Mesa de ayuda y soporte técnico', 10),
+('Autenticación',      5, 'Sistema de autenticación y SSO', 6);
+
+-- ============================================================
 -- TABLA TICKETS
 -- ============================================================
 
@@ -44,29 +68,37 @@ CREATE TABLE IF NOT EXISTS tickets (
     titulo VARCHAR(200) NOT NULL,
     tipo ENUM('incidencia','peticion','consulta') NOT NULL,
     prioridad ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
-    aplicacion VARCHAR(100) NOT NULL,
+    intensidad ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
     id_solicitante INT NOT NULL,
+    id_aplicacion INT NOT NULL,
     sla_horas SMALLINT NOT NULL DEFAULT 24,
-    descripcion TEXT NOT NULL,
-    estado ENUM('abierto','en_progreso','resuelto','cerrado','base_proyecto','eliminado') NOT NULL DEFAULT 'abierto',
-    fecha_apertura DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    fecha_resolucion DATETIME,
-    id_agente INT NULL,
-    notas_resolucion TEXT NULL,
-    link_img_descripcion TEXT NULL,
-    link_img_resolucion TEXT NULL,
+    estado ENUM('solicitado','en_progreso','resuelto','cerrado','cancelado') NOT NULL DEFAULT 'solicitado',
+    f_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    f_cierre DATETIME NULL,
     CONSTRAINT fk_ticket_solic FOREIGN KEY (id_solicitante) REFERENCES usuarios(id_usuario),
-    CONSTRAINT fk_ticket_agente FOREIGN KEY (id_agente) REFERENCES usuarios(id_usuario)
+    CONSTRAINT fk_ticket_aplic FOREIGN KEY (id_aplicacion) REFERENCES aplicaciones(id_aplicacion)
 ) ENGINE=InnoDB;
 
-INSERT INTO tickets
-(titulo, tipo, prioridad, aplicacion, estado, sla_horas, descripcion, id_solicitante, id_agente)
-VALUES
-('Error al exportar PDF','incidencia','alta','Reportes','resuelto',8,'No exporta PDF',1,2),
-('Acceso denegado','incidencia','critica','Panel','cerrado',4,'No puede ingresar',1,5),
-('Nuevo usuario','peticion','media','Usuarios','cerrado',24,'Crear usuario',1,2),
-('Lentitud tickets','incidencia','alta','Mesa Ayuda','resuelto',8,'Carga lenta',1,5),
-('Error login','incidencia','critica','Autenticación','cerrado',2,'Error 500 login',1,2);
+-- ============================================================
+-- TABLA DETALLE_TICKET
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS detalle_ticket (
+    id_detalle INT AUTO_INCREMENT PRIMARY KEY,
+    id_ticket INT NOT NULL UNIQUE,
+    f_asignacion_agente DATETIME NULL,
+    id_agente INT NULL,
+    f_solucion DATETIME NULL,
+    f_revision DATETIME NULL,
+    link_img_descripcion TEXT NULL,
+    descripcion TEXT NOT NULL,
+    notas_resolucion TEXT NULL,
+    link_img_resolucion TEXT NULL,
+    CONSTRAINT fk_detalle_ticket FOREIGN KEY (id_ticket)
+        REFERENCES tickets(id_ticket) ON DELETE CASCADE,
+    CONSTRAINT fk_detalle_agente FOREIGN KEY (id_agente)
+        REFERENCES usuarios(id_usuario)
+) ENGINE=InnoDB;
 
 -- ============================================================
 -- CALIFICACIONES
@@ -81,12 +113,6 @@ CREATE TABLE IF NOT EXISTS calificaciones_ticket (
     CONSTRAINT fk_calif_ticket FOREIGN KEY (id_ticket)
     REFERENCES tickets(id_ticket) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-
-INSERT INTO calificaciones_ticket
-(id_ticket, estrellas, observacion)
-VALUES
-(1, 4, 'Atencion buena, se resolvio con seguimiento.'),
-(4, 5, 'Excelente atencion, solucion rapida y clara.');
 
 -- ============================================================
 -- TABLA PROYECTOS
@@ -214,6 +240,30 @@ VALUES
 (1,1,3,'ACT-001','Panel KPIs','alta','completada',8),
 (1,1,2,'ACT-002','Exportar PDF','media','en_progreso',5),
 (2,2,3,'ACT-003','Login movil','critica','completada',8);
+
+-- ============================================================
+-- DATOS DE EJEMPLO: TICKETS + DETALLES
+-- ============================================================
+
+INSERT INTO tickets (id_ticket, titulo, tipo, prioridad, intensidad, id_solicitante, id_aplicacion, sla_horas, estado, f_registro, f_cierre)
+VALUES
+(1, 'Error al exportar PDF',  'incidencia', 'alta',   'alta',   1, 6, 8,  'cerrado',   '2025-05-01 10:00:00', '2025-05-03 15:00:00'),
+(2, 'Acceso denegado',        'incidencia', 'critica','critica',1, 8, 4,  'cerrado',   '2025-05-02 09:00:00', '2025-05-02 18:00:00'),
+(3, 'Nuevo usuario',          'peticion',   'media',  'baja',   1,10,24, 'cerrado',   '2025-05-03 08:00:00', '2025-05-05 12:00:00'),
+(4, 'Lentitud tickets',       'incidencia', 'alta',   'alta',   1, 9, 8,  'resuelto',  '2025-05-04 14:00:00', NULL),
+(5, 'Error login',            'incidencia', 'critica','critica',1,10, 2,  'cerrado',   '2025-05-05 07:00:00', '2025-05-05 16:00:00');
+
+INSERT INTO detalle_ticket (id_ticket, f_asignacion_agente, id_agente, f_solucion, f_revision, descripcion, notas_resolucion)
+VALUES
+(1, '2025-05-01 11:00:00', 2, '2025-05-03 14:00:00', '2025-05-03 15:00:00', 'No exporta PDF', 'Se corrigió la librería de exportación'),
+(2, '2025-05-02 10:00:00', 5, '2025-05-02 17:00:00', '2025-05-02 18:00:00', 'No puede ingresar', 'Se restauró acceso desde el panel'),
+(3, '2025-05-03 09:00:00', 2, '2025-05-05 11:00:00', '2025-05-05 12:00:00', 'Crear usuario', 'Usuario creado exitosamente'),
+(4, '2025-05-04 15:00:00', 5, '2025-05-06 10:00:00', NULL, 'Carga lenta', 'Se optimizaron consultas, pendiente revisión'),
+(5, '2025-05-05 08:00:00', 2, '2025-05-05 15:00:00', '2025-05-05 16:00:00', 'Error 500 login', 'Corregido error en microservicio de autenticación');
+
+INSERT INTO calificaciones_ticket (id_ticket, estrellas, observacion) VALUES
+(1, 4, 'Atencion buena, se resolvio con seguimiento.'),
+(4, 5, 'Excelente atencion, solucion rapida y clara.');
 
 -- ============================================================
 -- FIN
