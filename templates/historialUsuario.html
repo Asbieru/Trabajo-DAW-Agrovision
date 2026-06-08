@@ -6,12 +6,13 @@
 <!-- ENCABEZADO -->
 <div class="page-header">
     <div>
-        <h1>📋 Historia de participación de: {{ usuario.nombre_completo }}{% if usuario.apellido %} {{ usuario.apellido }}{% endif %}</h1>
+        <h1>📋 Historia de participación de: {{ usuario.nombre_completo }}{% if usuario.apellido %} {{ usuario.apellido
+            }}{% endif %}</h1>
         <p>Tickets y proyectos en los que el usuario ha participado</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="{{ url_for('perfil_usuario', id_usuario=usuario.id_usuario) }}"
-           class="btn btn-outline btn-sm">👤 Ver Perfil</a>
+        <a href="{{ url_for('perfil_usuario', id_usuario=usuario.id_usuario) }}" class="btn btn-outline btn-sm">👤 Ver
+            Perfil</a>
         <a href="{{ url_for('lista_usuarios') }}" class="btn btn-outline btn-sm">← Volver</a>
     </div>
 </div>
@@ -21,131 +22,22 @@
     <div class="card-body" style="padding:14px 20px;">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <!-- Buscador por título -->
-            <input type="text" id="buscar-historial"
-                   placeholder="Título del ticket o proyecto..."
-                   class="buscador-input"
-                   style="flex:1;min-width:220px;max-width:440px;"
-                   oninput="filtrarHistorial()">
+            <input type="text" id="buscar-historial" placeholder="Título del ticket o proyecto..."
+                class="buscador-input" style="flex:1;min-width:220px;max-width:440px;" oninput="filtrarHistorial()">
 
             <!-- Ver por -->
             <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
                 <span style="font-size:0.82rem;font-weight:600;color:#444;white-space:nowrap;">Ver por:</span>
                 <button class="btn btn-verde btn-sm filtro-tipo activo" data-tipo="todos"
-                        onclick="setTipo(this,'todos')">Todos</button>
+                    onclick="setTipo(this,'todos')">Todos</button>
                 <button class="btn btn-outline btn-sm filtro-tipo" data-tipo="ticket"
-                        onclick="setTipo(this,'ticket')">🎫 Ticket</button>
-                <button class="btn btn-outline btn-sm filtro-tipo" data-tipo="proyecto" 
-                        onclick="setTipo(this,'proyecto')">📁 Proyecto</button>
+                    onclick="setTipo(this,'ticket')">🎫 Ticket</button>
+                <button class="btn btn-outline btn-sm filtro-tipo" data-tipo="proyecto"
+                    onclick="setTipo(this,'proyecto')">📁 Proyecto</button>
             </div>
         </div>
     </div>
 </div>
-
-<!-- TABLERO KANBAN (solo lectura) -->
-{% set columnas = [
-    ('backlog',     '📥 Backlog',     'gris'),
-    ('por_hacer',   '📝 Por hacer',   'azul'),
-    ('en_progreso', '⚙️ En progreso', 'acento'),
-    ('completada',  '✅ Completada',  'verde'),
-    ('cancelada',   '🚫 Cancelada',   'rojo')
-] %}
-
-<div id="tablero-historial"
-     style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start;margin-bottom:28px;">
-
-{% for estado_key, estado_label, color_cls in columnas %}
-{% set col_items = items | selectattr('estado', 'equalto', estado_key) | list %}
-<div class="columna-kanban" data-estado="{{ estado_key }}"
-     style="background:var(--gris-bg);border-radius:10px;padding:10px;">
-
-    <!-- Encabezado columna -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <span style="font-weight:700;font-size:0.82rem;">{{ estado_label }}</span>
-        <span class="badge badge-{{ color_cls }}" style="font-size:0.72rem;col-count"
-              id="cnt-{{ estado_key }}">{{ col_items|length }}</span>
-    </div>
-
-    <!-- Tarjetas -->
-    <div class="col-cards" id="cards-{{ estado_key }}">
-    {% if col_items %}
-        {% for item in col_items %}
-        <div class="card historial-card" style="margin-bottom:10px;
-             border-left:3px solid var(--{% if item.prioridad == 'critica' %}rojo{% elif item.prioridad == 'alta' %}acento{% elif item.prioridad == 'media' %}azul{% else %}gris-borde{% endif %});"
-             data-titulo="{{ item.titulo|lower }}"
-             data-tipo="{{ item.tipo_item }}">
-            <div class="card-body" style="padding:12px;">
-
-                <!-- Tipo item + subtipo -->
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <span style="font-size:0.68rem;font-weight:700;
-                                 color:{% if item.tipo_item == 'ticket' %}var(--azul){% else %}var(--verde-oscuro){% endif %};">
-                            {% if item.tipo_item == 'ticket' %}🎫 TICKET{% else %}📁 PROYECTO{% endif %}
-                    </span>
-                    <span class="badge badge-{% if item.subtipo in ('incidencia','bug') %}rojo
-                                              {% elif item.subtipo in ('peticion','tecnica') %}azul
-                                              {% else %}verde{% endif %}"
-                          style="font-size:0.65rem;">
-                        {{ item.subtipo }}
-                    </span>
-                </div>
-
-                <!-- Código (solo historias) -->
-                {% if item.codigo %}
-                <div style="font-size:0.68rem;font-weight:700;color:var(--verde);margin-bottom:3px;">
-                    {{ item.codigo }}
-                </div>
-                {% endif %}
-
-                <!-- Título -->
-                <p style="font-size:0.83rem;font-weight:600;margin:0 0 6px 0;line-height:1.3;">
-                    {{ item.titulo }}
-                </p>
-
-                <!-- Proyecto (solo historias) -->
-                {% if item.tipo_item == 'proyecto' and item.actividades %}
-                <div style="margin-top:6px;border-top:1px solid var(--gris-borde);padding-top:6px;">
-                    <div style="font-size:0.68rem;font-weight:700;color:var(--gris-texto);margin-bottom:3px;">
-                        Actividades:
-                    </div>
-                    {% for act in item.actividades %}
-                    <div style="font-size:0.72rem;color:var(--negro);line-height:1.4;">
-                        — {% if act.codigo %}<span style="color:var(--verde);font-weight:600;">{{ act.codigo }}</span> {% endif %}{{ act.titulo }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                <!-- Rol del usuario + prioridad -->
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-                    <span style="font-size:0.68rem;padding:2px 7px;border-radius:20px;font-weight:600;
-                                 background:{% if item.rol_usuario == 'agente' %}var(--verde-claro){% elif item.rol_usuario == 'solicitante' %}var(--azul-claro){% elif item.rol_usuario == 'responsable' %}var(--acento-claro){% else %}var(--gris-bg){% endif %};
-                                 color:{% if item.rol_usuario == 'agente' %}var(--verde-oscuro){% elif item.rol_usuario == 'solicitante' %}var(--azul){% elif item.rol_usuario == 'responsable' %}#7a5200{% else %}var(--gris-texto){% endif %};">
-                        {% if item.rol_usuario == 'agente' %}🔧 Agente
-                        {% elif item.rol_usuario == 'solicitante' %}📨 Solicitante
-                        {% elif item.rol_usuario == 'responsable' %}⭐ Responsable
-                        {% else %}👤 Asignado{% endif %}
-                    </span>
-                    <span style="font-size:0.68rem;color:var(--gris-texto);">
-                        {% if item.prioridad == 'critica' %}🔴{% elif item.prioridad == 'alta' %}🟠{% elif item.prioridad == 'media' %}🟡{% else %}🟢{% endif %}
-                        {{ item.prioridad }}
-                    </span>
-                </div>
-
-            </div>
-        </div>
-        {% endfor %}
-    {% endif %}
-
-        <!-- Mensaje vacío por columna (oculto por defecto si no hay items) -->
-        <div class="col-vacia" style="{% if col_items %}display:none;{% endif %}
-             text-align:center;padding:18px 8px;color:var(--gris-texto);font-size:0.78rem;">
-            Sin elementos
-        </div>
-    </div>
-</div>
-{% endfor %}
-</div>
-
 <!-- RESUMEN ESTADÍSTICO -->
 <h2 style="font-size:1.05rem;font-weight:700;margin-bottom:14px;color:var(--negro);">
     📊 Resumen de {{ usuario.nombre_completo }}
@@ -178,6 +70,113 @@
         <div class="stat-label">Canceladas</div>
     </div>
 
+</div>
+<!-- TABLERO KANBAN (solo lectura) -->
+{% set columnas = [
+('backlog', '📥 Backlog', 'gris'),
+('por_hacer', '📝 Por hacer', 'azul'),
+('en_progreso', '⚙️ En progreso', 'acento'),
+('completada', '✅ Completada', 'verde'),
+('cancelada', '🚫 Cancelada', 'rojo')
+] %}
+
+<div id="tablero-historial"
+    style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start;margin-bottom:28px;">
+
+    {% for estado_key, estado_label, color_cls in columnas %}
+    {% set col_items = items | selectattr('estado', 'equalto', estado_key) | list %}
+    <div class="columna-kanban" data-estado="{{ estado_key }}"
+        style="background:var(--gris-bg);border-radius:10px;padding:10px;">
+
+        <!-- Encabezado columna -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-weight:700;font-size:0.82rem;">{{ estado_label }}</span>
+            <span class="badge badge-{{ color_cls }}" style="font-size:0.72rem;col-count" id="cnt-{{ estado_key }}">{{
+                col_items|length }}</span>
+        </div>
+
+        <!-- Tarjetas -->
+        <div class="col-cards" id="cards-{{ estado_key }}">
+            {% if col_items %}
+            {% for item in col_items %}
+            <div class="card historial-card"
+                style="margin-bottom:10px;
+            border-left:3px solid var(--{% if item.prioridad == 'critica' %}rojo{% elif item.prioridad == 'alta' %}acento{% elif item.prioridad == 'media' %}azul{% else %}gris-borde{% endif %});"
+                data-titulo="{{ item.titulo|lower }}" data-tipo="{{ item.tipo_item }}">
+                <div class="card-body" style="padding:12px;">
+
+                    <!-- Tipo item + subtipo -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span
+                            style="font-size:0.68rem;font-weight:700;
+                                color:{% if item.tipo_item == 'ticket' %}var(--azul){% else %}var(--verde-oscuro){% endif %};">
+                            {% if item.tipo_item == 'ticket' %}🎫 TICKET{% else %}📁 PROYECTO{% endif %}
+                        </span>
+                        <span class="badge badge-{% if item.subtipo in ('incidencia','bug') %}rojo
+                                            {% elif item.subtipo in ('peticion','tecnica') %}azul
+                                            {% else %}verde{% endif %}" style="font-size:0.65rem;">
+                            {{ item.subtipo }}
+                        </span>
+                    </div>
+
+                    <!-- Código (solo historias) -->
+                    {% if item.codigo %}
+                    <div style="font-size:0.68rem;font-weight:700;color:var(--verde);margin-bottom:3px;">
+                        {{ item.codigo }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Título -->
+                    <p style="font-size:0.83rem;font-weight:600;margin:0 0 6px 0;line-height:1.3;">
+                        {{ item.titulo }}
+                    </p>
+
+                    <!-- Proyecto (solo historias) -->
+                    {% if item.tipo_item == 'proyecto' and item.actividades %}
+                    <div style="margin-top:6px;border-top:1px solid var(--gris-borde);padding-top:6px;">
+                        <div style="font-size:0.68rem;font-weight:700;color:var(--gris-texto);margin-bottom:3px;">
+                            Actividades:
+                        </div>
+                        {% for act in item.actividades %}
+                        <div style="font-size:0.72rem;color:var(--negro);line-height:1.4;">
+                            — {% if act.codigo %}<span style="color:var(--verde);font-weight:600;">{{ act.codigo
+                                }}</span> {% endif %}{{ act.titulo }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Rol del usuario + prioridad -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                        <span
+                            style="font-size:0.68rem;padding:2px 7px;border-radius:20px;font-weight:600;
+                                background:{% if item.rol_usuario == 'agente' %}var(--verde-claro){% elif item.rol_usuario == 'solicitante' %}var(--azul-claro){% elif item.rol_usuario == 'responsable' %}var(--acento-claro){% else %}var(--gris-bg){% endif %};
+                                color:{% if item.rol_usuario == 'agente' %}var(--verde-oscuro){% elif item.rol_usuario == 'solicitante' %}var(--azul){% elif item.rol_usuario == 'responsable' %}#7a5200{% else %}var(--gris-texto){% endif %};">
+                            {% if item.rol_usuario == 'agente' %}🔧 Agente
+                            {% elif item.rol_usuario == 'solicitante' %}📨 Solicitante
+                            {% elif item.rol_usuario == 'responsable' %}⭐ Responsable
+                            {% else %}👤 Asignado{% endif %}
+                        </span>
+                        <span style="font-size:0.68rem;color:var(--gris-texto);">
+                            {% if item.prioridad == 'critica' %}🔴{% elif item.prioridad == 'alta' %}🟠{% elif
+                            item.prioridad == 'media' %}🟡{% else %}🟢{% endif %}
+                            {{ item.prioridad }}
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <!-- Mensaje vacío por columna (oculto por defecto si no hay items) -->
+            <div class="col-vacia" style="{% if col_items %}display:none;{% endif %}
+            text-align:center;padding:18px 8px;color:var(--gris-texto);font-size:0.78rem;">
+                Sin elementos
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 {% endblock %}
