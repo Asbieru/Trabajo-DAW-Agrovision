@@ -347,3 +347,74 @@ def eliminarAvance(id_avance):
                 (id_avance,)
             )
         conn.commit()
+
+# ──────────────────────────────────────────────────────────────
+#  SPRINTS  (generación automática y consulta)
+# ──────────────────────────────────────────────────────────────
+
+def generarSprintsProyecto(id_proyecto, fecha_inicio, fecha_fin):
+    """Genera sprints automáticamente según la duración del proyecto.
+
+    Reglas:
+      - <= 6 días totales  → sin sprints (flujo continuo/Kanban)
+      - 7-14 días totales  → sprints de 5 días laborables (1 semana)
+      - > 14 días totales  → sprints de 14 días calendario (2 semanas)
+    Los días restantes que no completan un sprint entero generan
+    un último sprint adicional (redondeo hacia arriba).
+    """
+    from datetime import timedelta
+
+    delta = (fecha_fin - fecha_inicio).days  # días totales (inclusive del día fin)
+
+    if delta <= 6:
+        # Sin sprints — flujo continuo
+        return
+
+    if delta <= 14:
+        duracion_sprint = 5   # días laborables (1 semana)
+    else:
+        duracion_sprint = 14  # días calendario (2 semanas)
+
+    # Calcular número de sprints con redondeo hacia arriba
+    import math
+    num_sprints = math.ceil(delta / duracion_sprint)
+
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            fecha_actual = fecha_inicio
+            for i in range(1, num_sprints + 1):
+                fecha_inicio_sprint = fecha_actual
+                fecha_fin_sprint    = fecha_actual + timedelta(days=duracion_sprint - 1)
+                # El último sprint no puede sobrepasar la fecha_fin del proyecto
+                if fecha_fin_sprint > fecha_fin:
+                    fecha_fin_sprint = fecha_fin
+
+                nombre_sprint = f'Sprint {i}'
+                cursor.execute("""
+                    INSERT INTO sprints
+                        (id_proyecto, nombre, objetivo, estado,
+                         capacidad_pts, fecha_inicio, fecha_fin)
+                    VALUES (%s, %s, %s, 'planificado', 0, %s, %s)
+                """, (id_proyecto, nombre_sprint,
+                      f'Sprint {i} del proyecto',
+                      fecha_inicio_sprint, fecha_fin_sprint))
+
+                fecha_actual = fecha_fin_sprint + timedelta(days=1)
+                if fecha_actual > fecha_fin:
+                    break
+        conn.commit()
+
+
+def listarSprintsPorProyecto(id_proyecto):
+    """Retorna todos los sprints de un proyecto específico."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id_sprint, nombre, estado, fecha_inicio, fecha_fin
+                FROM sprints
+                WHERE id_proyecto = %s
+                ORDER BY fecha_inicio
+            """, (id_proyecto,))
+            return cursor.fetchall()

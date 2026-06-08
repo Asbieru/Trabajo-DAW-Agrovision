@@ -36,7 +36,7 @@
                 <div class="form-group">
                     <label for="id_proyecto">Proyecto *</label>
                     <select id="id_proyecto" name="id_proyecto" required
-                            onchange="filtrarSprints(); cargarAsignados();">
+                            onchange="cargarSprintsAjax(this.value); cargarAsignados();">
                         <option value="">— Selecciona proyecto —</option>
                         {% for p in proyectos %}
                         <option value="{{ p.id_proyecto }}"
@@ -50,15 +50,8 @@
                     <label for="id_sprint">Sprint (opcional)</label>
                     <select id="id_sprint" name="id_sprint">
                         <option value="">— Sin sprint asignado —</option>
-                        {% for s in sprints %}
-                        <option value="{{ s.id_sprint }}"
-                                data-proyecto="{{ s.id_proyecto }}"
-                                {% if s.id_sprint == actividad.id_sprint %}selected{% endif %}>
-                            [{{ s.nombre_proyecto }}] {{ s.nombre }}
-                        </option>
-                        {% endfor %}
                     </select>
-                    <span class="form-hint">Solo se muestran sprints del proyecto seleccionado</span>
+                    <span class="form-hint">Se cargan según el proyecto seleccionado</span>
                 </div>
             </div>
 
@@ -95,12 +88,18 @@
                     <span class="form-hint">Solo responsables asignados a ese proyecto</span>
                 </div>
                 <div class="form-group">
-                    <label for="story_points">Story Points</label>
-                    <input type="number" id="story_points" name="story_points"
-                           min="0" max="100"
-                           value="{{ actividad.story_points }}"
-                           placeholder="0">
-                    <span class="form-hint">Estimación del esfuerzo relativo (0–100)</span>
+                    <label for="story_points">Story Points *</label>
+                    <select id="story_points" name="story_points" required>
+                        <option value="">— Selecciona dificultad —</option>
+                        <option value="0"  {% if actividad.story_points == 0  %}selected{% endif %}>0 — Trivial</option>
+                        <option value="1"  {% if actividad.story_points == 1  %}selected{% endif %}>1 — Muy fácil</option>
+                        <option value="2"  {% if actividad.story_points == 2  %}selected{% endif %}>2 — Fácil</option>
+                        <option value="3"  {% if actividad.story_points == 3  %}selected{% endif %}>3 — Moderado</option>
+                        <option value="5"  {% if actividad.story_points == 5  %}selected{% endif %}>5 — Difícil</option>
+                        <option value="8"  {% if actividad.story_points == 8  %}selected{% endif %}>8 — Muy difícil</option>
+                        <option value="13" {% if actividad.story_points == 13 %}selected{% endif %}>13 — Complejo</option>
+                    </select>
+                    <span class="form-hint">Estimación de dificultad (escala Fibonacci)</span>
                 </div>
             </div>
 
@@ -118,10 +117,11 @@
 <script>
 var asignadosPorProyecto = {{ asignados_json | tojson }};
 var _actividadAsignadoActual = {{ actividad.id_asignado | tojson }};
+var _actividadSprintActual   = {{ actividad.id_sprint   | tojson }};
 
 // Al cargar, filtrar sprints y asignados del proyecto actual
 document.addEventListener('DOMContentLoaded', function() {
-    filtrarSprints();
+    cargarSprintsAjax(document.getElementById('id_proyecto').value, _actividadSprintActual);
     cargarAsignadosConSeleccion(_actividadAsignadoActual);
 });
 

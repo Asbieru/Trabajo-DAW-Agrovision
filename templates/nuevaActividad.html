@@ -36,7 +36,7 @@
                 <div class="form-group">
                     <label for="id_proyecto">Proyecto *</label>
                     <select id="id_proyecto" name="id_proyecto" required
-                            onchange="filtrarSprints(); cargarAsignados();">
+                            onchange="cargarSprintsAjax(this.value); cargarAsignados();">
                         <option value="">— Selecciona proyecto —</option>
                         {% for p in proyectos %}
                         <option value="{{ p.id_proyecto }}"
@@ -48,15 +48,10 @@
                 </div>
                 <div class="form-group">
                     <label for="id_sprint">Sprint (opcional)</label>
-                    <select id="id_sprint" name="id_sprint">
+                    <select id="id_sprint" name="id_sprint" disabled>
                         <option value="">— Sin sprint asignado —</option>
-                        {% for s in sprints %}
-                        <option value="{{ s.id_sprint }}" data-proyecto="{{ s.id_proyecto }}">
-                            [{{ s.nombre_proyecto }}] {{ s.nombre }}
-                        </option>
-                        {% endfor %}
                     </select>
-                    <span class="form-hint">Solo se muestran sprints del proyecto seleccionado</span>
+                    <span class="form-hint">Se cargan al seleccionar un proyecto</span>
                 </div>
             </div>
 
@@ -90,10 +85,18 @@
                     <span class="form-hint">Solo responsables asignados a ese proyecto</span>
                 </div>
                 <div class="form-group">
-                    <label for="story_points">Story Points</label>
-                    <input type="number" id="story_points" name="story_points"
-                           min="0" max="100" value="0" placeholder="0">
-                    <span class="form-hint">Estimación del esfuerzo relativo (0–100)</span>
+                    <label for="story_points">Story Points *</label>
+                    <select id="story_points" name="story_points" required>
+                        <option value="">— Selecciona dificultad —</option>
+                        <option value="0">0 — Trivial</option>
+                        <option value="1">1 — Muy fácil</option>
+                        <option value="2">2 — Fácil</option>
+                        <option value="3">3 — Moderado</option>
+                        <option value="5">5 — Difícil</option>
+                        <option value="8">8 — Muy difícil</option>
+                        <option value="13">13 — Complejo</option>
+                    </select>
+                    <span class="form-hint">Estimación de dificultad (escala Fibonacci)</span>
                 </div>
             </div>
 

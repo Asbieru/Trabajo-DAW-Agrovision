@@ -1167,17 +1167,52 @@ function eliminarActividad(idActividad, btn) {
    7. NUEVA ACTIVIDAD – nuevaActividad.html
    ============================================================ */
 
-function filtrarSprints() {
-    var proyectoId = document.getElementById('id_proyecto').value;
-    var sprintSel  = document.getElementById('id_sprint');
+/**
+ * Carga los sprints del proyecto seleccionado vía AJAX.
+ * @param {string|number} proyectoId  - id del proyecto
+ * @param {string|number} [sprintSeleccionado] - id del sprint a pre-seleccionar (edición)
+ */
+function cargarSprintsAjax(proyectoId, sprintSeleccionado) {
+    var sprintSel = document.getElementById('id_sprint');
     if (!sprintSel) return;
-    var opciones   = sprintSel.querySelectorAll('option');
 
-    opciones.forEach(function (op) {
-        if (!op.value) return;
-        op.style.display = (op.dataset.proyecto === proyectoId) ? '' : 'none';
-    });
-    sprintSel.value = '';
+    // Resetear combo
+    sprintSel.innerHTML = '<option value="">— Sin sprint asignado —</option>';
+
+    if (!proyectoId) {
+        sprintSel.disabled = true;
+        return;
+    }
+
+    fetch('/api/proyecto/' + proyectoId + '/sprints')
+        .then(function(resp) { return resp.json(); })
+        .then(function(data) {
+            if (!data.ok || !data.sprints || data.sprints.length === 0) {
+                // Proyecto sin sprints (duración < 1 semana → Kanban)
+                sprintSel.disabled = false;
+                return;
+            }
+            data.sprints.forEach(function(s) {
+                var op = document.createElement('option');
+                op.value = s.id_sprint;
+                op.textContent = s.nombre + ' (' + s.fecha_inicio + ' → ' + s.fecha_fin + ')';
+                if (sprintSeleccionado && s.id_sprint == sprintSeleccionado) {
+                    op.selected = true;
+                }
+                sprintSel.appendChild(op);
+            });
+            sprintSel.disabled = false;
+        })
+        .catch(function() {
+            sprintSel.disabled = false;
+        });
+}
+
+/* Mantiene compatibilidad: al cambiar proyecto en nueva actividad llama a AJAX */
+function filtrarSprints() {
+    var proyectoId = document.getElementById('id_proyecto') ?
+                     document.getElementById('id_proyecto').value : '';
+    cargarSprintsAjax(proyectoId);
 }
 
 function cargarAsignados() {
@@ -1214,7 +1249,8 @@ function cargarAsignados() {
     if (!document.getElementById('id_proyecto')) return;
 
     function arrancar() {
-        filtrarSprints();
+        var proyectoId = document.getElementById('id_proyecto').value;
+        cargarSprintsAjax(proyectoId);
         cargarAsignados();
     }
 

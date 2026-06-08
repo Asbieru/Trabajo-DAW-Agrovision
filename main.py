@@ -27,7 +27,8 @@ from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
                         listarAvances, insertarAvance, eliminarAvance,
                         eliminarProyecto, tieneActividadesPendientes,
-                        listarProyectosEnRevision, aprobarProyecto, rechazarProyecto)
+                        listarProyectosEnRevision, aprobarProyecto, rechazarProyecto,
+                        generarSprintsProyecto, listarSprintsPorProyecto)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos,
                             kpiSatisfaccion, comentariosCalificacionesRecientes,
@@ -944,11 +945,45 @@ def aprobacion_proyectos():
 @app.route('/api/proyecto/<int:id_proyecto>/aprobar', methods=['POST'])
 def api_aprobar_proyecto(id_proyecto):
     try:
+        from datetime import date
+        # Obtener datos del proyecto antes de aprobar para calcular sprints
+        proyecto = obtenerProyecto(id_proyecto)
         aprobarProyecto(id_proyecto)
+        # Generar sprints automáticamente si no los tiene ya
+        if proyecto and proyecto.get('fecha_inicio') and proyecto.get('fecha_fin_plan'):
+            from proyectoAD import listarSprintsPorProyecto
+            sprints_existentes = listarSprintsPorProyecto(id_proyecto)
+            if not sprints_existentes:
+                generarSprintsProyecto(
+                    id_proyecto,
+                    proyecto['fecha_inicio'],
+                    proyecto['fecha_fin_plan']
+                )
         return jsonify({'ok': True})
     except Exception as e:
         print(f'Error al aprobar proyecto: {e}')
         return jsonify({'ok': False, 'mensaje': 'Error al aprobar el proyecto.'})
+
+
+@app.route('/api/proyecto/<int:id_proyecto>/sprints')
+def api_sprints_por_proyecto(id_proyecto):
+    """Devuelve los sprints de un proyecto en JSON para el combo dinámico."""
+    try:
+        sprints = listarSprintsPorProyecto(id_proyecto)
+        resultado = [
+            {
+                'id_sprint': s['id_sprint'],
+                'nombre':    s['nombre'],
+                'estado':    s['estado'],
+                'fecha_inicio': str(s['fecha_inicio']),
+                'fecha_fin':    str(s['fecha_fin']),
+            }
+            for s in sprints
+        ]
+        return jsonify({'ok': True, 'sprints': resultado})
+    except Exception as e:
+        print(f'Error al obtener sprints: {e}')
+        return jsonify({'ok': False, 'sprints': []})
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/rechazar', methods=['POST'])
