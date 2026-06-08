@@ -18,6 +18,8 @@ Se usa esto
 # Crea la base de datos y las tablas o si no, no corre 
     pip install pymysql 
 
+    pip install openpyxl
+
 --------------------------------------------------------------------------------------------------
 
 # Qué hacer si hago cambios en versiones desactualizadas.

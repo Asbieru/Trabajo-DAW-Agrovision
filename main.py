@@ -1256,11 +1256,46 @@ def api_porcentaje_proyecto(id_proyecto):
 
 @app.route('/api/proyecto/<int:id_proyecto>/avances-grafico')
 def api_avances_grafico(id_proyecto):
+    proyecto = obtenerProyecto(id_proyecto)
     avances = listarAvances(id_proyecto)
     avances_cronologicos = list(reversed(avances))
-    fechas      = [av['fecha_reporte'].strftime('%d/%m') for av in avances_cronologicos]
-    porcentajes = [float(av['porcentaje_avance']) for av in avances_cronologicos]
-    return jsonify({'fechas': fechas, 'porcentajes': porcentajes})
+    
+    fechas = []
+    porcentajes_reales = []
+    porcentajes_estimados = []
+
+    if proyecto and proyecto.get('fecha_inicio') and proyecto.get('fecha_fin_plan'):
+        inicio = proyecto['fecha_inicio']
+        fin = proyecto['fecha_fin_plan']
+        # Calculamos la duración total del proyecto en días
+        duracion_total = (fin - inicio).days
+
+        for av in avances_cronologicos:
+            fecha_rep = av['fecha_reporte']
+            fechas.append(fecha_rep.strftime('%d/%m'))
+            porcentajes_reales.append(float(av['porcentaje_avance']))
+            
+            # Cálculo del Avance Estimado (Lineal / Roadmap)
+            if duracion_total > 0:
+                dias_transcurridos = (fecha_rep - inicio).days
+                esperado = (dias_transcurridos / duracion_total) * 100
+                # Evitamos que baje de 0% o pase de 100%
+                esperado = max(0, min(100, esperado))
+            else:
+                esperado = 100
+                
+            porcentajes_estimados.append(round(esperado, 1))
+    else:
+        # Fallback de seguridad si el proyecto no tiene fechas
+        fechas = [av['fecha_reporte'].strftime('%d/%m') for av in avances_cronologicos]
+        porcentajes_reales = [float(av['porcentaje_avance']) for av in avances_cronologicos]
+        porcentajes_estimados = [0] * len(avances_cronologicos)
+
+    return jsonify({
+        'fechas': fechas,
+        'porcentajes': porcentajes_reales,
+        'estimados': porcentajes_estimados
+    })
 
 @app.route('/api/avance/<int:id_avance>/eliminar', methods=['POST'])
 def api_eliminar_avance(id_avance):
