@@ -31,3 +31,31 @@ Se usa esto
 4. Si no deja subir cambios
     git add .
     git commit -m "" <- pon tu mensaje
+
+--------------------------------------------------------------------------------------------------
+
+# Como actualizar el público
+1. Entrar carpeta
+    cd ~/Trabajo-DAW-Agrovision
+2. Ver si se modificó conexión (no cambien conexión)
+    git status
+3. Traer cambios
+    git pull
+--------------------------------------------------------------------------------------------------
+
+# Conexion a BD pública
+    def obtenerconexion():
+        connection = pymysql.connect(
+            host='Cristhian18.mysql.pythonanywhere-services.com',
+            user='Cristhian18',
+            password='agrovision',
+            database='Cristhian18$agrovision',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        return connection
+
+--NOTA: si se desactiva y se cambia la coneccion poner en la terminal:
+
+    git update-index --skip-worktree conexion.py
+
+Cuando se coloque push y pull no se movera conexion.py
