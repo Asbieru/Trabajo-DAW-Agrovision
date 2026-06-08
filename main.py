@@ -13,8 +13,11 @@ from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuario
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       resolverTicket, guardarCalificacionTicket,
                       editarTicket, cancelarTicket, listarAplicaciones,
+                      listarAplicacionesActivas,
                       listarPosiblesAgentes, asignarTicket,
-                      obtenerAplicacion, calcularSLA)
+                      obtenerAplicacion, calcularSLA,
+                      insertarAplicacion, editarAplicacion, eliminarAplicacion,
+                      toggleEstadoAplicacion)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
                          actualizarEstadoActividad, eliminarActividad,
                          listarTodosSprints, listarAsignadosPorProyecto,
@@ -147,28 +150,18 @@ def index():
 
 @app.route('/ticket/nuevo')
 def form_ticket():
-    aplicaciones = listarAplicaciones()
+    aplicaciones = listarAplicacionesActivas()
     return render_template('NuevoTicket.html', aplicaciones=aplicaciones)
 
 
 @app.route('/ticket/guardar', methods=['POST'])
 def guardar_ticket():
     try:
-        prioridad     = request.form['prioridad']
-        intensidad    = request.form['intensidad']
-        id_aplicacion = request.form['id_aplicacion']
-        app_data      = obtenerAplicacion(id_aplicacion)
-        sla_horas     = calcularSLA(prioridad, intensidad,
-                                    app_data['peso'] if app_data else 3,
-                                    app_data['participantes_promedio'] if app_data else 5)
         obj = Ticket(
             titulo                = request.form['titulo'],
             tipo                  = request.form['tipo'],
-            prioridad             = prioridad,
-            intensidad            = intensidad,
             id_solicitante        = request.form['id_solicitante'],
-            id_aplicacion         = id_aplicacion,
-            sla_horas             = sla_horas,
+            id_aplicacion         = request.form['id_aplicacion'],
             descripcion           = request.form['descripcion'],
             link_img_descripcion  = request.form.get('link_img_descripcion', '').strip() or None,
         )
@@ -279,8 +272,6 @@ def guardar_edicion_ticket(id_ticket):
 
     titulo                = request.form.get('titulo', '').strip()
     tipo                  = request.form.get('tipo', '')
-    prioridad             = request.form.get('prioridad', '')
-    intensidad            = request.form.get('intensidad', '')
     id_aplicacion         = request.form.get('id_aplicacion', '')
     descripcion           = request.form.get('descripcion', '').strip()
     link_img_descripcion  = request.form.get('link_img_descripcion', '').strip() or None
@@ -288,11 +279,7 @@ def guardar_edicion_ticket(id_ticket):
     if not titulo:
         return redirect(url_for('form_editar_ticket', id_ticket=id_ticket))
 
-    app_data  = obtenerAplicacion(id_aplicacion)
-    sla_horas = calcularSLA(prioridad, intensidad,
-                            app_data['peso'] if app_data else 3,
-                            app_data['participantes_promedio'] if app_data else 5)
-    editarTicket(id_ticket, titulo, tipo, prioridad, intensidad, id_aplicacion, sla_horas, descripcion, link_img_descripcion)
+    editarTicket(id_ticket, titulo, tipo, id_aplicacion, descripcion, link_img_descripcion)
     return redirect(url_for('listar_tickets'))
 
 
@@ -310,7 +297,8 @@ def form_asignar_ticket(id_ticket):
     if not ticket or ticket['estado'] != 'solicitado':
         return redirect(url_for('listar_tickets'))
     agentes = listarPosiblesAgentes()
-    return render_template('asignarTicket.html', ticket=ticket, agentes=agentes)
+    aplicaciones = listarAplicaciones()
+    return render_template('asignarTicket.html', ticket=ticket, agentes=agentes, aplicaciones=aplicaciones)
 
 
 @app.route('/ticket/<int:id_ticket>/asignar', methods=['POST'])
@@ -318,14 +306,76 @@ def guardar_asignacion(id_ticket):
     id_agente = request.form.get('id_agente')
     if not id_agente:
         return redirect(url_for('form_asignar_ticket', id_ticket=id_ticket))
+    prioridad     = request.form.get('prioridad', 'media')
+    intensidad    = request.form.get('intensidad', 'media')
+    sla_raw       = request.form.get('sla_horas', '').strip()
+    if sla_raw:
+        sla_horas = int(sla_raw)
+    else:
+        id_app = request.form.get('id_aplicacion_hidden', '')
+        app_data = obtenerAplicacion(int(id_app)) if id_app else None
+        sla_horas = calcularSLA(prioridad, intensidad,
+                                app_data['peso'] if app_data else 3,
+                                app_data['participantes_promedio'] if app_data else 5)
     try:
-        asignarTicket(id_ticket, int(id_agente))
+        asignarTicket(id_ticket, int(id_agente), prioridad, intensidad, sla_horas)
     except ValueError:
         return redirect(url_for('listar_tickets'))
     except Exception as e:
         print(f'Error al asignar ticket: {e}')
         abort(500)
     return redirect(url_for('listar_tickets'))
+
+
+# ──────────────────────────────────────────────────────────────
+#  APLICACIONES CRUD  (solo admin)
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/aplicaciones')
+def listar_aplicaciones():
+    aplicaciones = listarAplicaciones()
+    return render_template('gestionAplicaciones.html', aplicaciones=aplicaciones)
+
+
+@app.route('/aplicacion/nueva', methods=['GET', 'POST'])
+def nueva_aplicacion():
+    if request.method == 'POST':
+        nombre                = request.form.get('nombre', '').strip()
+        peso                  = request.form.get('peso', 3)
+        descripcion           = request.form.get('descripcion', '').strip()
+        participantes_promedio = request.form.get('participantes_promedio', 5)
+        if nombre:
+            insertarAplicacion(nombre, peso, descripcion, participantes_promedio)
+            return redirect(url_for('listar_aplicaciones') + '?creada=1')
+    return render_template('formularioAplicacion.html', aplicacion=None)
+
+
+@app.route('/aplicacion/<int:id_aplicacion>/editar', methods=['GET', 'POST'])
+def editar_aplicacion_route(id_aplicacion):
+    app = obtenerAplicacion(id_aplicacion)
+    if not app:
+        abort(404)
+    if request.method == 'POST':
+        nombre                = request.form.get('nombre', '').strip()
+        peso                  = request.form.get('peso', 3)
+        descripcion           = request.form.get('descripcion', '').strip()
+        participantes_promedio = request.form.get('participantes_promedio', 5)
+        if nombre:
+            editarAplicacion(id_aplicacion, nombre, peso, descripcion, participantes_promedio)
+            return redirect(url_for('listar_aplicaciones') + '?editada=1')
+    return render_template('formularioAplicacion.html', aplicacion=app)
+
+
+@app.route('/aplicacion/<int:id_aplicacion>/eliminar', methods=['POST'])
+def eliminar_aplicacion_route(id_aplicacion):
+    eliminarAplicacion(id_aplicacion)
+    return redirect(url_for('listar_aplicaciones') + '?eliminada=1')
+
+
+@app.route('/aplicacion/<int:id_aplicacion>/toggle-estado', methods=['POST'])
+def toggle_estado_aplicacion(id_aplicacion):
+    toggleEstadoAplicacion(id_aplicacion)
+    return redirect(url_for('listar_aplicaciones'))
 
 
 # ──────────────────────────────────────────────────────────────

@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS aplicaciones (
     nombre VARCHAR(100) NOT NULL,
     peso INT NOT NULL DEFAULT 1,
     descripcion TEXT NULL,
-    participantes_promedio INT NOT NULL DEFAULT 1
+    participantes_promedio INT NOT NULL DEFAULT 1,
+    estado ENUM('activo','cerrado') NOT NULL DEFAULT 'activo'
 ) ENGINE=InnoDB;
 
 INSERT INTO aplicaciones (nombre, peso, descripcion, participantes_promedio) VALUES
@@ -67,11 +68,8 @@ CREATE TABLE IF NOT EXISTS tickets (
     id_ticket INT AUTO_INCREMENT PRIMARY KEY,
     titulo VARCHAR(200) NOT NULL,
     tipo ENUM('incidencia','peticion','consulta') NOT NULL,
-    prioridad ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
-    intensidad ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
     id_solicitante INT NOT NULL,
     id_aplicacion INT NOT NULL,
-    sla_horas SMALLINT NOT NULL DEFAULT 24,
     estado ENUM('solicitado','en_progreso','resuelto','cerrado','cancelado') NOT NULL DEFAULT 'solicitado',
     f_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     f_cierre DATETIME NULL,
@@ -94,6 +92,9 @@ CREATE TABLE IF NOT EXISTS detalle_ticket (
     descripcion TEXT NOT NULL,
     notas_resolucion TEXT NULL,
     link_img_resolucion TEXT NULL,
+    prioridad ENUM('critica','alta','media','baja') DEFAULT 'media',
+    intensidad ENUM('critica','alta','media','baja') DEFAULT 'media',
+    sla_horas SMALLINT DEFAULT 24,
     CONSTRAINT fk_detalle_ticket FOREIGN KEY (id_ticket)
         REFERENCES tickets(id_ticket) ON DELETE CASCADE,
     CONSTRAINT fk_detalle_agente FOREIGN KEY (id_agente)
@@ -245,21 +246,21 @@ VALUES
 -- DATOS DE EJEMPLO: TICKETS + DETALLES
 -- ============================================================
 
-INSERT INTO tickets (id_ticket, titulo, tipo, prioridad, intensidad, id_solicitante, id_aplicacion, sla_horas, estado, f_registro, f_cierre)
+INSERT INTO tickets (id_ticket, titulo, tipo, id_solicitante, id_aplicacion, estado, f_registro, f_cierre)
 VALUES
-(1, 'Error al exportar PDF',  'incidencia', 'alta',   'alta',   1, 6, 8,  'cerrado',   '2025-05-01 10:00:00', '2025-05-03 15:00:00'),
-(2, 'Acceso denegado',        'incidencia', 'critica','critica',1, 8, 4,  'cerrado',   '2025-05-02 09:00:00', '2025-05-02 18:00:00'),
-(3, 'Nuevo usuario',          'peticion',   'media',  'baja',   1,10,24, 'cerrado',   '2025-05-03 08:00:00', '2025-05-05 12:00:00'),
-(4, 'Lentitud tickets',       'incidencia', 'alta',   'alta',   1, 9, 8,  'resuelto',  '2025-05-04 14:00:00', NULL),
-(5, 'Error login',            'incidencia', 'critica','critica',1,10, 2,  'cerrado',   '2025-05-05 07:00:00', '2025-05-05 16:00:00');
+(1, 'Error al exportar PDF',  'incidencia', 1, 6, 'cerrado',  '2025-05-01 10:00:00', '2025-05-03 15:00:00'),
+(2, 'Acceso denegado',        'incidencia', 1, 8, 'cerrado',  '2025-05-02 09:00:00', '2025-05-02 18:00:00'),
+(3, 'Nuevo usuario',          'peticion',   1,10, 'cerrado',  '2025-05-03 08:00:00', '2025-05-05 12:00:00'),
+(4, 'Lentitud tickets',       'incidencia', 1, 9, 'resuelto', '2025-05-04 14:00:00', NULL),
+(5, 'Error login',            'incidencia', 1,10, 'cerrado',  '2025-05-05 07:00:00', '2025-05-05 16:00:00');
 
-INSERT INTO detalle_ticket (id_ticket, f_asignacion_agente, id_agente, f_solucion, f_revision, descripcion, notas_resolucion)
+INSERT INTO detalle_ticket (id_ticket, f_asignacion_agente, id_agente, f_solucion, f_revision, descripcion, notas_resolucion, prioridad, intensidad, sla_horas)
 VALUES
-(1, '2025-05-01 11:00:00', 2, '2025-05-03 14:00:00', '2025-05-03 15:00:00', 'No exporta PDF', 'Se corrigió la librería de exportación'),
-(2, '2025-05-02 10:00:00', 5, '2025-05-02 17:00:00', '2025-05-02 18:00:00', 'No puede ingresar', 'Se restauró acceso desde el panel'),
-(3, '2025-05-03 09:00:00', 2, '2025-05-05 11:00:00', '2025-05-05 12:00:00', 'Crear usuario', 'Usuario creado exitosamente'),
-(4, '2025-05-04 15:00:00', 5, '2025-05-06 10:00:00', NULL, 'Carga lenta', 'Se optimizaron consultas, pendiente revisión'),
-(5, '2025-05-05 08:00:00', 2, '2025-05-05 15:00:00', '2025-05-05 16:00:00', 'Error 500 login', 'Corregido error en microservicio de autenticación');
+(1, '2025-05-01 11:00:00', 2, '2025-05-03 14:00:00', '2025-05-03 15:00:00', 'No exporta PDF', 'Se corrigió la librería de exportación', 'alta', 'alta', 8),
+(2, '2025-05-02 10:00:00', 5, '2025-05-02 17:00:00', '2025-05-02 18:00:00', 'No puede ingresar', 'Se restauró acceso desde el panel', 'critica', 'critica', 4),
+(3, '2025-05-03 09:00:00', 2, '2025-05-05 11:00:00', '2025-05-05 12:00:00', 'Crear usuario', 'Usuario creado exitosamente', 'media', 'baja', 24),
+(4, '2025-05-04 15:00:00', 5, '2025-05-06 10:00:00', NULL, 'Carga lenta', 'Se optimizaron consultas, pendiente revisión', 'alta', 'alta', 8),
+(5, '2025-05-05 08:00:00', 2, '2025-05-05 15:00:00', '2025-05-05 16:00:00', 'Error 500 login', 'Corregido error en microservicio de autenticación', 'critica', 'critica', 2);
 
 INSERT INTO calificaciones_ticket (id_ticket, estrellas, observacion) VALUES
 (1, 4, 'Atencion buena, se resolvio con seguimiento.'),

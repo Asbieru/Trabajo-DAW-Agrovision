@@ -118,6 +118,11 @@ body {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    position: sticky;
+    top: 60px;
+    align-self: flex-start;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
 }
 .sidebar-section {
     padding: 8px 18px 3px;
@@ -192,6 +197,7 @@ body {
 .btn-outline { background: transparent; color: var(--verde); border: 1.5px solid var(--verde); }
 .btn-outline:hover { background: var(--verde-claro); }
 .btn-rojo { background: var(--rojo); color: var(--blanco); }
+.btn-rojo:hover { background: #b71c1c; transform: translateY(-1px); box-shadow: var(--sombra); }
 .btn-acento { background: var(--acento); color: var(--blanco); }
 .btn-acento:hover { background: #c98a00; transform: translateY(-1px); box-shadow: var(--sombra); }
 .btn-sm { padding: 5px 13px; font-size: 0.8rem; }
@@ -542,6 +548,14 @@ a.ticket-link:hover strong { text-decoration: underline; }
     }
     .td-accion::before { display: none; }
     .col-aplicacion, .col-agente, .col-apertura, .col-calificacion { display: none !important; }
+}
+
+/* Botones de acción en tabla de aplicaciones */
+.td-accion-apps {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 /* ── INDICADORES ESPECÍFICO ─────────── */

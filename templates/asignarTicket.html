@@ -11,17 +11,15 @@
 </div>
 
 <div class="card">
-    <div class="card-header">Detalle del ticket</div>
+    <div class="card-header">📋 Detalle del ticket</div>
     <div class="card-body">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
             <div><strong>Título:</strong> {{ ticket.titulo }}</div>
             <div><strong>Tipo:</strong> {{ ticket.tipo }}</div>
-            <div><strong>Prioridad:</strong> {{ ticket.prioridad }}</div>
-            <div><strong>Intensidad:</strong> {{ ticket.intensidad }}</div>
             <div><strong>Aplicación:</strong> {{ ticket.nombre_aplicacion }}</div>
             <div><strong>Solicitante:</strong> {{ ticket.nombre_solicitante }}</div>
             <div><strong>Registro:</strong> {{ ticket.f_registro.strftime('%d/%m/%Y %H:%M') if ticket.f_registro else '—' }}</div>
-            <div><strong>SLA:</strong> {{ ticket.sla_horas }}h</div>
+            <div><strong>Estado:</strong> <span class="badge badge-rojo">Solicitado</span></div>
         </div>
         <div style="margin-bottom:24px;">
             <strong>Descripción:</strong><br>
@@ -36,25 +34,93 @@
     </div>
 </div>
 
+{% if ticket.id_detalle %}
 <div class="card">
-    <div class="card-header">Seleccionar agente</div>
+    <div class="card-header">📝 Detalle existente</div>
+    <div class="card-body">
+        <p style="color:var(--gris-texto);margin:0;"><strong>Este ticket ya tiene un detalle registrado</strong></p>
+        {% if ticket.descripcion %}
+        <p style="margin:8px 0;">Descripción: {{ ticket.descripcion }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">⚙️ Configurar asignación</div>
     <div class="card-body">
         <form action="{{ url_for('guardar_asignacion', id_ticket=ticket.id_ticket) }}" method="POST">
-            <div class="form-group">
-                <label for="id_agente">Agente a asignar *</label>
-                <select id="id_agente" name="id_agente" required>
-                    <option value="">— Selecciona un agente —</option>
-                    {% for a in agentes %}
-                        <option value="{{ a.id_usuario }}">{{ a.nombre_completo }} ({{ a.rol }})</option>
-                    {% endfor %}
-                </select>
-                <span class="form-hint">Solo se muestran usuarios con rol soporte o programador</span>
+            <input type="hidden" name="id_aplicacion_hidden" value="{{ ticket.id_aplicacion }}">
+
+            <div class="form-grid tres form-section-spacing">
+                <div class="form-group">
+                    <label for="id_agente">Agente a asignar *</label>
+                    <select id="id_agente" name="id_agente" required>
+                        <option value="">— Selecciona un agente —</option>
+                        {% for a in agentes %}
+                            <option value="{{ a.id_usuario }}">{{ a.nombre_completo }} ({{ a.rol }})</option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-hint">Solo se muestran usuarios con rol soporte o programador</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="prioridad">Prioridad *</label>
+                    <select id="prioridad" name="prioridad" required>
+                        <option value="critica">🚨 Crítica – sistema caído</option>
+                        <option value="alta">🔴 Alta – afecta producción</option>
+                        <option value="media" selected>🟡 Media</option>
+                        <option value="baja">🟢 Baja</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="intensidad">Intensidad *</label>
+                    <select id="intensidad" name="intensidad" required>
+                        <option value="critica">🔴 Crítica</option>
+                        <option value="alta">🟠 Alta</option>
+                        <option value="media" selected>🟡 Media</option>
+                        <option value="baja">🟢 Baja</option>
+                    </select>
+                </div>
             </div>
+
+            <div class="form-group form-section-spacing">
+                <label for="sla_horas">SLA (horas)</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="number" id="sla_horas" name="sla_horas"
+                           placeholder="Automático" min="2" max="240"
+                           style="max-width:200px;">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="calcularSLA()">⟳ Calcular automático</button>
+                </div>
+                <span class="form-hint">Déjalo vacío para calcular automáticamente según prioridad e intensidad</span>
+            </div>
+
             <div class="form-actions" style="margin-top:20px;">
                 <button type="submit" class="btn btn-verde">✓ Asignar y pasar a En progreso</button>
                 <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">Cancelar</a>
             </div>
         </form>
+        <div class="form-actions" style="margin-top:12px;">
+            <form action="{{ url_for('cancelar_ticket', id_ticket=ticket.id_ticket) }}" method="POST"
+                  onsubmit="return confirm('¿Estás seguro de cancelar este ticket?');">
+                <button type="submit" class="btn btn-rojo">🚫 Cancelar ticket</button>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+function calcularSLA() {
+    var prioridad = document.getElementById('prioridad').value;
+    var intensidad = document.getElementById('intensidad').value;
+    var base = {'critica': 4, 'alta': 8, 'media': 16, 'baja': 32};
+    var intMult = {'critica': 1.8, 'alta': 1.4, 'media': 1.0, 'baja': 0.6};
+    var b = base[prioridad] || 16;
+    var m = intMult[intensidad] || 1.0;
+    var sla = Math.round(b * m);
+    sla = Math.max(2, Math.min(240, sla));
+    document.getElementById('sla_horas').value = sla;
+}
+</script>
 {% endblock %}

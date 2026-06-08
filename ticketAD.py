@@ -39,24 +39,35 @@ def asegurarTablas():
                     descripcion TEXT NOT NULL,
                     notas_resolucion TEXT NULL,
                     link_img_resolucion TEXT NULL,
+                    prioridad ENUM('critica','alta','media','baja') DEFAULT 'media',
+                    intensidad ENUM('critica','alta','media','baja') DEFAULT 'media',
+                    sla_horas SMALLINT DEFAULT 24,
                     CONSTRAINT fk_detalle_ticket FOREIGN KEY (id_ticket)
                         REFERENCES tickets(id_ticket) ON DELETE CASCADE,
                     CONSTRAINT fk_detalle_agente FOREIGN KEY (id_agente)
                         REFERENCES usuarios(id_usuario)
                 ) ENGINE=InnoDB
             """)
+            # Migración: si la tabla ya existe sin las columnas nuevas, agregarlas
+            for col in ('prioridad', 'intensidad', 'sla_horas'):
+                cursor.execute("""
+                    SELECT COUNT(*) FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'detalle_ticket'
+                      AND COLUMN_NAME = %s
+                """, (col,))
+                if cursor.fetchone()['COUNT(*)'] == 0:
+                    tipo = "ENUM('critica','alta','media','baja') DEFAULT 'media'" if col != 'sla_horas' else "SMALLINT DEFAULT 24"
+                    cursor.execute(f"ALTER TABLE detalle_ticket ADD COLUMN {col} {tipo}")
         conn.commit()
 
 
 class Ticket:
-    def __init__(self, titulo, tipo, prioridad, intensidad, id_solicitante, id_aplicacion, sla_horas, descripcion, link_img_descripcion=None):
+    def __init__(self, titulo, tipo, id_solicitante, id_aplicacion, descripcion, link_img_descripcion=None):
         self.titulo                = titulo
         self.tipo                  = tipo
-        self.prioridad             = prioridad
-        self.intensidad            = intensidad
         self.id_solicitante        = id_solicitante
         self.id_aplicacion         = id_aplicacion
-        self.sla_horas             = sla_horas
         self.descripcion           = descripcion
         self.link_img_descripcion  = link_img_descripcion
 
@@ -68,7 +79,12 @@ def obtenerTicket(id_ticket):
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT t.*,
+                SELECT t.id_ticket, t.titulo, t.tipo, t.estado,
+                       t.f_registro, t.f_cierre,
+                       t.id_solicitante, t.id_aplicacion,
+                       IFNULL(d.prioridad, 'media') AS prioridad,
+                       IFNULL(d.intensidad, 'media') AS intensidad,
+                       IFNULL(d.sla_horas, 24) AS sla_horas,
                        d.id_detalle, d.f_asignacion_agente, d.id_agente,
                        d.f_solucion, d.f_revision,
                        d.link_img_descripcion, d.descripcion,
@@ -98,12 +114,11 @@ def insertarTicket(obj):
         with conn.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO tickets
-                    (titulo, tipo, prioridad, intensidad,
-                     id_solicitante, id_aplicacion, sla_horas)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (titulo, tipo, id_solicitante, id_aplicacion)
+                VALUES (%s, %s, %s, %s)
             """, (
-                obj.titulo, obj.tipo, obj.prioridad, obj.intensidad,
-                obj.id_solicitante, obj.id_aplicacion, obj.sla_horas
+                obj.titulo, obj.tipo,
+                obj.id_solicitante, obj.id_aplicacion
             ))
             id_ticket = cursor.lastrowid
             cursor.execute("""
@@ -115,8 +130,8 @@ def insertarTicket(obj):
     return id_ticket
 
 
-def editarTicket(id_ticket, titulo, tipo, prioridad, intensidad, id_aplicacion, sla_horas, descripcion, link_img_descripcion=None):
-    """Actualiza los campos editables de un ticket."""
+def editarTicket(id_ticket, titulo, tipo, id_aplicacion, descripcion, link_img_descripcion=None):
+    """Actualiza los campos editables de un ticket (sin prioridad/intensidad/SLA)."""
     asegurarTablas()
     conn = obtenerconexion()
     with conn:
@@ -125,13 +140,10 @@ def editarTicket(id_ticket, titulo, tipo, prioridad, intensidad, id_aplicacion, 
                 UPDATE tickets
                    SET titulo         = %s,
                        tipo           = %s,
-                       prioridad      = %s,
-                       intensidad     = %s,
-                       id_aplicacion  = %s,
-                       sla_horas      = %s
+                       id_aplicacion  = %s
                   WHERE id_ticket = %s
                     AND estado = 'solicitado'
-             """, (titulo, tipo, prioridad, intensidad, id_aplicacion, sla_horas, id_ticket))
+             """, (titulo, tipo, id_aplicacion, id_ticket))
             cursor.execute("""
                 INSERT INTO detalle_ticket (id_ticket, descripcion, link_img_descripcion)
                 VALUES (%s, %s, %s)
@@ -216,9 +228,12 @@ def listarTickets():
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT t.id_ticket, t.titulo, t.tipo, t.prioridad, t.intensidad,
-                       t.estado, t.f_registro, t.sla_horas, t.f_cierre,
+                SELECT t.id_ticket, t.titulo, t.tipo, t.estado,
+                       t.f_registro, t.f_cierre,
                        t.id_solicitante, t.id_aplicacion,
+                       IFNULL(d.prioridad, 'media') AS prioridad,
+                       IFNULL(d.intensidad, 'media') AS intensidad,
+                       IFNULL(d.sla_horas, 24) AS sla_horas,
                        d.id_detalle, d.f_asignacion_agente, d.id_agente,
                        d.f_solucion, d.f_revision,
                        d.link_img_descripcion, d.descripcion,
@@ -237,7 +252,7 @@ def listarTickets():
                 LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
                 WHERE t.estado NOT IN ('cancelado')
                 ORDER BY
-                    FIELD(t.prioridad,'critica','alta','media','baja'),
+                    FIELD(IFNULL(d.prioridad, 'media'),'critica','alta','media','baja'),
                     t.f_registro DESC
             """)
             return cursor.fetchall()
@@ -249,8 +264,22 @@ def listarAplicaciones():
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
+                SELECT id_aplicacion, nombre, peso, descripcion, participantes_promedio, estado
+                FROM aplicaciones
+                ORDER BY nombre
+            """)
+            return cursor.fetchall()
+
+
+def listarAplicacionesActivas():
+    """Retorna solo aplicaciones activas."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
                 SELECT id_aplicacion, nombre, peso, descripcion, participantes_promedio
                 FROM aplicaciones
+                WHERE estado = 'activo'
                 ORDER BY nombre
             """)
             return cursor.fetchall()
@@ -262,11 +291,60 @@ def obtenerAplicacion(id_aplicacion):
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT id_aplicacion, nombre, peso, descripcion, participantes_promedio
+                SELECT id_aplicacion, nombre, peso, descripcion, participantes_promedio, estado
                 FROM aplicaciones
                 WHERE id_aplicacion = %s
             """, (id_aplicacion,))
             return cursor.fetchone()
+
+
+def insertarAplicacion(nombre, peso, descripcion, participantes_promedio):
+    """Inserta una nueva aplicación."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO aplicaciones (nombre, peso, descripcion, participantes_promedio, estado)
+                VALUES (%s, %s, %s, %s, 'activo')
+            """, (nombre, peso, descripcion, participantes_promedio))
+        conn.commit()
+
+
+def editarAplicacion(id_aplicacion, nombre, peso, descripcion, participantes_promedio):
+    """Actualiza una aplicación existente."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE aplicaciones
+                   SET nombre = %s, peso = %s, descripcion = %s, participantes_promedio = %s
+                 WHERE id_aplicacion = %s
+            """, (nombre, peso, descripcion, participantes_promedio, id_aplicacion))
+        conn.commit()
+
+
+def eliminarAplicacion(id_aplicacion):
+    """Elimina una aplicación."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                DELETE FROM aplicaciones WHERE id_aplicacion = %s
+            """, (id_aplicacion,))
+        conn.commit()
+
+
+def toggleEstadoAplicacion(id_aplicacion):
+    """Cambia entre activo/cerrado."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE aplicaciones
+                   SET estado = IF(estado = 'activo', 'cerrado', 'activo')
+                 WHERE id_aplicacion = %s
+            """, (id_aplicacion,))
+        conn.commit()
 
 
 def calcularSLA(prioridad, intensidad, peso, participantes_promedio):
@@ -294,7 +372,7 @@ def listarPosiblesAgentes():
             return cursor.fetchall()
 
 
-def asignarTicket(id_ticket, id_agente):
+def asignarTicket(id_ticket, id_agente, prioridad, intensidad, sla_horas):
     """Asigna un agente a un ticket en estado 'solicitado' y lo pasa a 'en_progreso'."""
     from datetime import datetime
     ahora = datetime.now()
@@ -310,10 +388,14 @@ def asignarTicket(id_ticket, id_agente):
             if cursor.rowcount == 0:
                 raise ValueError("El ticket no está en estado 'solicitado' o no existe.")
             cursor.execute("""
-                INSERT INTO detalle_ticket (id_ticket, id_agente, f_asignacion_agente)
-                VALUES (%s, %s, %s)
+                INSERT INTO detalle_ticket (id_ticket, id_agente, f_asignacion_agente,
+                                            prioridad, intensidad, sla_horas)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     id_agente           = VALUES(id_agente),
-                    f_asignacion_agente = VALUES(f_asignacion_agente)
-            """, (id_ticket, id_agente, ahora))
+                    f_asignacion_agente = VALUES(f_asignacion_agente),
+                    prioridad           = VALUES(prioridad),
+                    intensidad          = VALUES(intensidad),
+                    sla_horas           = VALUES(sla_horas)
+            """, (id_ticket, id_agente, ahora, prioridad, intensidad, sla_horas))
         conn.commit()

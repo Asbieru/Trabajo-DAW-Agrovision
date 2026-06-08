@@ -52,6 +52,11 @@
            data-vis="programador admin">
             <span class="ico">🔧</span> Resolver tickets
         </a>
+        <a href="{{ url_for('listar_aplicaciones') }}"
+           class="{{ 'activo' if request.endpoint in ('listar_aplicaciones', 'nueva_aplicacion', 'editar_aplicacion_route') else '' }}"
+           data-vis="admin">
+            <span class="ico">📦</span> Aplicaciones
+        </a>
 
         <div class="sidebar-section">Proyectos</div>
         <a href="{{ url_for('form_proyecto') }}"

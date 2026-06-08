@@ -5,13 +5,13 @@
 <div class="page-header">
     <div>
         <h1>✏️ Editar ticket <span style="color:var(--verde);">SD-{{ ticket.id_ticket }}</span></h1>
-        <p>Solo disponible mientras el ticket está <strong>solicitado o en progreso</strong></p>
+        <p>Solo disponible mientras el ticket está en <strong>solicitado</strong></p>
     </div>
     <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
 </div>
 
 <div class="alerta alerta-info" style="margin-bottom:1.5rem;">
-    ⚠️ <strong>Nota:</strong> Solo puedes editar tickets en estado <em>Solicitado</em> o <em>En progreso</em>.
+    ⚠️ <strong>Nota:</strong> Solo puedes editar tickets en estado <em>Solicitado</em>.
 </div>
 
 <div class="card">
@@ -27,34 +27,14 @@
                        placeholder="Resume el problema en una línea clara" required>
             </div>
 
-            <!-- Tipo, Prioridad, Intensidad, Aplicación -->
-            <div class="form-grid cuatro form-section-spacing">
+            <!-- Tipo, Aplicación -->
+            <div class="form-grid dos form-section-spacing">
                 <div class="form-group">
                     <label for="tipo">Tipo de solicitud *</label>
                     <select id="tipo" name="tipo" required>
                         <option value="incidencia" {% if ticket.tipo == 'incidencia' %}selected{% endif %}>🔴 Incidencia (error / falla)</option>
                         <option value="peticion"   {% if ticket.tipo == 'peticion'   %}selected{% endif %}>🔵 Petición (acceso / cuenta)</option>
                         <option value="consulta"   {% if ticket.tipo == 'consulta'   %}selected{% endif %}>🟡 Consulta</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="prioridad">Prioridad *</label>
-                    <select id="prioridad" name="prioridad" required>
-                        <option value="critica" {% if ticket.prioridad == 'critica' %}selected{% endif %}>🚨 Crítica – sistema caído</option>
-                        <option value="alta"    {% if ticket.prioridad == 'alta'    %}selected{% endif %}>🔴 Alta – afecta producción</option>
-                        <option value="media"   {% if ticket.prioridad == 'media'   %}selected{% endif %}>🟡 Media</option>
-                        <option value="baja"    {% if ticket.prioridad == 'baja'    %}selected{% endif %}>🟢 Baja</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="intensidad">Intensidad *</label>
-                    <select id="intensidad" name="intensidad" required>
-                        <option value="critica" {% if ticket.intensidad == 'critica' %}selected{% endif %}>🔴 Crítica</option>
-                        <option value="alta"    {% if ticket.intensidad == 'alta'    %}selected{% endif %}>🟠 Alta</option>
-                        <option value="media"   {% if ticket.intensidad == 'media'   %}selected{% endif %}>🟡 Media</option>
-                        <option value="baja"    {% if ticket.intensidad == 'baja'    %}selected{% endif %}>🟢 Baja</option>
                     </select>
                 </div>
 

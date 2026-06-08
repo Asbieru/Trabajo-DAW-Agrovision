@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Aplicaciones{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>📦 Aplicaciones</h1>
+        <p>Gestión de aplicaciones del sistema</p>
+    </div>
+    <a class="btn btn-verde" href="{{ url_for('nueva_aplicacion') }}">+ Nueva aplicación</a>
+</div>
+
+{% if request.args.get('creada') %}
+<div class="calificacion-alerta exito">✅ Aplicación creada correctamente.</div>
+{% elif request.args.get('editada') %}
+<div class="calificacion-alerta exito">✅ Aplicación actualizada correctamente.</div>
+{% elif request.args.get('eliminada') %}
+<div class="calificacion-alerta exito">✅ Aplicación eliminada.</div>
+{% endif %}
+
+<div class="card">
+    <div class="tabla-wrap">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Importancia</th>
+                    <th>Participantes</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in aplicaciones %}
+                <tr>
+                    <td>{{ app.id_aplicacion }}</td>
+                    <td><strong>{{ app.nombre }}</strong></td>
+                    <td>{{ app.peso }}</td>
+                    <td>{{ app.participantes_promedio }}</td>
+                    <td style="color:var(--gris-texto);font-size:0.84rem;">{{ app.descripcion or '—' }}</td>
+                    <td>
+                        {% if app.estado == 'activo' %}
+                            <span class="badge badge-verde">Activo</span>
+                        {% else %}
+                            <span class="badge badge-gris">Cerrado</span>
+                        {% endif %}
+                    </td>
+                    <td class="td-accion td-accion-apps">
+                        <a href="{{ url_for('editar_aplicacion_route', id_aplicacion=app.id_aplicacion) }}"
+                           class="btn btn-sm btn-outline">✏️ Editar</a>
+                        <form action="{{ url_for('toggle_estado_aplicacion', id_aplicacion=app.id_aplicacion) }}"
+                              method="POST" style="display:inline;">
+                            {% if app.estado == 'activo' %}
+                                <button type="submit" class="btn btn-sm btn-acento">🔒 Cerrar</button>
+                            {% else %}
+                                <button type="submit" class="btn btn-sm btn-verde">✅ Reactivar</button>
+                            {% endif %}
+                        </form>
+                        <button type="button" class="btn btn-sm btn-rojo"
+                                onclick="confirmarEliminarApp({{ app.id_aplicacion }}, '{{ app.nombre|replace("'", "\\'") }}')">🗑️</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="tabla-empty">
+                        No hay aplicaciones registradas.
+                        <a href="{{ url_for('nueva_aplicacion') }}" style="color:var(--verde);">Crear primera aplicación →</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ══ MODAL CONFIRMAR ELIMINAR APLICACIÓN ══ -->
+<div id="modal-eliminar-app" class="av-modal-overlay" style="display:none;">
+    <div class="av-modal-box">
+        <div style="font-size:2rem;margin-bottom:10px;">🗑️</div>
+        <h3 style="margin:0 0 8px 0;font-size:1.05rem;">¿Eliminar aplicación?</h3>
+        <p id="modal-elim-app-texto" style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;"></p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+            <form id="modal-elim-app-form" method="POST" style="display:inline;">
+                <button type="submit" class="btn btn-sm"
+                        style="background:var(--rojo);color:#fff;border:none;border-radius:6px;cursor:pointer;padding:8px 24px;font-size:0.88rem;font-weight:600;">
+                    Sí, eliminar
+                </button>
+            </form>
+            <button onclick="cerrarModalEliminarApp()"
+                    class="btn btn-sm btn-outline"
+                    style="padding:8px 24px;font-size:0.88rem;">
+                No, cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+var _elimAppId = null;
+
+function confirmarEliminarApp(id, nombre) {
+    _elimAppId = id;
+    var modal = document.getElementById('modal-eliminar-app');
+    var texto = document.getElementById('modal-elim-app-texto');
+    if (texto) texto.textContent = '¿Eliminar "' + nombre + '"? Los tickets asociados perderán la referencia.';
+    var form = document.getElementById('modal-elim-app-form');
+    if (form) form.action = '/aplicacion/' + id + '/eliminar';
+    if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalEliminarApp() {
+    var modal = document.getElementById('modal-eliminar-app');
+    if (modal) modal.style.display = 'none';
+    _elimAppId = null;
+}
+
+document.addEventListener('click', function(e) {
+    var modal = document.getElementById('modal-eliminar-app');
+    if (e.target === modal) cerrarModalEliminarApp();
+});
+</script>
+{% endblock %}
