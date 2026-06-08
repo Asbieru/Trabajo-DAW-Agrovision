@@ -7,7 +7,10 @@
         <h1>📁 Proyectos de software</h1>
         <p>Gestión ágil de proyectos en curso</p>
     </div>
-    <a class="btn btn-verde" href="{{ url_for('form_proyecto') }}">+ Nuevo proyecto</a>
+    <div style="display:flex;gap:10px;align-items:center;">
+        <a class="btn btn-outline aprobacion-solo-admin" href="{{ url_for('aprobacion_proyectos') }}" style="display:none;">✅ Aprobación de proyectos</a>
+        <a class="btn btn-verde" href="{{ url_for('form_proyecto') }}">+ Nuevo proyecto</a>
+    </div>
 </div>
 
 <div class="card">
@@ -17,7 +20,7 @@
                 <tr>
                     <th>#</th>
                     <th>Nombre</th>
-                    <th>Responsable</th>
+                    <th>Stakeholder</th>
                     <th>Estado</th>
                     <th>Inicio</th>
                     <th>Fin planificado</th>
@@ -31,8 +34,8 @@
                         <td class="proyecto-id">PR-{{ p.id_proyecto }}</td>
                         <td><strong>{{ p.nombre }}</strong></td>
                         <td>
-                            {% if p.responsables %}
-                                {% for nombre in p.responsables %}
+                            {% if p.stakeholders %}
+                                {% for nombre in p.stakeholders %}
                                     <span class="badge badge-verde" style="margin:2px 2px 2px 0;">{{ nombre }}</span>
                                 {% endfor %}
                             {% else %}
@@ -123,5 +126,19 @@
         </button>
     </div>
 </div>
+
+<script>
+(function() {
+    try {
+        var raw = localStorage.getItem('usuario');
+        if (!raw) return;
+        var u = JSON.parse(raw);
+        if (u && u.rol === 'admin') {
+            var btn = document.querySelector('.aprobacion-solo-admin');
+            if (btn) btn.style.display = 'inline-flex';
+        }
+    } catch(e) {}
+})();
+</script>
 
 {% endblock %}

@@ -20,12 +20,14 @@ from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       toggleEstadoAplicacion)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
                          actualizarEstadoActividad, eliminarActividad,
+                         desbloquearActividad,
                          listarTodosSprints, listarAsignadosPorProyecto,
                          resumenActividadesPorProyecto, proximoCodigo)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
                         listarAvances, insertarAvance, eliminarAvance,
-                        eliminarProyecto, tieneActividadesPendientes)
+                        eliminarProyecto, tieneActividadesPendientes,
+                        listarProyectosEnRevision, aprobarProyecto, rechazarProyecto)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos,
                             kpiSatisfaccion, comentariosCalificacionesRecientes,
@@ -398,9 +400,12 @@ def guardar_proyecto():
         obj = Proyecto(
             nombre           = request.form['nombre'],
             ids_responsables = ids_responsables,
-            estado           = 'planificado',
+            estado           = 'en_revision',
             fecha_inicio     = date.today().strftime('%Y-%m-%d'),
             fecha_fin_plan   = request.form['fecha_fin_plan'],
+            problematica     = request.form.get('problematica', '').strip() or None,
+            justificacion    = request.form.get('justificacion', '').strip() or None,
+            beneficios       = request.form.get('beneficios', '').strip() or None,
             descripcion      = request.form['descripcion'],
         )
         insertarProyecto(obj)
@@ -871,6 +876,12 @@ def api_estado_actividad(id_actividad):
     return jsonify({'ok': True, 'estado': nuevo_estado})
 
 
+@app.route('/api/actividad/<int:id_actividad>/desbloquear', methods=['POST'])
+def api_desbloquear_actividad(id_actividad):
+    estado_retorno = desbloquearActividad(id_actividad)
+    return jsonify({'ok': True, 'estado': estado_retorno})
+
+
 @app.route('/api/actividad/<int:id_actividad>/eliminar', methods=['POST'])
 def api_eliminar_actividad(id_actividad):
     ok = eliminarActividad(id_actividad)
@@ -915,6 +926,39 @@ def api_eliminar_avance(id_avance):
     except Exception as e:
         print(f"Error de integridad al eliminar avance: {e}")
         return jsonify({'ok': False, 'mensaje': 'No se puede eliminar por restricciones de integridad en la base de datos.'})
+
+# ──────────────────────────────────────────────────────────────
+#  APROBACION DE PROYECTOS (GERENTE)
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/admin/aprobacion-proyectos')
+def aprobacion_proyectos():
+    try:
+        proyectos = listarProyectosEnRevision()
+    except Exception as e:
+        print(f'Error al listar proyectos en revision: {e}')
+        abort(500)
+    return render_template('aprobacionProyectos.html', proyectos=proyectos)
+
+
+@app.route('/api/proyecto/<int:id_proyecto>/aprobar', methods=['POST'])
+def api_aprobar_proyecto(id_proyecto):
+    try:
+        aprobarProyecto(id_proyecto)
+        return jsonify({'ok': True})
+    except Exception as e:
+        print(f'Error al aprobar proyecto: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al aprobar el proyecto.'})
+
+
+@app.route('/api/proyecto/<int:id_proyecto>/rechazar', methods=['POST'])
+def api_rechazar_proyecto(id_proyecto):
+    try:
+        rechazarProyecto(id_proyecto)
+        return jsonify({'ok': True})
+    except Exception as e:
+        print(f'Error al rechazar proyecto: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al rechazar el proyecto.'})
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE

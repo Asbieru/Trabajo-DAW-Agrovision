@@ -14,7 +14,7 @@ class Actividad:
 
 
 def _generarCodigo():
-    """Genera automáticamente el siguiente código ACT-XXX."""
+    """Genera automaticamente el siguiente codigo ACT-XXX."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -43,6 +43,7 @@ def listarActividades(id_proyecto=None):
             sql = """
                 SELECT a.id_actividad, a.codigo, a.titulo,
                        a.prioridad, a.estado, a.story_points,
+                       a.estado_anterior,
                        p.nombre  AS nombre_proyecto,
                        s.nombre  AS nombre_sprint,
                        u.nombre_completo AS nombre_asignado
@@ -62,7 +63,7 @@ def listarActividades(id_proyecto=None):
 
 
 def insertarActividad(obj):
-    """Inserta una nueva actividad con código auto-generado."""
+    """Inserta una nueva actividad con codigo auto-generado."""
     codigo = _generarCodigo()
     conn = obtenerconexion()
     with conn:
@@ -81,23 +82,54 @@ def insertarActividad(obj):
 
 
 def actualizarEstadoActividad(id_actividad, nuevo_estado):
-    """Cambia el estado de una actividad."""
+    """Cambia el estado de una actividad. Si se bloquea, guarda el estado anterior."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            if nuevo_estado == 'bloqueado':
+                # Guardar el estado actual como estado_anterior
+                cursor.execute(
+                    "SELECT estado FROM actividades WHERE id_actividad = %s",
+                    (id_actividad,)
+                )
+                row = cursor.fetchone()
+                estado_actual = row['estado'] if row else None
+                cursor.execute(
+                    "UPDATE actividades SET estado = %s, estado_anterior = %s WHERE id_actividad = %s",
+                    (nuevo_estado, estado_actual, id_actividad)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE actividades SET estado = %s WHERE id_actividad = %s",
+                    (nuevo_estado, id_actividad)
+                )
+        conn.commit()
+
+
+def desbloquearActividad(id_actividad):
+    """Regresa la actividad al estado anterior antes de ser bloqueada."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                "UPDATE actividades SET estado = %s WHERE id_actividad = %s",
-                (nuevo_estado, id_actividad)
+                "SELECT estado_anterior FROM actividades WHERE id_actividad = %s",
+                (id_actividad,)
+            )
+            row = cursor.fetchone()
+            estado_retorno = row['estado_anterior'] if row and row['estado_anterior'] else 'por_hacer'
+            cursor.execute(
+                "UPDATE actividades SET estado = %s, estado_anterior = NULL WHERE id_actividad = %s",
+                (estado_retorno, id_actividad)
             )
         conn.commit()
+    return estado_retorno
 
 
 def eliminarActividad(id_actividad):
-    """Elimina lógicamente una actividad (estado = 'eliminado'). Solo si está en estado 'cancelada'."""
+    """Elimina logicamente una actividad (estado = 'eliminado'). Solo si esta en estado 'cancelada'."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
-            # Verificar que esté cancelada antes de eliminar
             cursor.execute(
                 "SELECT estado FROM actividades WHERE id_actividad = %s",
                 (id_actividad,)
@@ -179,6 +211,7 @@ def obtenerActividad(id_actividad):
             cursor.execute("""
                 SELECT a.id_actividad, a.codigo, a.titulo,
                        a.prioridad, a.estado, a.story_points,
+                       a.estado_anterior,
                        a.id_proyecto, a.id_sprint, a.id_asignado,
                        p.nombre AS nombre_proyecto,
                        s.nombre AS nombre_sprint,
@@ -216,5 +249,5 @@ def actualizarActividad(id_actividad, id_proyecto, id_sprint, id_asignado,
 
 
 def proximoCodigo():
-    """Devuelve el próximo código que se generaría (para mostrar en formulario)."""
+    """Devuelve el proximo codigo que se generaria (para mostrar en formulario)."""
     return _generarCodigo()

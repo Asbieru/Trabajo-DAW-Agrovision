@@ -122,22 +122,25 @@ CREATE TABLE IF NOT EXISTS calificaciones_ticket (
 CREATE TABLE IF NOT EXISTS proyectos (
     id_proyecto INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(200) NOT NULL,
-    id_responsable INT NOT NULL,
-    estado ENUM('planificado','en_desarrollo','qa','completado','pausado', 'eliminado')
-    NOT NULL DEFAULT 'planificado',
+    id_Stakeholder INT NOT NULL,
+    estado ENUM('en_revision','rechazado','planificado','en_desarrollo','qa','pausado','completado','eliminado')
+    NOT NULL DEFAULT 'en_revision',
     fecha_inicio DATE NOT NULL,
     fecha_fin_plan DATE NOT NULL,
+    problematica TEXT NULL,
+    justificacion TEXT NULL,
+    beneficios TEXT NULL,
     descripcion TEXT NOT NULL,
     estado2 TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_proy_resp FOREIGN KEY (id_responsable)
+    CONSTRAINT fk_proy_resp FOREIGN KEY (id_Stakeholder)
     REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
 INSERT INTO proyectos
-(nombre, descripcion, estado, id_responsable, fecha_inicio, fecha_fin_plan)
+(nombre, descripcion, estado, id_Stakeholder, fecha_inicio, fecha_fin_plan)
 VALUES
-('Sistema AgroVision v2','Sistema de soporte','en_desarrollo',1,'2025-01-01','2025-12-31'),
+('Sistema AgroVision v2','Sistema de soporte','planificado',1,'2025-01-01','2025-12-31'),
 ('App Movil Tecnicos','Aplicacion movil','planificado',1,'2025-02-01','2025-09-30'),
 ('Portal Reportes','Dashboard gerencial','planificado',1,'2025-03-01','2025-10-31');
 
@@ -208,7 +211,7 @@ CREATE TABLE IF NOT EXISTS asignado (
 ) ENGINE=InnoDB;
 
 INSERT IGNORE INTO asignado (id_proyecto, id_usuario)
-SELECT id_proyecto, id_responsable FROM proyectos;
+SELECT id_proyecto, id_Stakeholder FROM proyectos;
 
 -- ============================================================
 -- TABLA ACTIVIDADES
@@ -222,8 +225,9 @@ CREATE TABLE IF NOT EXISTS actividades (
     codigo VARCHAR(30) NOT NULL UNIQUE,
     titulo VARCHAR(200) NOT NULL,
     prioridad ENUM('critica','alta','media','baja') NOT NULL DEFAULT 'media',
-    estado ENUM('backlog','por_hacer','en_progreso','completada','cancelada','eliminado')
+    estado ENUM('backlog','por_hacer','en_progreso','completada','cancelada','bloqueado','eliminado')
     NOT NULL DEFAULT 'backlog',
+    estado_anterior VARCHAR(30) NULL,
     story_points SMALLINT DEFAULT 0,
     estado2 TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

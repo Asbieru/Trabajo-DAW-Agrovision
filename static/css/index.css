@@ -2701,3 +2701,196 @@ a.ticket-link:hover strong { text-decoration: underline; }
     transition: opacity 0.15s;
 }
 .rep-btn-pdf-act:hover { opacity: 0.88; }
+/* ══════════════════════════════════════════════════════════════
+   APROBACIÓN DE PROYECTOS – cards limpias
+   ══════════════════════════════════════════════════════════════ */
+
+.aprobacion-contador {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--gris-texto);
+    margin-bottom: 20px;
+}
+
+.aprobacion-badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--verde-oscuro);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    padding: 0 6px;
+}
+
+.aprobacion-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 20px;
+}
+
+.aprobacion-card {
+    background: #fff;
+    border: 1px solid var(--gris-borde);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.aprobacion-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+}
+
+.aprobacion-card-aprobada {
+    border-color: var(--verde);
+    background: #f0faf3;
+}
+
+.aprobacion-card-rechazada {
+    border-color: var(--rojo);
+    background: #fff5f5;
+}
+
+.aprobacion-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px 14px;
+    background: var(--gris-bg);
+    border-bottom: 1px solid var(--gris-borde);
+}
+
+.aprobacion-id {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--verde-oscuro);
+    background: rgba(52,168,83,0.12);
+    border-radius: 5px;
+    padding: 3px 8px;
+    white-space: nowrap;
+}
+
+.aprobacion-nombre {
+    font-size: 0.97rem;
+    font-weight: 700;
+    color: var(--texto);
+    line-height: 1.3;
+}
+
+.aprobacion-card-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+}
+
+.aprobacion-meta {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.aprobacion-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.aprobacion-meta-label {
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: var(--gris-texto);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.aprobacion-meta-val {
+    font-size: 0.88rem;
+    color: var(--texto);
+    font-weight: 500;
+}
+
+.aprobacion-campo {
+    border-left: 3px solid var(--gris-borde);
+    padding-left: 12px;
+}
+
+.aprobacion-campo-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--gris-texto);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+
+.aprobacion-campo-texto {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--texto);
+    line-height: 1.5;
+}
+
+.aprobacion-card-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--gris-borde);
+    background: var(--gris-bg);
+}
+
+.aprobacion-acciones {
+    display: flex;
+    gap: 10px;
+}
+
+.aprobacion-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 16px !important;
+    font-size: 0.85rem !important;
+    font-weight: 600;
+}
+
+.aprobacion-btn-rechazar {
+    background: var(--rojo) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+}
+
+.aprobacion-resultado {
+    text-align: center;
+    padding: 6px 0;
+}
+
+.aprobacion-resultado-ok {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--verde-oscuro);
+}
+
+.aprobacion-resultado-rechazo {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--rojo);
+}
+
+@media (max-width: 700px) {
+    .aprobacion-grid {
+        grid-template-columns: 1fr;
+    }
+    .aprobacion-meta {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

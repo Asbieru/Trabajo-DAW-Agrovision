@@ -1050,6 +1050,57 @@ function cancelarActividad(idActividad, btn) {
     });
 }
 
+function bloquearActividad(idActividad, btn) {
+    btn.textContent = '…';
+    btn.disabled    = true;
+
+    fetch('/api/actividad/' + idActividad + '/estado', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ estado: 'bloqueado' })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert('Error al bloquear actividad.');
+            btn.textContent = '🔒 Bloquear';
+            btn.disabled    = false;
+        }
+    })
+    .catch(function () {
+        alert('Error de conexión.');
+        btn.textContent = '🔒 Bloquear';
+        btn.disabled    = false;
+    });
+}
+
+function desbloquearActividad(idActividad, btn) {
+    btn.textContent = '…';
+    btn.disabled    = true;
+
+    fetch('/api/actividad/' + idActividad + '/desbloquear', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert('Error al desbloquear actividad.');
+            btn.textContent = '🔓 Desbloquear';
+            btn.disabled    = false;
+        }
+    })
+    .catch(function () {
+        alert('Error de conexión.');
+        btn.textContent = '🔓 Desbloquear';
+        btn.disabled    = false;
+    });
+}
+
 // Variable para almacenar el botón y el id al confirmar eliminación de actividad
 var _elimActividadId  = null;
 var _elimActividadBtn = null;

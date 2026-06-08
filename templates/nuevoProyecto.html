@@ -23,8 +23,8 @@
     <div class="card-body">
         <form action="{{ url_for('guardar_proyecto') }}" method="POST">
 
-            <!-- Estado oculto: siempre planificado al crear -->
-            <input type="hidden" name="estado" value="planificado">
+            <!-- Estado oculto: siempre en_revision al crear -->
+            <input type="hidden" name="estado" value="en_revision">
 
             <!-- Nombre del proyecto -->
             <div class="form-group form-section-spacing">
@@ -35,9 +35,9 @@
                        required>
             </div>
 
-            <!-- Responsables: checkboxes -->
+            <!-- Stakeholders: checkboxes -->
             <div class="form-group form-section-spacing">
-                <label>Responsables del proyecto *</label>
+                <label>Stakeholder *</label>
                 <div class="checkbox-lista">
                     {% for r in responsables %}
                     <label class="checkbox-item">
@@ -46,7 +46,7 @@
                     </label>
                     {% endfor %}
                 </div>
-                <span class="form-hint">Marca uno o más responsables para este proyecto</span>
+                <span class="form-hint">Marca uno o más Stakeholders para este proyecto</span>
             </div>
 
             <!-- Fecha de fin planificada -->
@@ -54,6 +54,30 @@
                 <label for="fecha_fin_plan">Fecha de fin planificada *</label>
                 <input type="date" id="fecha_fin_plan" name="fecha_fin_plan" required>
                 <span class="form-hint">Fecha objetivo de entrega en producción. La fecha de inicio se asigna automáticamente al día de hoy.</span>
+            </div>
+
+            <!-- Problemática -->
+            <div class="form-group form-section-spacing">
+                <label for="problematica">Problemática por la cual se origina el proyecto</label>
+                <textarea id="problematica" name="problematica" rows="4"
+                          placeholder="Describe el problema o necesidad que da origen a este proyecto..."></textarea>
+            </div>
+
+            <!-- Justificación -->
+            <div class="form-group form-section-spacing">
+                <label for="justificacion">Justificación del proyecto</label>
+                <textarea id="justificacion" name="justificacion" rows="4"
+                          placeholder="Explica por qué es necesario desarrollar este proyecto..."></textarea>
+            </div>
+
+            <!-- Beneficios -->
+            <div class="form-group form-section-spacing">
+                <label for="beneficios">
+                    Beneficios del proyecto
+                    <span class="form-hint" style="display:inline;margin-left:8px;font-style:italic;">(Los beneficios pueden ser cualitativos o cuantitativos)</span>
+                </label>
+                <textarea id="beneficios" name="beneficios" rows="4"
+                          placeholder="Ej. Reducción de tiempos en 30% (cuantitativo), Mejora en la satisfacción del cliente (cualitativo)..."></textarea>
             </div>
 
             <!-- Descripción / Alcance -->
@@ -79,8 +103,8 @@
 <div id="modal-proyecto-creado" class="av-modal-overlay" style="display:none;">
     <div class="av-modal-box">
         <div style="font-size:2.5rem;margin-bottom:10px;">✅</div>
-        <h3 style="margin:0 0 8px 0;font-size:1.1rem;color:var(--verde-oscuro);">¡Nuevo proyecto agregado!</h3>
-        <p style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;">El proyecto fue registrado correctamente.</p>
+        <h3 style="margin:0 0 8px 0;font-size:1.1rem;color:var(--verde-oscuro);">¡Proyecto enviado a revisión!</h3>
+        <p style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;">El proyecto fue registrado y está pendiente de aprobación por el administrador.</p>
         <button onclick="cerrarModalProyectoCreado()"
                 class="btn btn-verde btn-sm"
                 style="padding:8px 28px;font-size:0.88rem;">
@@ -98,7 +122,6 @@
 })();
 function cerrarModalProyectoCreado() {
     document.getElementById('modal-proyecto-creado').style.display = 'none';
-    // Limpiar el parámetro de la URL sin recargar
     var url = window.location.pathname;
     window.history.replaceState({}, '', url);
 }

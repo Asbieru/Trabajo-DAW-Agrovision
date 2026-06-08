@@ -69,6 +69,11 @@
            data-vis="programador admin">
             <span class="ico">📁</span> Ver proyectos
         </a>
+        <a href="{{ url_for('aprobacion_proyectos') }}"
+           class="{{ 'activo' if request.endpoint == 'aprobacion_proyectos' else '' }}"
+           data-vis="admin">
+            <span class="ico">✅</span> Aprobación de proyectos
+        </a>
 
         <div class="sidebar-section">Actividades</div>
         <a href="{{ url_for('form_actividad') }}"

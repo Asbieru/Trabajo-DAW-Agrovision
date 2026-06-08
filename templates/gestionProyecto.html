@@ -32,6 +32,26 @@
     </div>
 </div>
 
+<!-- RESUMEN TOTALES (arriba del kanban) -->
+<div style="margin-bottom:18px;display:flex;gap:10px;flex-wrap:wrap;">
+    <div class="stat-card" style="flex:1;min-width:120px;">
+        <div class="stat-num azul">{{ actividades|length }}</div>
+        <div class="stat-label">Total actividades</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:120px;">
+        <div class="stat-num verde">{{ actividades|selectattr('estado','equalto','completada')|list|length }}</div>
+        <div class="stat-label">Completadas</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:120px;">
+        <div class="stat-num acento">{{ actividades|selectattr('estado','equalto','en_progreso')|list|length }}</div>
+        <div class="stat-label">En progreso</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:120px;">
+        <div class="stat-num verde">{{ actividades|sum(attribute='story_points') }}</div>
+        <div class="stat-label">Story points totales</div>
+    </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════
      TABLERO KANBAN DE ACTIVIDADES
      ══════════════════════════════════════════════════════ -->
@@ -40,10 +60,11 @@
     ('por_hacer',    '📝 Por hacer',    'azul'),
     ('en_progreso',  '⚙️ En progreso',  'acento'),
     ('completada',   '✅ Completada',   'verde'),
-    ('cancelada',    '🚫 Cancelada',    'rojo')
+    ('bloqueado',    '🚫 Bloqueado',    'rojo'),
+    ('cancelada',    '⛔ Cancelada',    'rojo')
 ] %}
 
-<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start;">
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:start;">
 
 {% for estado_key, estado_label, color_cls in columnas %}
 {% set col_actividades = actividades | selectattr('estado', 'equalto', estado_key) | list %}
@@ -90,6 +111,13 @@
                                     style="padding:3px 8px;font-size:0.7rem;background:var(--rojo);color:#fff;border:none;border-radius:5px;cursor:pointer;flex:1;">
                                 🗑 Eliminar
                             </button>
+                        {% elif a.estado == 'bloqueado' %}
+                            <button type="button"
+                                    onclick="desbloquearActividad({{ a.id_actividad }}, this)"
+                                    class="btn btn-verde btn-sm"
+                                    style="padding:3px 8px;font-size:0.7rem;flex:1;">
+                                🔓 Desbloquear
+                            </button>
                         {% else %}
                             {% if a.estado != 'completada' %}
                             <button type="button"
@@ -104,6 +132,14 @@
                                style="padding:3px 8px;font-size:0.7rem;flex:1;text-align:center;">
                                 ✏️
                             </a>
+                            {% if a.estado == 'por_hacer' or a.estado == 'en_progreso' %}
+                            <button type="button"
+                                    onclick="bloquearActividad({{ a.id_actividad }}, this)"
+                                    class="btn btn-sm"
+                                    style="padding:3px 8px;font-size:0.7rem;background:var(--acento);color:#fff;border:none;border-radius:5px;cursor:pointer;flex:1;">
+                                🔒 Bloquear
+                            </button>
+                            {% endif %}
                             <button type="button"
                                     onclick="cancelarActividad({{ a.id_actividad }}, this)"
                                     class="btn btn-sm"
@@ -124,26 +160,6 @@
 </div>
 {% endfor %}
 
-</div>
-
-<!-- RESUMEN TOTALES -->
-<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
-    <div class="stat-card" style="flex:1;min-width:120px;">
-        <div class="stat-num azul">{{ actividades|length }}</div>
-        <div class="stat-label">Total actividades</div>
-    </div>
-    <div class="stat-card" style="flex:1;min-width:120px;">
-        <div class="stat-num verde">{{ actividades|selectattr('estado','equalto','completada')|list|length }}</div>
-        <div class="stat-label">Completadas</div>
-    </div>
-    <div class="stat-card" style="flex:1;min-width:120px;">
-        <div class="stat-num acento">{{ actividades|selectattr('estado','equalto','en_progreso')|list|length }}</div>
-        <div class="stat-label">En progreso</div>
-    </div>
-    <div class="stat-card" style="flex:1;min-width:120px;">
-        <div class="stat-num verde">{{ actividades|sum(attribute='story_points') }}</div>
-        <div class="stat-label">Story points totales</div>
-    </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
