@@ -4,7 +4,11 @@ Sin uso de session ni import json.
 """
 
 
-from flask import Flask, render_template, request, redirect, url_for, abort, jsonify
+from flask import Flask, render_template, request, redirect, url_for, abort, jsonify, make_response
+import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios,
                        listarUsuariosCompleto, obtenerPerfilUsuario,
@@ -33,14 +37,23 @@ from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos,
                             kpiSatisfaccion, comentariosCalificacionesRecientes,
                             kpiProyectosPorEstado, kpiVelocityPorSprint,
-                            kpiCargaPorProgramador)
+                            kpiCargaPorProgramador, kpiTiempoRespuesta,
+                            kpiPorIntensidad, kpiSLAPorAgente,
+                            kpiProyectosPorSalud, kpiAvancePromedioPorProyecto,
+                            kpiTiempoResolucionPorAplicacion,
+                            kpiCancelados, kpiRankingAppsProblemáticas,
+                            kpiPorTipo, kpiTop5MasLentos,
+                            kpiActividadesPorEstado, kpiProgramadoresSinCarga,
+                            kpiProyectosVencidos)
 from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorTipo,
                          reporteStoryPointsPorProgramador, reporteCarryoverPorProgramador,
                          reporteTicketsFiltrados, obtenerAplicaciones,
                          reporteProyectosPorEstado, reporteProyectosEnRiesgo,
                          reporteRendimientoPorSprint, reporteProyectosFiltrados,
                          obtenerResponsables,
-                         reporteActividadesPorProyecto, resumenActividadesReporte)
+                         reporteActividadesPorProyecto, resumenActividadesReporte,
+                         reporteSLAPorAplicacion, reporteTicketsPorEstado,
+                         reporteAgentesMetricas, reporteTendenciaPorMes)
 
 app = Flask(__name__)
 app.secret_key = 'agrovision-clave-secreta-2024'
@@ -595,6 +608,19 @@ def indicadores_soporte():
     proyectos_estado  = kpiProyectosPorEstado()
     velocity_sprints  = kpiVelocityPorSprint()
     carga_programador = kpiCargaPorProgramador()
+    tiempo_respuesta  = kpiTiempoRespuesta()
+    por_intensidad    = kpiPorIntensidad()
+    sla_por_agente    = kpiSLAPorAgente()
+    salud_proyectos   = kpiProyectosPorSalud()
+    avance_proyectos  = kpiAvancePromedioPorProyecto()
+    tiempo_por_app    = kpiTiempoResolucionPorAplicacion()
+    cancelados        = kpiCancelados()
+    ranking_apps      = kpiRankingAppsProblemáticas()
+    por_tipo          = kpiPorTipo()
+    top5_lentos       = kpiTop5MasLentos()
+    act_por_estado    = kpiActividadesPorEstado()
+    sin_carga         = kpiProgramadoresSinCarga()
+    proy_vencidos     = kpiProyectosVencidos()
 
     return render_template('indicadores.html',
                            resumen=resumen,
@@ -608,6 +634,19 @@ def indicadores_soporte():
                            proyectos_estado=proyectos_estado,
                            velocity_sprints=velocity_sprints,
                            carga_programador=carga_programador,
+                           tiempo_respuesta=tiempo_respuesta,
+                           por_intensidad=por_intensidad,
+                           sla_por_agente=sla_por_agente,
+                           salud_proyectos=salud_proyectos,
+                           avance_proyectos=avance_proyectos,
+                           tiempo_por_app=tiempo_por_app,
+                           cancelados=cancelados,
+                           ranking_apps=ranking_apps,
+                           por_tipo=por_tipo,
+                           top5_lentos=top5_lentos,
+                           act_por_estado=act_por_estado,
+                           sin_carga=sin_carga,
+                           proy_vencidos=proy_vencidos,
                            mes_inicio=mes_inicio   or '',
                            anio_inicio=anio_inicio or '',
                            mes_fin=mes_fin         or '',
@@ -627,11 +666,11 @@ def limpiar(valor):
 
 @app.route('/reportes')
 def gestion_reportes():
-    fecha_inicio = limpiar(request.args.get('fecha_inicio', ''))
-    fecha_fin    = limpiar(request.args.get('fecha_fin', ''))
-    aplicacion   = limpiar(request.args.get('aplicacion', ''))
-    estado       = limpiar(request.args.get('estado', ''))
-    prioridad    = limpiar(request.args.get('prioridad', ''))
+    fecha_inicio  = limpiar(request.args.get('fecha_inicio', ''))
+    fecha_fin     = limpiar(request.args.get('fecha_fin', ''))
+    id_aplicacion = limpiar(request.args.get('id_aplicacion', ''))
+    estado        = limpiar(request.args.get('estado', ''))
+    prioridad     = limpiar(request.args.get('prioridad', ''))
 
     resumen             = reporteResumen()
     tickets_app         = reporteTicketsPorApp()
@@ -640,12 +679,16 @@ def gestion_reportes():
     carryover           = reporteCarryoverPorProgramador()
     aplicaciones        = obtenerAplicaciones()
     tickets_filtrados   = reporteTicketsFiltrados(fecha_inicio, fecha_fin,
-                                                  aplicacion, estado, prioridad)
+                                                  id_aplicacion, estado, prioridad)
     proyectos_estado    = reporteProyectosPorEstado()
     proyectos_riesgo    = reporteProyectosEnRiesgo()
     rendimiento_sprint  = reporteRendimientoPorSprint()
     proyectos_filtrados = reporteProyectosFiltrados()
     responsables        = obtenerResponsables()
+    sla_por_app         = reporteSLAPorAplicacion()
+    tickets_por_estado  = reporteTicketsPorEstado()
+    agentes_metricas    = reporteAgentesMetricas()
+    tendencia_mes       = reporteTendenciaPorMes()
 
     return render_template('reportes.html',
                            resumen=resumen,
@@ -660,11 +703,312 @@ def gestion_reportes():
                            rendimiento_sprint=rendimiento_sprint,
                            proyectos_filtrados=proyectos_filtrados,
                            responsables=responsables,
-                           fecha_inicio=fecha_inicio or '',
-                           fecha_fin=fecha_fin       or '',
-                           aplicacion=aplicacion     or '',
-                           estado=estado             or '',
-                           prioridad=prioridad       or '')
+                           sla_por_app=sla_por_app,
+                           tickets_por_estado=tickets_por_estado,
+                           agentes_metricas=agentes_metricas,
+                           tendencia_mes=tendencia_mes,
+                           fecha_inicio=fecha_inicio   or '',
+                           fecha_fin=fecha_fin         or '',
+                           id_aplicacion=id_aplicacion or '',
+                           estado=estado               or '',
+                           prioridad=prioridad         or '')
+
+
+# ──────────────────────────────────────────────────────────────
+#  EXPORTAR EXCEL
+# ──────────────────────────────────────────────────────────────
+
+def _estilo_cabecera(ws, fila, columnas, color_hex="1a5276"):
+    """Aplica estilo de cabecera a una fila del worksheet."""
+    fill   = PatternFill("solid", fgColor=color_hex)
+    fuente = Font(bold=True, color="FFFFFF", size=10)
+    borde  = Border(
+        bottom=Side(style='medium', color='FFFFFF'),
+        right =Side(style='thin',   color='FFFFFF')
+    )
+    for col_idx, titulo in enumerate(columnas, 1):
+        cell = ws.cell(row=fila, column=col_idx, value=titulo)
+        cell.fill      = fill
+        cell.font      = fuente
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border    = borde
+
+def _autowidth(ws, extra=4):
+    """Ajusta el ancho de columnas automáticamente."""
+    for col in ws.columns:
+        max_len = max((len(str(c.value)) if c.value else 0) for c in col)
+        ws.column_dimensions[get_column_letter(col[0].column)].width = min(max_len + extra, 50)
+
+def _fila_alterna(ws, fila, n_cols, par=True):
+    color = "EBF5FB" if par else "FFFFFF"
+    fill  = PatternFill("solid", fgColor=color)
+    for c in range(1, n_cols + 1):
+        ws.cell(row=fila, column=c).fill = fill
+
+@app.route('/reportes/exportar-excel')
+def exportar_excel():
+    fecha_inicio  = limpiar(request.args.get('fecha_inicio', ''))
+    fecha_fin     = limpiar(request.args.get('fecha_fin', ''))
+    id_aplicacion = limpiar(request.args.get('id_aplicacion', ''))
+    estado        = limpiar(request.args.get('estado', ''))
+    prioridad     = limpiar(request.args.get('prioridad', ''))
+
+    tickets        = reporteTicketsFiltrados(fecha_inicio, fecha_fin, id_aplicacion, estado, prioridad)
+    resumen        = reporteResumen()
+    tickets_app    = reporteTicketsPorApp()
+    sprints        = reporteRendimientoPorSprint()
+    story_pts      = reporteStoryPointsPorProgramador()
+    carryover      = reporteCarryoverPorProgramador()
+    proyectos      = reporteProyectosFiltrados()
+    tiempo_res     = kpiPorAgente()          # promedio horas resolución por agente
+
+    wb = Workbook()
+
+    # ── HOJA 1: Tickets filtrados ──────────────────────────────
+    ws1 = wb.active
+    ws1.title = "Tickets"
+    ws1.row_dimensions[1].height = 30
+
+    cabeceras_t = [
+        "#", "Título", "Aplicación", "Tipo", "Prioridad", "Intensidad",
+        "Estado", "Solicitante", "Agente", "Fecha Apertura", "Fecha Asignación",
+        "Fecha Solución", "Fecha Cierre", "SLA (h)", "Tiempo resolución",
+        "SLA cumplido", "Calificación", "Observación"
+    ]
+    _estilo_cabecera(ws1, 1, cabeceras_t, "1a5276")
+
+    for i, t in enumerate(tickets, 2):
+        mins = t.get('minutos_resolucion')
+        if mins is not None:
+            horas, resto = divmod(int(mins), 60)
+            tiempo_str   = f"{horas}h {resto}m"
+        else:
+            tiempo_str = "—"
+
+        fila = [
+            t.get('id_ticket'),
+            t.get('titulo'),
+            t.get('aplicacion'),
+            t.get('tipo', '').capitalize(),
+            t.get('prioridad', '').capitalize(),
+            t.get('intensidad', '').capitalize(),
+            (t.get('estado') or '').replace('_', ' ').capitalize(),
+            t.get('solicitante'),
+            t.get('agente') or '—',
+            t.get('fecha_apertura') or '—',
+            t.get('fecha_asignacion') or '—',
+            t.get('fecha_solucion') or '—',
+            t.get('fecha_cierre') or '—',
+            t.get('sla_horas') or '—',
+            tiempo_str,
+            t.get('sla_cumplido') or '—',
+            t.get('calificacion') or '—',
+            t.get('obs_calificacion') or '—',
+        ]
+        for col_idx, valor in enumerate(fila, 1):
+            cell = ws1.cell(row=i, column=col_idx, value=valor)
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+            # Color SLA
+            if col_idx == 16:
+                if valor == 'SI':
+                    cell.font = Font(color="1E8449", bold=True)
+                elif valor == 'NO':
+                    cell.font = Font(color="C0392B", bold=True)
+        _fila_alterna(ws1, i, len(cabeceras_t), i % 2 == 0)
+        ws1.row_dimensions[i].height = 18
+    _autowidth(ws1)
+    ws1.freeze_panes = "A2"
+
+    # ── HOJA 2: Tickets por Aplicación ────────────────────────
+    ws2 = wb.create_sheet("Por Aplicación")
+    _estilo_cabecera(ws2, 1, ["Aplicación", "Total", "Pendientes", "Cerrados"], "1f618d")
+    for i, r in enumerate(tickets_app, 2):
+        r = dict(r)
+        ws2.cell(row=i, column=1, value=r.get('aplicacion'))
+        ws2.cell(row=i, column=2, value=r.get('total'))
+        ws2.cell(row=i, column=3, value=r.get('pendientes') or 0)
+        ws2.cell(row=i, column=4, value=r.get('cerrados') or 0)
+        _fila_alterna(ws2, i, 4, i % 2 == 0)
+    _autowidth(ws2)
+    ws2.freeze_panes = "A2"
+
+    # ── HOJA 3: Rendimiento por Sprint ────────────────────────
+    ws3 = wb.create_sheet("Sprints")
+    _estilo_cabecera(ws3, 1,
+        ["Sprint", "Proyecto", "Capacidad (pts)", "Completados (pts)", "Pendientes (pts)",
+         "% Completado", "Estado"], "1b4f72")
+    for i, s in enumerate(sprints, 2):
+        s = dict(s)
+        cap  = s.get('capacidad_pts') or 0
+        comp = s.get('pts_completados') or 0
+        pct  = round(comp / cap * 100, 1) if cap else 0
+        ws3.cell(row=i, column=1, value=s.get('sprint'))
+        ws3.cell(row=i, column=2, value=s.get('proyecto'))
+        ws3.cell(row=i, column=3, value=cap)
+        ws3.cell(row=i, column=4, value=comp)
+        ws3.cell(row=i, column=5, value=s.get('pts_pendientes') or 0)
+        ws3.cell(row=i, column=6, value=pct)
+        ws3.cell(row=i, column=7, value=(s.get('estado_sprint') or '').capitalize())
+        _fila_alterna(ws3, i, 7, i % 2 == 0)
+    _autowidth(ws3)
+    ws3.freeze_panes = "A2"
+
+    # ── HOJA 4: Story Points por Programador ──────────────────
+    ws4 = wb.create_sheet("Story Points")
+    _estilo_cabecera(ws4, 1,
+        ["Programador", "Pts Completados", "Pts Asignados", "% Completado"], "145a32")
+    for i, r in enumerate(story_pts, 2):
+        r = dict(r)
+        asig = r.get('pts_asignados') or 0
+        comp = r.get('pts_completados') or 0
+        pct  = round(comp / asig * 100, 1) if asig else 0
+        ws4.cell(row=i, column=1, value=r.get('programador'))
+        ws4.cell(row=i, column=2, value=comp)
+        ws4.cell(row=i, column=3, value=asig)
+        ws4.cell(row=i, column=4, value=pct)
+        _fila_alterna(ws4, i, 4, i % 2 == 0)
+    _autowidth(ws4)
+    ws4.freeze_panes = "A2"
+
+    # ── HOJA 5: Carryover ─────────────────────────────────────
+    ws5 = wb.create_sheet("Carryover")
+    _estilo_cabecera(ws5, 1,
+        ["Programador", "Sprints con Carryover", "Pts Carryover"], "6e2f1a")
+    for i, r in enumerate(carryover, 2):
+        r = dict(r)
+        ws5.cell(row=i, column=1, value=r.get('programador'))
+        ws5.cell(row=i, column=2, value=r.get('sprints_con_carryover'))
+        ws5.cell(row=i, column=3, value=r.get('pts_carryover'))
+        _fila_alterna(ws5, i, 3, i % 2 == 0)
+    _autowidth(ws5)
+    ws5.freeze_panes = "A2"
+
+    # ── HOJA 6: Proyectos ─────────────────────────────────────
+    ws6 = wb.create_sheet("Proyectos")
+    _estilo_cabecera(ws6, 1,
+        ["#", "Proyecto", "Responsable", "Estado", "Inicio", "Fecha Fin",
+         "Días restantes", "Salud"], "1b2631")
+    for i, p in enumerate(proyectos, 2):
+        p = dict(p)
+        salud_map = {'completado': 'Completado', 'vencido': 'Vencido',
+                     'por_vencer': 'Por vencer', 'ok': 'OK'}
+        ws6.cell(row=i, column=1, value=p.get('id_proyecto'))
+        ws6.cell(row=i, column=2, value=p.get('nombre'))
+        ws6.cell(row=i, column=3, value=p.get('responsable'))
+        ws6.cell(row=i, column=4, value=(p.get('estado') or '').replace('_', ' ').capitalize())
+        ws6.cell(row=i, column=5, value=str(p.get('fecha_inicio') or '—'))
+        ws6.cell(row=i, column=6, value=str(p.get('fecha_fin_plan') or '—'))
+        ws6.cell(row=i, column=7, value=p.get('dias_restantes'))
+        ws6.cell(row=i, column=8, value=salud_map.get(p.get('salud'), '—'))
+        # Color en columna Salud
+        salud_cell = ws6.cell(row=i, column=8)
+        if p.get('salud') == 'vencido':
+            salud_cell.font = Font(color="C0392B", bold=True)
+        elif p.get('salud') == 'por_vencer':
+            salud_cell.font = Font(color="D68910", bold=True)
+        elif p.get('salud') == 'ok':
+            salud_cell.font = Font(color="1E8449", bold=True)
+        _fila_alterna(ws6, i, 8, i % 2 == 0)
+    _autowidth(ws6)
+    ws6.freeze_panes = "A2"
+
+    # ── HOJA 7: Tiempo de resolución por agente ───────────────
+    ws7 = wb.create_sheet("Tiempo Resolución")
+    _estilo_cabecera(ws7, 1,
+        ["Agente", "Tickets atendidos", "Resueltos",
+         "Promedio resolución (h)", "Cumplimiento SLA (%)"], "4a235a")
+    for i, a in enumerate(tiempo_res, 2):
+        a = dict(a)
+        # Buscar pct_sla del agente en sla_por_agente si existe
+        ws7.cell(row=i, column=1, value=a.get('agente'))
+        ws7.cell(row=i, column=2, value=a.get('total_atendidos'))
+        ws7.cell(row=i, column=3, value=a.get('resueltos') or 0)
+        ws7.cell(row=i, column=4, value=a.get('promedio_horas') or '—')
+        _fila_alterna(ws7, i, 5, i % 2 == 0)
+    _autowidth(ws7)
+    ws7.freeze_panes = "A2"
+
+    # ── Enviar el archivo ──────────────────────────────────────
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = make_response(output.read())
+    response.headers['Content-Type']        = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = 'attachment; filename=reporte_agrovision.xlsx'
+    return response
+
+
+@app.route('/reportes/exportar-excel-proyectos')
+def exportar_excel_proyectos():
+    estado        = limpiar(request.args.get('estado', ''))
+    id_responsable = limpiar(request.args.get('id_responsable', ''))
+
+    proyectos    = reporteProyectosFiltrados(estado or None, id_responsable or None)
+    sprints      = reporteRendimientoPorSprint()
+
+    wb = Workbook()
+
+    # ── HOJA 1: Proyectos ─────────────────────────────────────
+    ws1 = wb.active
+    ws1.title = "Proyectos"
+    ws1.row_dimensions[1].height = 30
+    _estilo_cabecera(ws1, 1,
+        ["#", "Proyecto", "Responsable", "Estado", "Inicio", "Fecha Fin",
+         "Días restantes", "Salud"], "1b2631")
+    for i, p in enumerate(proyectos, 2):
+        p = dict(p)
+        salud_map = {'completado': 'Completado', 'vencido': 'Vencido',
+                     'por_vencer': 'Por vencer', 'ok': 'OK'}
+        ws1.cell(row=i, column=1, value=p.get('id_proyecto'))
+        ws1.cell(row=i, column=2, value=p.get('nombre'))
+        ws1.cell(row=i, column=3, value=p.get('responsable'))
+        ws1.cell(row=i, column=4, value=(p.get('estado') or '').replace('_', ' ').capitalize())
+        ws1.cell(row=i, column=5, value=str(p.get('fecha_inicio') or '—'))
+        ws1.cell(row=i, column=6, value=str(p.get('fecha_fin_plan') or '—'))
+        ws1.cell(row=i, column=7, value=p.get('dias_restantes'))
+        ws1.cell(row=i, column=8, value=salud_map.get(p.get('salud'), '—'))
+        salud_cell = ws1.cell(row=i, column=8)
+        if p.get('salud') == 'vencido':
+            salud_cell.font = Font(color="C0392B", bold=True)
+        elif p.get('salud') == 'por_vencer':
+            salud_cell.font = Font(color="D68910", bold=True)
+        elif p.get('salud') == 'ok':
+            salud_cell.font = Font(color="1E8449", bold=True)
+        _fila_alterna(ws1, i, 8, i % 2 == 0)
+        ws1.row_dimensions[i].height = 18
+    _autowidth(ws1)
+    ws1.freeze_panes = "A2"
+
+    # ── HOJA 2: Rendimiento por Sprint ────────────────────────
+    ws2 = wb.create_sheet("Sprints")
+    _estilo_cabecera(ws2, 1,
+        ["Sprint", "Proyecto", "Capacidad (pts)", "Completados (pts)",
+         "Pendientes (pts)", "% Completado", "Estado"], "1b4f72")
+    for i, s in enumerate(sprints, 2):
+        s = dict(s)
+        cap  = s.get('capacidad_pts') or 0
+        comp = s.get('pts_completados') or 0
+        pct  = round(comp / cap * 100, 1) if cap else 0
+        ws2.cell(row=i, column=1, value=s.get('sprint'))
+        ws2.cell(row=i, column=2, value=s.get('proyecto'))
+        ws2.cell(row=i, column=3, value=cap)
+        ws2.cell(row=i, column=4, value=comp)
+        ws2.cell(row=i, column=5, value=s.get('pts_pendientes') or 0)
+        ws2.cell(row=i, column=6, value=pct)
+        ws2.cell(row=i, column=7, value=(s.get('estado_sprint') or '').capitalize())
+        _fila_alterna(ws2, i, 7, i % 2 == 0)
+    _autowidth(ws2)
+    ws2.freeze_panes = "A2"
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = make_response(output.read())
+    response.headers['Content-Type']        = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = 'attachment; filename=reporte_proyectos.xlsx'
+    return response
 
 
 # ──────────────────────────────────────────────────────────────

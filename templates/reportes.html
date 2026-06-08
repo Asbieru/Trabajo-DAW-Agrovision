@@ -15,7 +15,10 @@
      data-tipo='{{ tickets_tipo | tojson if tickets_tipo else "[]" }}'
      data-sp='{{ story_points | tojson if story_points else "[]" }}'
      data-carryover='{{ carryover | tojson if carryover else "[]" }}'
-     data-proyectos-estado='{{ proyectos_estado | tojson if proyectos_estado else "[]" }}'>
+     data-proyectos-estado='{{ proyectos_estado | tojson if proyectos_estado else "[]" }}'
+     data-tickets-estado='{{ tickets_por_estado | tojson if tickets_por_estado else "[]" }}'
+     data-tendencia='{{ tendencia_mes | tojson if tendencia_mes else "[]" }}'
+     data-sla-app='{{ sla_por_app | tojson if sla_por_app else "[]" }}'>
 </div>
 
 <!-- Cabecera solo visible al exportar PDF -->
@@ -130,6 +133,73 @@
         </div>
     </div>
 
+    <!-- TICKETS POR ESTADO + TENDENCIA -->
+    <div class="rep-panel-fila">
+        <div class="rep-panel">
+            <div class="rep-panel-titulo">📊 Tickets por estado</div>
+            <div class="rep-panel-cuerpo">
+                {% if tickets_por_estado %}<canvas id="grafico-tickets-estado"></canvas>
+                {% else %}<div class="rep-sin-datos">Sin datos aún</div>{% endif %}
+            </div>
+        </div>
+        <div class="rep-panel">
+            <div class="rep-panel-titulo">📈 Tendencia de tickets por mes</div>
+            <div class="rep-panel-cuerpo">
+                {% if tendencia_mes %}<canvas id="grafico-rep-tendencia"></canvas>
+                {% else %}<div class="rep-sin-datos">Sin datos aún</div>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- SLA POR APLICACIÓN -->
+    <div class="rep-panel">
+        <div class="rep-panel-titulo">🎯 SLA cumplido / incumplido por aplicación</div>
+        <div class="rep-panel-cuerpo">
+            {% if sla_por_app %}<canvas id="grafico-sla-app"></canvas>
+            {% else %}<div class="rep-sin-datos">Sin datos de SLA aún</div>{% endif %}
+        </div>
+    </div>
+
+    <!-- TABLA AGENTES CON MÉTRICAS -->
+    <div class="rep-panel">
+        <div class="rep-panel-titulo">👤 Métricas completas por agente</div>
+        <div class="rep-panel-cuerpo rep-panel-tabla">
+            {% if agentes_metricas %}
+            <table class="rep-tabla">
+                <thead>
+                    <tr>
+                        <th>Agente</th><th>Atendidos</th><th>Resueltos</th>
+                        <th>SLA OK</th><th>% SLA</th><th>Prom. resolución</th><th>Satisfacción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in agentes_metricas %}
+                    <tr>
+                        <td><strong>{{ a.agente }}</strong></td>
+                        <td>{{ a.total_atendidos }}</td>
+                        <td>{{ a.resueltos or 0 }}</td>
+                        <td>{{ a.sla_ok or 0 }}</td>
+                        <td>
+                            <span class="rep-chip {{ 'rep-chip-verde' if (a.pct_sla or 0) >= 80 else 'rep-chip-rojo' if (a.pct_sla or 0) < 50 else 'rep-chip-naranja' }}">
+                                {{ a.pct_sla or '—' }}{% if a.pct_sla %}%{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ a.promedio_horas or '—' }}{% if a.promedio_horas %}h{% endif %}</td>
+                        <td>
+                            {% if a.satisfaccion %}
+                                ⭐ {{ a.satisfaccion }}/5
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="rep-sin-datos">Sin agentes con tickets asignados aún.</div>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- FILTROS: panel colapsable de búsqueda -->
     <div class="rep-panel rep-filtros-panel reporte-no-print">
         <div class="rep-panel-titulo">🔍 Filtrar tickets</div>
@@ -146,10 +216,10 @@
                     </div>
                     <div class="rep-filtro-grupo">
                         <label>Aplicación</label>
-                        <select name="aplicacion">
+                        <select name="id_aplicacion">
                             <option value="">Todas</option>
                             {% for app in aplicaciones %}
-                            <option value="{{ app }}" {{ 'selected' if aplicacion == app }}>{{ app }}</option>
+                            <option value="{{ app.id_aplicacion }}" {{ 'selected' if id_aplicacion == app.id_aplicacion|string }}>{{ app.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -157,11 +227,11 @@
                         <label>Estado</label>
                         <select name="estado">
                             <option value="">Todos</option>
-                            <option value="abierto"       {{ 'selected' if estado == 'abierto' }}>Abierto</option>
-                            <option value="en_progreso"   {{ 'selected' if estado == 'en_progreso' }}>En progreso</option>
-                            <option value="resuelto"      {{ 'selected' if estado == 'resuelto' }}>Resuelto</option>
-                            <option value="cerrado"       {{ 'selected' if estado == 'cerrado' }}>Cerrado</option>
-                            <option value="base_proyecto" {{ 'selected' if estado == 'base_proyecto' }}>Base proyecto</option>
+                            <option value="solicitado"  {{ 'selected' if estado == 'solicitado' }}>Solicitado</option>
+                            <option value="en_progreso" {{ 'selected' if estado == 'en_progreso' }}>En progreso</option>
+                            <option value="resuelto"    {{ 'selected' if estado == 'resuelto' }}>Resuelto</option>
+                            <option value="cerrado"     {{ 'selected' if estado == 'cerrado' }}>Cerrado</option>
+                            <option value="cancelado"   {{ 'selected' if estado == 'cancelado' }}>Cancelado</option>
                         </select>
                     </div>
                     <div class="rep-filtro-grupo">
@@ -178,7 +248,8 @@
                 <div class="rep-filtros-botones">
                     <button type="button" class="rep-btn-filtrar" onclick="filtrarReportes()">Filtrar</button>
                     <button type="button" class="rep-btn-limpiar" onclick="limpiarFiltros()">Limpiar</button>
-                    <button type="button" class="rep-btn-pdf reporte-no-print" onclick="exportarTabla()">Exportar Tabla PDF</button>
+                    <button type="button" class="rep-btn-pdf reporte-no-print" onclick="exportarTabla()">Exportar PDF</button>
+                    <button type="button" class="rep-btn-excel reporte-no-print" onclick="exportarExcel()">⬇ Exportar Excel</button>
                 </div>
             </form>
         </div>
@@ -196,21 +267,45 @@
                 <thead>
                     <tr>
                         <th>#</th><th>Título</th><th>Aplicación</th>
-                        <th>Tipo</th><th>Prioridad</th><th>Estado</th>
-                        <th>Solicitante</th><th>Fecha</th>
+                        <th>Tipo</th><th>Prioridad</th><th>Intensidad</th><th>Estado</th>
+                        <th>Solicitante</th><th>Agente</th>
+                        <th>Apertura</th><th>Solución</th>
+                        <th>Tiempo</th><th>SLA</th><th>⭐</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for t in tickets_filtrados %}
+                    {% set mins = t.minutos_resolucion %}
+                    {% if mins is not none %}
+                        {% set h = (mins // 60)|int %}
+                        {% set m = (mins % 60)|int %}
+                        {% set tiempo_str = h|string + 'h ' + m|string + 'm' %}
+                    {% else %}
+                        {% set tiempo_str = '—' %}
+                    {% endif %}
                     <tr>
                         <td class="rep-td-id">#{{ t.id_ticket }}</td>
                         <td>{{ t.titulo }}</td>
                         <td class="rep-td-app">{{ t.aplicacion }}</td>
                         <td><span class="rep-chip {{ 'rep-chip-rojo' if t.tipo == 'incidencia' else 'rep-chip-azul' }}">{{ t.tipo | capitalize }}</span></td>
-                        <td><span class="rep-chip {{ 'rep-chip-rojo' if t.prioridad in ('critica','alta') else 'rep-chip-gris' }}">{{ t.prioridad | capitalize }}</span></td>
+                        <td><span class="rep-chip {{ 'rep-chip-rojo' if t.prioridad in ('critica','alta') else 'rep-chip-gris' }}">{{ (t.prioridad or '—') | capitalize }}</span></td>
+                        <td><span class="rep-chip {{ 'rep-chip-rojo' if t.intensidad in ('critica','alta') else 'rep-chip-gris' }}">{{ (t.intensidad or '—') | capitalize }}</span></td>
                         <td><span class="rep-chip {{ 'rep-chip-verde' if t.estado in ('resuelto','cerrado') else 'rep-chip-naranja' if t.estado == 'en_progreso' else 'rep-chip-rojo' }}">{{ t.estado | replace('_',' ') | capitalize }}</span></td>
                         <td class="rep-td-agente">{{ t.solicitante }}</td>
+                        <td class="rep-td-agente">{{ t.agente or '—' }}</td>
                         <td class="rep-td-fecha">{{ t.fecha_apertura }}</td>
+                        <td class="rep-td-fecha">{{ t.fecha_solucion or '—' }}</td>
+                        <td class="rep-td-fecha">{{ tiempo_str }}</td>
+                        <td>
+                            {% if t.sla_cumplido == 'SI' %}
+                                <span class="rep-chip rep-chip-verde">✔ SLA OK</span>
+                            {% elif t.sla_cumplido == 'NO' %}
+                                <span class="rep-chip rep-chip-rojo">✘ Excedido</span>
+                            {% else %}
+                                <span class="rep-chip rep-chip-gris">Pendiente</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ '⭐' * (t.calificacion or 0) if t.calificacion else '—' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -346,6 +441,7 @@
                 <button type="button" class="rep-btn-limpiar" onclick="limpiarFiltrosProyecto()">Limpiar</button>
                 <button type="button" class="rep-btn-pdf reporte-no-print" onclick="exportarTabla()">Exportar Tabla PDF</button>
                 <button type="button" class="rep-btn-pdf-act reporte-no-print" onclick="exportarConActividades()">Exportar con Actividades PDF</button>
+                <button type="button" class="rep-btn-excel reporte-no-print" onclick="exportarExcelProyectos()">⬇ Exportar Excel</button>
             </div>
         </div>
     </div>

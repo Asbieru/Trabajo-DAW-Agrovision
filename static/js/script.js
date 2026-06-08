@@ -153,11 +153,15 @@ function hacerLogin() {
         el.style.height = el.getAttribute('data-h') + 'px';
     });
 
-    var porApp       = JSON.parse(contenedor.getAttribute('data-app'));
-    var porPrioridad = JSON.parse(contenedor.getAttribute('data-prioridad'));
-    var porMes       = JSON.parse(contenedor.getAttribute('data-mes'));
-    var proyectosEst = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
-    var velocity     = JSON.parse(contenedor.getAttribute('data-velocity') || '[]');
+    var porApp        = JSON.parse(contenedor.getAttribute('data-app'));
+    var porPrioridad  = JSON.parse(contenedor.getAttribute('data-prioridad'));
+    var porIntensidad = JSON.parse(contenedor.getAttribute('data-intensidad') || '[]');
+    var porTipoInd    = JSON.parse(contenedor.getAttribute('data-tipo') || '[]');
+    var rankingApps   = JSON.parse(contenedor.getAttribute('data-ranking-apps') || '[]');
+    var actEstado     = JSON.parse(contenedor.getAttribute('data-act-estado') || '[]');
+    var porMes        = JSON.parse(contenedor.getAttribute('data-mes'));
+    var proyectosEst  = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
+    var velocity      = JSON.parse(contenedor.getAttribute('data-velocity') || '[]');
 
     if (document.getElementById('grafico-app') && porApp.length) {
         var canvasApp = document.getElementById('grafico-app');
@@ -184,6 +188,23 @@ function hacerLogin() {
             data: {
                 labels: porPrioridad.map(function (p) { return p.prioridad; }),
                 datasets: [{ data: porPrioridad.map(function (p) { return p.total; }),
+                    backgroundColor: ['rgba(192,57,43,0.8)','rgba(230,126,34,0.8)',
+                                    'rgba(241,196,15,0.8)','rgba(26,122,74,0.8)'],
+                    borderWidth: 2 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
+        });
+    }
+
+    if (document.getElementById('grafico-intensidad') && porIntensidad.length) {
+        var canvasIntensidad = document.getElementById('grafico-intensidad');
+        canvasIntensidad.style.height = '400px';
+        new Chart(canvasIntensidad, {
+            type: 'doughnut',
+            data: {
+                labels: porIntensidad.map(function (p) { return p.intensidad; }),
+                datasets: [{ data: porIntensidad.map(function (p) { return p.total; }),
                     backgroundColor: ['rgba(192,57,43,0.8)','rgba(230,126,34,0.8)',
                                     'rgba(241,196,15,0.8)','rgba(26,122,74,0.8)'],
                     borderWidth: 2 }]
@@ -267,6 +288,124 @@ function hacerLogin() {
                 scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
             }
         });
+    }
+
+    // Tipo de ticket (indicadores)
+    if (document.getElementById('grafico-tipo') && porTipoInd.length) {
+        var canvasTipoInd = document.getElementById('grafico-tipo');
+        canvasTipoInd.style.height = '360px';
+        new Chart(canvasTipoInd, {
+            type: 'doughnut',
+            data: {
+                labels: porTipoInd.map(function(t){ return t.tipo + ' (' + t.pct + '%)'; }),
+                datasets: [{ data: porTipoInd.map(function(t){ return t.total; }),
+                    backgroundColor: ['rgba(192,57,43,0.8)','rgba(26,122,74,0.8)','rgba(30,95,168,0.8)'],
+                    borderWidth: 2 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
+        });
+    }
+
+    // Ranking apps problemáticas
+    if (document.getElementById('grafico-ranking-apps') && rankingApps.length) {
+        var canvasRanking = document.getElementById('grafico-ranking-apps');
+        canvasRanking.style.height = Math.max(300, rankingApps.length * 55) + 'px';
+        new Chart(canvasRanking, {
+            type: 'bar',
+            data: {
+                labels: rankingApps.map(function(a){ return a.aplicacion; }),
+                datasets: [
+                    { label: 'Total incidencias', data: rankingApps.map(function(a){ return a.total_incidencias; }),
+                      backgroundColor: 'rgba(149,165,166,0.5)', borderRadius: 4 },
+                    { label: 'Alta prioridad', data: rankingApps.map(function(a){ return a.alta_prioridad; }),
+                      backgroundColor: 'rgba(192,57,43,0.8)', borderRadius: 4 }
+                ]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+
+    // Actividades por estado (proyectos)
+    if (document.getElementById('grafico-act-estado') && actEstado.length) {
+        var canvasActEst = document.getElementById('grafico-act-estado');
+        canvasActEst.style.height = '320px';
+        var coloresAct = { 'en_progreso': 'rgba(30,95,168,0.8)', 'por_hacer': 'rgba(241,196,15,0.8)',
+            'backlog': 'rgba(149,165,166,0.6)', 'completada': 'rgba(26,122,74,0.8)',
+            'cancelada': 'rgba(192,57,43,0.5)', 'bloqueado': 'rgba(120,40,40,0.8)' };
+        new Chart(canvasActEst, {
+            type: 'doughnut',
+            data: {
+                labels: actEstado.map(function(a){ return a.estado.replace(/_/g,' ') + ' (' + a.total + ')'; }),
+                datasets: [{ data: actEstado.map(function(a){ return a.total; }),
+                    backgroundColor: actEstado.map(function(a){ return coloresAct[a.estado] || 'rgba(100,100,100,0.6)'; }),
+                    borderWidth: 2 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+        });
+    }
+
+    // Gráfica de tiempo promedio resolución por aplicación
+    var panelTiempoApp = document.querySelector('[data-tiempo-app]');
+    if (panelTiempoApp && document.getElementById('grafico-tiempo-app')) {
+        var tiempoApp = JSON.parse(panelTiempoApp.getAttribute('data-tiempo-app'));
+        if (tiempoApp.length) {
+            var canvasTiempoApp = document.getElementById('grafico-tiempo-app');
+            canvasTiempoApp.style.height = Math.max(300, tiempoApp.length * 55) + 'px';
+            new Chart(canvasTiempoApp, {
+                type: 'bar',
+                data: {
+                    labels: tiempoApp.map(function(a){ return a.aplicacion; }),
+                    datasets: [
+                        {
+                            label: 'Promedio (h)',
+                            data: tiempoApp.map(function(a){ return a.promedio_horas; }),
+                            backgroundColor: tiempoApp.map(function(a){
+                                return a.promedio_horas <= 8
+                                    ? 'rgba(26,122,74,0.8)'
+                                    : a.promedio_horas <= 24
+                                        ? 'rgba(230,126,34,0.8)'
+                                        : 'rgba(192,57,43,0.8)';
+                            }),
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Mínimo (h)',
+                            data: tiempoApp.map(function(a){ return a.minimo_horas; }),
+                            backgroundColor: 'rgba(52,152,219,0.5)',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Máximo (h)',
+                            data: tiempoApp.map(function(a){ return a.maximo_horas; }),
+                            backgroundColor: 'rgba(149,165,166,0.4)',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.dataset.label + ': ' + ctx.parsed.x + 'h';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { callback: function(v){ return v + 'h'; } } }
+                    }
+                }
+            });
+        }
     }
 
 })();
@@ -712,6 +851,9 @@ function exportarResumen() {
     var storyPoints     = JSON.parse(contenedor.getAttribute('data-sp'));
     var carryover       = JSON.parse(contenedor.getAttribute('data-carryover'));
     var proyectosEstado = JSON.parse(contenedor.getAttribute('data-proyectos-estado') || '[]');
+    var ticketsEstado   = JSON.parse(contenedor.getAttribute('data-tickets-estado') || '[]');
+    var tendencia       = JSON.parse(contenedor.getAttribute('data-tendencia') || '[]');
+    var slaApp          = JSON.parse(contenedor.getAttribute('data-sla-app') || '[]');
 
     if (document.getElementById('grafico-reporte-app') && porApp.length) {
         var canvasApp = document.getElementById('grafico-reporte-app');
@@ -807,6 +949,74 @@ function exportarResumen() {
         });
     }
 
+    // Tickets por estado
+    if (document.getElementById('grafico-tickets-estado') && ticketsEstado.length) {
+        var canvasEst = document.getElementById('grafico-tickets-estado');
+        canvasEst.style.height = '350px';
+        var coloresEst = ticketsEstado.map(function(e) {
+            if (e.estado === 'resuelto')    return 'rgba(26,122,74,0.8)';    // verde oscuro
+            if (e.estado === 'cerrado')     return 'rgba(88,214,141,0.8)';   // verde claro
+            if (e.estado === 'en_progreso') return 'rgba(30,95,168,0.8)';    // azul
+            if (e.estado === 'solicitado')  return 'rgba(241,196,15,0.8)';   // amarillo
+            if (e.estado === 'cancelado')   return 'rgba(149,165,166,0.8)';  // gris
+            return 'rgba(192,57,43,0.8)';                                     // rojo
+        });
+        new Chart(canvasEst, {
+            type: 'doughnut',
+            data: {
+                labels: ticketsEstado.map(function(e){ return e.estado.replace(/_/g,' '); }),
+                datasets: [{ data: ticketsEstado.map(function(e){ return e.total; }),
+                    backgroundColor: coloresEst, borderWidth: 2 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    // Tendencia por mes
+    if (document.getElementById('grafico-rep-tendencia') && tendencia.length) {
+        var canvasTend = document.getElementById('grafico-rep-tendencia');
+        canvasTend.style.height = '350px';
+        new Chart(canvasTend, {
+            type: 'bar',
+            data: {
+                labels: tendencia.map(function(m){ return m.mes_label; }),
+                datasets: [
+                    { label: 'Total', data: tendencia.map(function(m){ return m.total; }),
+                      backgroundColor: 'rgba(30,95,168,0.6)', borderRadius: 4 },
+                    { label: 'Resueltos', data: tendencia.map(function(m){ return m.resueltos; }),
+                      backgroundColor: 'rgba(26,122,74,0.8)', borderRadius: 4 },
+                    { label: 'Cancelados', data: tendencia.map(function(m){ return m.cancelados; }),
+                      backgroundColor: 'rgba(149,165,166,0.7)', borderRadius: 4 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
+
+    // SLA por aplicación (barras apiladas OK vs KO)
+    if (document.getElementById('grafico-sla-app') && slaApp.length) {
+        var canvasSlaApp = document.getElementById('grafico-sla-app');
+        canvasSlaApp.style.height = Math.max(300, slaApp.length * 55) + 'px';
+        new Chart(canvasSlaApp, {
+            type: 'bar',
+            data: {
+                labels: slaApp.map(function(a){ return a.aplicacion; }),
+                datasets: [
+                    { label: 'SLA cumplido', data: slaApp.map(function(a){ return a.sla_ok; }),
+                      backgroundColor: 'rgba(26,122,74,0.8)', borderRadius: 4 },
+                    { label: 'SLA excedido', data: slaApp.map(function(a){ return a.sla_ko; }),
+                      backgroundColor: 'rgba(192,57,43,0.8)', borderRadius: 4 }
+                ]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { x: { beginAtZero: true, stacked: true }, y: { stacked: true } } }
+        });
+    }
+
 })();
 
 function filtrarReportes() {
@@ -814,31 +1024,41 @@ function filtrarReportes() {
     var form = document.getElementById('form-filtro-reportes');
     if (!form) return;
 
-    var fechaInicio = form.querySelector('[name="fecha_inicio"]').value;
-    var fechaFin    = form.querySelector('[name="fecha_fin"]').value;
-    var aplicacion  = form.querySelector('[name="aplicacion"]').value.toLowerCase().trim();
-    var estado      = form.querySelector('[name="estado"]').value.toLowerCase().trim();
-    var prioridad   = form.querySelector('[name="prioridad"]').value.toLowerCase().trim();
+    var fechaInicio   = form.querySelector('[name="fecha_inicio"]').value;
+    var fechaFin      = form.querySelector('[name="fecha_fin"]').value;
+    // El select ahora envía id_aplicacion; para filtrar visualmente usamos el texto del option
+    var selApp        = form.querySelector('[name="id_aplicacion"]');
+    var aplicacion    = selApp ? selApp.options[selApp.selectedIndex].text.toLowerCase().trim() : '';
+    if (selApp && selApp.value === '') aplicacion = '';
+    var estado        = form.querySelector('[name="estado"]').value.toLowerCase().trim();
+    var prioridad     = form.querySelector('[name="prioridad"]').value.toLowerCase().trim();
 
-    var filas   = document.querySelectorAll('#tabla-reporte tbody tr');
+    var filas    = document.querySelectorAll('#tabla-reporte tbody tr');
     var visibles = 0;
 
+    // Índices de columna (0-based) en la nueva tabla:
+    // 0:#  1:Título  2:Aplicación  3:Tipo  4:Prioridad  5:Intensidad
+    // 6:Estado  7:Solicitante  8:Agente  9:Apertura  10:Solución
+    // 11:Tiempo  12:SLA  13:⭐
     filas.forEach(function(fila) {
-        var celdas      = fila.querySelectorAll('td');
-        if (celdas.length < 8) return;
+        var celdas = fila.querySelectorAll('td');
+        if (celdas.length < 10) return;
+
         var fAplicacion = celdas[2].textContent.trim().toLowerCase();
-        var fEstado     = celdas[5].textContent.trim().toLowerCase();
         var fPrioridad  = celdas[4].textContent.trim().toLowerCase();
-        var fFecha      = celdas[7].textContent.trim();
+        var fEstado     = celdas[6].textContent.trim().toLowerCase();
+        var fFecha      = celdas[9].textContent.trim(); // fecha apertura dd/mm/yyyy hh:mm
 
         var ok = true;
 
         if (aplicacion && !fAplicacion.includes(aplicacion)) ok = false;
         if (estado     && !fEstado.includes(estado.replace(/_/g, ' '))) ok = false;
-        if (prioridad  && !fPrioridad.includes(prioridad))   ok = false;
+        if (prioridad  && !fPrioridad.includes(prioridad))              ok = false;
 
         if (fechaInicio || fechaFin) {
-            var partes    = fFecha.split('/');
+            // La fecha puede tener hora: "12/06/2025 09:00", tomamos solo la parte de fecha
+            var soloFecha = fFecha.split(' ')[0];
+            var partes    = soloFecha.split('/');
             if (partes.length === 3) {
                 var fechaFila = partes[2] + '-' + partes[1] + '-' + partes[0];
                 if (fechaInicio && fechaFila < fechaInicio) ok = false;
@@ -857,6 +1077,44 @@ function filtrarReportes() {
     // Mostrar mensaje si no hay resultados
     var sinDatos = document.querySelector('#tabla-reporte .rep-sin-datos');
     if (sinDatos) sinDatos.style.display = visibles === 0 ? 'block' : 'none';
+}
+
+/* ============================================================
+   EXPORTAR EXCEL — reportes.html
+   Redirige a la ruta Flask con los filtros activos del form.
+   El servidor genera y devuelve el .xlsx directamente.
+   ============================================================ */
+function exportarExcel() {
+    var form = document.getElementById('form-filtro-reportes');
+    if (!form) return;
+
+    var params = new URLSearchParams();
+
+    var fechaInicio = form.querySelector('[name="fecha_inicio"]').value;
+    var fechaFin    = form.querySelector('[name="fecha_fin"]').value;
+    var selApp      = form.querySelector('[name="id_aplicacion"]');
+    var idAplicacion = selApp ? selApp.value : '';
+    var estado      = form.querySelector('[name="estado"]').value;
+    var prioridad   = form.querySelector('[name="prioridad"]').value;
+
+    if (fechaInicio)  params.append('fecha_inicio',  fechaInicio);
+    if (fechaFin)     params.append('fecha_fin',     fechaFin);
+    if (idAplicacion) params.append('id_aplicacion', idAplicacion);
+    if (estado)       params.append('estado',        estado);
+    if (prioridad)    params.append('prioridad',     prioridad);
+
+    window.location.href = '/reportes/exportar-excel?' + params.toString();
+}
+
+function exportarExcelProyectos() {
+    var estado       = document.getElementById('filtro-estado-proy') ? document.getElementById('filtro-estado-proy').value : '';
+    var responsable  = document.getElementById('filtro-responsable-proy') ? document.getElementById('filtro-responsable-proy').value : '';
+
+    var params = new URLSearchParams();
+    if (estado)      params.append('estado',          estado);
+    if (responsable) params.append('id_responsable',  responsable);
+
+    window.location.href = '/reportes/exportar-excel-proyectos?' + params.toString();
 }
 
 /* ============================================================

@@ -8,6 +8,10 @@
 <div id="datos-graficos"
      data-app='{{ por_app | tojson if por_app else "[]" }}'
      data-prioridad='{{ por_prioridad | tojson if por_prioridad else "[]" }}'
+     data-intensidad='{{ por_intensidad | tojson if por_intensidad else "[]" }}'
+     data-tipo='{{ por_tipo | tojson if por_tipo else "[]" }}'
+     data-ranking-apps='{{ ranking_apps | tojson if ranking_apps else "[]" }}'
+     data-act-estado='{{ act_por_estado | tojson if act_por_estado else "[]" }}'
      data-mes='{{ por_mes | tojson if por_mes else "[]" }}'
      data-proyectos-estado='{{ proyectos_estado | tojson if proyectos_estado else "[]" }}'
      data-velocity='{{ velocity_sprints | tojson if velocity_sprints else "[]" }}'>
@@ -73,11 +77,33 @@
             </div>
             <div class="ind-kpi-barra"></div>
         </div>
+        {% set prom_resp_mins = tiempo_respuesta | map(attribute='promedio_minutos_respuesta') | list %}
+        {% set prom_resp = (prom_resp_mins | sum / prom_resp_mins | length) | int if prom_resp_mins else none %}
+        <div class="ind-kpi-card ind-kpi-pendiente">
+            <div class="ind-kpi-icono">🔔</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">
+                    {% if prom_resp is not none %}
+                        {{ (prom_resp // 60) }}h {{ (prom_resp % 60) }}m
+                    {% else %}—{% endif %}
+                </div>
+                <div class="ind-kpi-label">Tiempo prom. 1ª respuesta</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
+        </div>
         <div class="ind-kpi-card ind-kpi-sla">
             <div class="ind-kpi-icono">🎯</div>
             <div class="ind-kpi-cuerpo">
                 <div class="ind-kpi-num">{{ resumen.pct_sla or 0 }}<span class="ind-kpi-unidad">%</span></div>
                 <div class="ind-kpi-label">SLA cumplido</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
+        </div>
+        <div class="ind-kpi-card ind-kpi-total">
+            <div class="ind-kpi-icono">🚫</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ cancelados.cancelados or 0 }}<span class="ind-kpi-unidad"> ({{ cancelados.tasa_cancelacion or 0 }}%)</span></div>
+                <div class="ind-kpi-label">Cancelados</div>
             </div>
             <div class="ind-kpi-barra"></div>
         </div>
@@ -118,6 +144,44 @@
             <div class="ind-chart-cuerpo">
                 {% if por_prioridad %}<canvas id="grafico-prioridad"></canvas>
                 {% else %}<div class="ind-sin-datos">Sin datos aún</div>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- INTENSIDAD + TIEMPO DE RESPUESTA -->
+    <div class="ind-charts-grid">
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-rojo"></span>Distribución por intensidad</div>
+            <div class="ind-chart-cuerpo">
+                {% if por_intensidad %}<canvas id="grafico-intensidad"></canvas>
+                {% else %}<div class="ind-sin-datos">Sin datos aún</div>{% endif %}
+            </div>
+        </div>
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-acento"></span>Tiempo de primera respuesta por agente</div>
+            <div class="ind-chart-cuerpo ind-chart-lista">
+                {% if tiempo_respuesta %}
+                    {% for a in tiempo_respuesta %}
+                    {% set horas = (a.promedio_minutos_respuesta // 60) | int %}
+                    {% set mins  = (a.promedio_minutos_respuesta % 60)  | int %}
+                    <div class="ind-agente-row">
+                        <div class="ind-agente-avatar">
+                            {{ a.agente.split()[0][0] }}{{ a.agente.split()[-1][0] if a.agente.split()|length > 1 else '' }}
+                        </div>
+                        <div class="ind-agente-info">
+                            <div class="ind-agente-nombre">{{ a.agente }}</div>
+                            <div class="ind-agente-dato">
+                                Promedio: {{ horas }}h {{ mins }}m ·
+                                Mín: {{ (a.minimo_minutos // 60)|int }}h {{ (a.minimo_minutos % 60)|int }}m ·
+                                Máx: {{ (a.maximo_minutos // 60)|int }}h {{ (a.maximo_minutos % 60)|int }}m
+                            </div>
+                        </div>
+                        <div class="ind-agente-badge">{{ a.total_asignados }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="ind-sin-datos">Sin datos de respuesta aún.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -166,6 +230,96 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- TIPO DE TICKET + RANKING APPS PROBLEMÁTICAS -->
+    <div class="ind-charts-grid">
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Distribución por tipo de ticket</div>
+            <div class="ind-chart-cuerpo">
+                {% if por_tipo %}<canvas id="grafico-tipo"></canvas>
+                {% else %}<div class="ind-sin-datos">Sin datos aún</div>{% endif %}
+            </div>
+        </div>
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-rojo"></span>Ranking de aplicaciones problemáticas</div>
+            <div class="ind-chart-cuerpo">
+                {% if ranking_apps %}<canvas id="grafico-ranking-apps"></canvas>
+                {% else %}<div class="ind-sin-datos">Sin incidencias registradas</div>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP 5 TICKETS MÁS LENTOS -->
+    <div class="ind-chart-panel ind-chart-wide">
+        <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-rojo"></span>Top 5 tickets más lentos en resolver</div>
+        <div class="ind-chart-cuerpo rep-panel-tabla">
+            {% if top5_lentos %}
+            <table class="rep-tabla">
+                <thead>
+                    <tr><th>#</th><th>Título</th><th>Aplicación</th><th>Prioridad</th><th>Agente</th><th>Horas</th><th>SLA</th></tr>
+                </thead>
+                <tbody>
+                    {% for t in top5_lentos %}
+                    <tr>
+                        <td class="rep-td-id">#{{ t.id_ticket }}</td>
+                        <td>{{ t.titulo }}</td>
+                        <td>{{ t.aplicacion }}</td>
+                        <td><span class="rep-chip {{ 'rep-chip-rojo' if t.prioridad in ('critica','alta') else 'rep-chip-gris' }}">{{ (t.prioridad or '—') | capitalize }}</span></td>
+                        <td>{{ t.agente or '—' }}</td>
+                        <td><strong>{{ t.horas_resolucion }}h</strong></td>
+                        <td>
+                            {% if t.sla_cumplido == 'SI' %}<span class="rep-chip rep-chip-verde">✔ OK</span>
+                            {% else %}<span class="rep-chip rep-chip-rojo">✘ Excedido</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="ind-sin-datos">Sin datos suficientes aún.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SLA POR AGENTE -->
+    <div class="ind-chart-panel ind-chart-wide">
+        <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Cumplimiento de SLA por agente</div>
+        <div class="ind-chart-cuerpo ind-chart-lista">
+            {% if sla_por_agente %}
+                {% for a in sla_por_agente %}
+                <div class="ind-agente-row">
+                    <div class="ind-agente-avatar">
+                        {{ a.agente.split()[0][0] }}{{ a.agente.split()[-1][0] if a.agente.split()|length > 1 else '' }}
+                    </div>
+                    <div class="ind-agente-info">
+                        <div class="ind-agente-nombre">{{ a.agente }}</div>
+                        <div class="ind-agente-dato">
+                            {{ a.sla_cumplidos }} de {{ a.total_resueltos }} tickets dentro del SLA
+                        </div>
+                    </div>
+                    <div class="ind-agente-badge {{ 'ind-badge-verde' if a.pct_sla >= 80 else 'ind-badge-rojo' if a.pct_sla < 50 else 'ind-badge-naranja' }}">
+                        {{ a.pct_sla }}%
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="ind-sin-datos">Sin datos de SLA por agente aún.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- TIEMPO PROMEDIO DE RESOLUCIÓN POR APLICACIÓN -->
+    <div class="ind-chart-panel ind-chart-wide"
+         data-tiempo-app='{{ tiempo_por_app | tojson if tiempo_por_app else "[]" }}'>
+        <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Tiempo promedio de resolución por aplicación (horas)</div>
+        <div class="ind-chart-cuerpo">
+            {% if tiempo_por_app %}
+                <canvas id="grafico-tiempo-app"></canvas>
+            {% else %}
+                <div class="ind-sin-datos">Sin datos de resolución por aplicación aún.</div>
+            {% endif %}
         </div>
     </div>
 
@@ -228,6 +382,30 @@
             <div class="ind-kpi-cuerpo">
                 <div class="ind-kpi-num">{{ carga_programador | length }}</div>
                 <div class="ind-kpi-label">Programadores con carga</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
+        </div>
+        <div class="ind-kpi-card ind-kpi-resuelto">
+            <div class="ind-kpi-icono">🟢</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ salud_proyectos.a_tiempo or 0 }}</div>
+                <div class="ind-kpi-label">Proyectos a tiempo</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
+        </div>
+        <div class="ind-kpi-card ind-kpi-pendiente">
+            <div class="ind-kpi-icono">🟡</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ salud_proyectos.en_riesgo or 0 }}</div>
+                <div class="ind-kpi-label">En riesgo</div>
+            </div>
+            <div class="ind-kpi-barra"></div>
+        </div>
+        <div class="ind-kpi-card ind-kpi-total">
+            <div class="ind-kpi-icono">🔴</div>
+            <div class="ind-kpi-cuerpo">
+                <div class="ind-kpi-num">{{ salud_proyectos.retrasado or 0 }}</div>
+                <div class="ind-kpi-label">Retrasados</div>
             </div>
             <div class="ind-kpi-barra"></div>
         </div>
@@ -309,6 +487,90 @@
             </div>
         </div>
     </div>
+
+    <!-- AVANCE POR PROYECTO -->
+    <div class="ind-chart-panel ind-chart-wide">
+        <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-verde"></span>Avance actual por proyecto</div>
+        <div class="ind-chart-cuerpo ind-chart-lista">
+            {% if avance_proyectos %}
+                {% for p in avance_proyectos %}
+                {% set pct = p.porcentaje_avance | int %}
+                <div class="sprint-item">
+                    <div class="sprint-nombre">{{ p.proyecto }}</div>
+                    <div class="sprint-proyecto">
+                        {{ p.estado | replace('_',' ') | capitalize }} ·
+                        {% if p.estado_salud == 'a_tiempo' %}🟢 A tiempo
+                        {% elif p.estado_salud == 'en_riesgo' %}🟡 En riesgo
+                        {% else %}🔴 Retrasado{% endif %}
+                        · Actualizado: {{ p.fecha_reporte.strftime('%d/%m/%Y') if p.fecha_reporte else '—' }}
+                    </div>
+                    <div class="sprint-barra-fondo">
+                        <div class="sprint-barra-relleno" data-ancho="{{ [pct, 100] | min }}"></div>
+                    </div>
+                    <div class="sprint-texto">
+                        <span>{{ pct }}% completado</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="ind-sin-datos">Sin avances registrados en proyectos activos.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ACTIVIDADES POR ESTADO + PROYECTOS VENCIDOS -->
+    <div class="ind-charts-grid">
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Actividades por estado</div>
+            <div class="ind-chart-cuerpo">
+                {% if act_por_estado %}<canvas id="grafico-act-estado"></canvas>
+                {% else %}<div class="ind-sin-datos">Sin actividades registradas</div>{% endif %}
+            </div>
+        </div>
+        <div class="ind-chart-panel">
+            <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-rojo"></span>Proyectos vencidos sin completar</div>
+            <div class="ind-chart-cuerpo ind-chart-lista">
+                {% if proy_vencidos %}
+                    {% for p in proy_vencidos %}
+                    <div class="ind-agente-row">
+                        <div class="ind-agente-avatar" style="background:var(--rojo);">🔴</div>
+                        <div class="ind-agente-info">
+                            <div class="ind-agente-nombre">{{ p.nombre }}</div>
+                            <div class="ind-agente-dato">
+                                {{ p.responsable }} · {{ p.estado | replace('_',' ') | capitalize }} ·
+                                Venció: {{ p.fecha_fin_plan.strftime('%d/%m/%Y') if p.fecha_fin_plan else '—' }}
+                            </div>
+                        </div>
+                        <div class="ind-agente-badge ind-badge-rojo">+{{ p.dias_vencido }}d</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="ind-sin-datos">✅ Ningún proyecto vencido.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- PROGRAMADORES SIN CARGA -->
+    {% if sin_carga %}
+    <div class="ind-chart-panel ind-chart-wide">
+        <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-verde"></span>Programadores disponibles (sin actividades activas)</div>
+        <div class="ind-chart-cuerpo ind-chart-lista">
+            {% for p in sin_carga %}
+            <div class="ind-agente-row">
+                <div class="ind-agente-avatar">
+                    {{ p.programador.split()[0][0] }}{{ p.programador.split()[-1][0] if p.programador.split()|length > 1 else '' }}
+                </div>
+                <div class="ind-agente-info">
+                    <div class="ind-agente-nombre">{{ p.programador }}</div>
+                    <div class="ind-agente-dato">Sin actividades en progreso ni por hacer</div>
+                </div>
+                <div class="ind-agente-badge ind-badge-verde">Libre</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
 </div><!-- fin seccion-ind-proyectos -->
 
