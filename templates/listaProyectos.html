@@ -29,7 +29,7 @@
             </thead>
             <tbody>
                 {% if proyectos %}
-                    {% for p in proyectos %}
+                    {% for p in proyectos | sort(attribute='id_proyecto', reverse=True) %}
                     <tr>
                         <td class="proyecto-id">PR-{{ p.id_proyecto }}</td>
                         <td><strong>{{ p.nombre }}</strong></td>

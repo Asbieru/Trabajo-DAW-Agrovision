@@ -168,7 +168,9 @@
         </div>
     </div>
 
-</div><div id="modal-eliminar-avance" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+</div>
+
+<div id="modal-eliminar-avance" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
     <div class="modal-content" style="background:white; padding:20px; border-radius:8px; max-width:400px; width:90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
         <h3 style="color:var(--rojo); margin-top:0;">⚠️ Confirmar Eliminación</h3>
         <p>¿Estás seguro de que deseas eliminar el reporte de avance del <strong id="lbl-fecha-avance"></strong>?</p>
@@ -184,16 +186,16 @@
 const ID_PROYECTO = {{ proyecto.id_proyecto }};
 var instanciaGrafico = null;
 
-// ── 1. Dibujar gráfico inicial ────────────────────────────────
+// ── 1. Dibujar gráfico inicial (Usa AJAX para traer real y estimado) ──
 {% if avances %}
 document.addEventListener('DOMContentLoaded', function() {
-    var etiquetas = {{ fechas_grafico | tojson }};
-    var datos     = {{ porcentajes_grafico | tojson }};
-    dibujarGrafico(etiquetas, datos);
+    // Al cargar la página, llamamos directamente a refrescarGrafico 
+    // para que traiga los datos reales y estimados desde main.py
+    refrescarGrafico();
 });
 {% endif %}
 
-function dibujarGrafico(etiquetas, datos) {
+function dibujarGrafico(etiquetas, datosReales, datosEstimados) {
     var ctx = document.getElementById('graficoAvance');
     if (!ctx) return;
 
@@ -205,18 +207,31 @@ function dibujarGrafico(etiquetas, datos) {
         type: 'line',
         data: {
             labels: etiquetas,
-            datasets: [{
-                label: '% de Avance',
-                data: datos,
-                borderColor: '#1a7a4a',
-                backgroundColor: 'rgba(26,122,74,0.08)',
-                borderWidth: 3,
-                pointBackgroundColor: '#f0a500',
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                fill: true,
-                tension: 0.35
-            }]
+            datasets: [
+                {
+                    label: '% Avance Real',
+                    data: datosReales,
+                    borderColor: '#1a7a4a', // Verde
+                    backgroundColor: 'rgba(26,122,74,0.08)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#f0a500',
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    fill: true,
+                    tension: 0.35
+                },
+                {
+                    label: '% Avance Estimado (Roadmap)',
+                    data: datosEstimados,
+                    borderColor: '#95a5a6', // Gris
+                    borderWidth: 2,
+                    borderDash: [5, 5], // Línea punteada
+                    pointBackgroundColor: '#95a5a6',
+                    pointRadius: 3,
+                    fill: false,
+                    tension: 0
+                }
+            ]
         },
         options: {
             responsive: true,
@@ -230,10 +245,15 @@ function dibujarGrafico(etiquetas, datos) {
                 }
             },
             plugins: {
-                legend: { display: false },
+                legend: { 
+                    display: true, 
+                    position: 'bottom' 
+                },
                 tooltip: {
                     callbacks: {
-                        label: function(ctx) { return ' Avance: ' + ctx.parsed.y + '%'; }
+                        label: function(ctx) { 
+                            return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y + '%'; 
+                        }
                     }
                 }
             }
@@ -244,18 +264,23 @@ function dibujarGrafico(etiquetas, datos) {
 // ── 2. Refrescar gráfico desde la API ─────────────────────────
 function refrescarGrafico() {
     var txtBtn = document.getElementById('txt-refresh-grafico');
-    txtBtn.textContent = 'Cargando…';
+    if(txtBtn) txtBtn.textContent = 'Cargando…';
 
     fetch('/api/proyecto/' + ID_PROYECTO + '/avances-grafico')
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            dibujarGrafico(data.fechas, data.porcentajes);
-            txtBtn.textContent = 'Actualizado ✓';
-            setTimeout(function() { txtBtn.textContent = 'Refrescar'; }, 2000);
+            // Se le pasan los 3 arreglos devueltos por la nueva ruta API
+            dibujarGrafico(data.fechas, data.porcentajes, data.estimados);
+            if(txtBtn) {
+                txtBtn.textContent = 'Actualizado ✓';
+                setTimeout(function() { txtBtn.textContent = 'Refrescar'; }, 2000);
+            }
         })
         .catch(function() {
-            txtBtn.textContent = '⚠️ Error';
-            setTimeout(function() { txtBtn.textContent = 'Refrescar'; }, 2000);
+            if(txtBtn) {
+                txtBtn.textContent = '⚠️ Error';
+                setTimeout(function() { txtBtn.textContent = 'Refrescar'; }, 2000);
+            }
         });
 }
 
@@ -306,14 +331,12 @@ document.addEventListener('DOMContentLoaded', function() {
             btnConf.textContent = 'Eliminando...';
             btnConf.disabled = true;
 
-            // Llama a la nueva ruta API que debes colocar en main.py
             fetch('/api/avance/' + _avanceEliminarId + '/eliminar', {
                 method: 'POST'
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if(data.ok) {
-                    // Recarga la página para refrescar tabla y gráficos
                     location.reload(); 
                 } else {
                     alert(data.mensaje || 'No se puede eliminar por restricciones de integridad.');

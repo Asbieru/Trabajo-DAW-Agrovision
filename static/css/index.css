@@ -2893,4 +2893,163 @@ a.ticket-link:hover strong { text-decoration: underline; }
         flex-direction: column;
         gap: 10px;
     }
+
+    /* ════════════════════════════════════════════════════
+   AJUSTES RESPONSIVOS PARA MÓVILES (CELULARES)
+   ════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+    
+    /* 1. TOPBAR Y BOTÓN DE MENÚ (HAMBURGUESA) */
+    .topbar {
+        padding: 0 16px;
+        justify-content: space-between;
+    }
+    
+    /* Mostrar el botón de menú en móviles (necesitas agregarlo al base.html) */
+    .menu-toggle-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: var(--blanco);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 5px;
+    }
+
+    .topbar-spacer {
+        display: none; /* Oculta espacio extra en celular */
+    }
+
+    .topbar-user {
+        gap: 6px;
+    }
+
+    .topbar-nombre, .topbar-rol {
+        display: none; /* Ocultar nombres largos en celular para ahorrar espacio */
+    }
+
+    .topbar-logout {
+        padding: 5px 8px !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* 2. SIDEBAR (MENÚ LATERAL) OCULTO POR DEFECTO */
+    .sidebar {
+        position: fixed;
+        left: -100%; /* Oculto fuera de la pantalla */
+        top: 60px;
+        height: calc(100vh - 60px);
+        width: 260px;
+        z-index: 999;
+        transition: left 0.3s ease-in-out;
+        box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+    }
+
+    /* Clase para cuando el menú esté abierto */
+    .sidebar.open {
+        left: 0;
+    }
+
+    /* Fondo oscuro para cuando el menú está abierto */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 998;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    /* 3. MAIN (CONTENIDO PRINCIPAL) */
+    .layout {
+        flex-direction: column;
+    }
+
+    .main {
+        padding: 20px 15px;
+        width: 100%;
+        max-width: 100vw;
+    }
+
+    /* 4. TARJETAS Y GRID (KPIs) */
+    .stats-grid, 
+    .accesos-grid-container,
+    .ind-kpi-grid,
+    .rep-resumen-fila,
+    .rep-panel-fila,
+    .form-grid {
+        grid-template-columns: 1fr; /* Todo en una sola columna */
+        gap: 16px;
+    }
+
+    /* 5. TABLAS RESPONSIVAS (Scroll Horizontal) */
+    .card-body, .rep-panel-cuerpo, .tabla-wrap {
+        padding: 15px;
+        width: 100%;
+        overflow-x: auto; /* Permite deslizar tablas hacia la derecha */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabla {
+        min-width: 600px; /* Fuerza el ancho para que no se aplaste la tabla */
+    }
+
+    /* 6. ENCABEZADOS DE PÁGINA */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .page-header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* 7. FORMULARIOS */
+    .card {
+        margin: 0;
+        border-radius: 12px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* 8. INDICADORES ESPECÍFICO */
+    .ind-hero {
+        padding: 20px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .ind-hero-titulo {
+        font-size: 1.6rem;
+    }
+
+    .ind-tabs {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 2px;
+    }
+    
+    .ind-tab {
+        padding: 10px 15px;
+        font-size: 0.8rem;
+    }
+}
 }
