@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AgroVisión{% endblock %} · Sistema de Gestión</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css') }}">
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -166,6 +167,8 @@
             });
         }
     </script>
+    <!-- CHATBOT AGROVISION -->
+    <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
 </body>
 
 </html>
