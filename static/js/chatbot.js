@@ -545,7 +545,7 @@ NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.
         if (!win) return;
         abierto = !abierto;
         win.classList.toggle('abierto', abierto);
-        if (ico)   ico.textContent = abierto ? '✕' : '💬';
+        if (ico)   ico.textContent = abierto ? '✕' : '🤖';
         if (badge) badge.classList.remove('visible');
     }
  
@@ -572,6 +572,8 @@ NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.
     function limpiar() {
         const cont = document.getElementById('av-chat-mensajes');
         if (cont) cont.innerHTML = '';
+        const ico = document.getElementById('av-chat-ico');
+        if (ico) ico.textContent = '🤖';
         setTimeout(() => addMsg('bot', respuestaDinamica('saludo', getUsuario())), 100);
     }
  
