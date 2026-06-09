@@ -1,14 +1,6 @@
-"""
-usuarioAD.py – Acceso a datos de la tabla 'usuarios' (AgroVision)
-Adaptado siguiendo exactamente el patrón de ticketAD.py y proyectoAD.py
-"""
-
 from werkzeug.security import check_password_hash
 from conexion import obtenerconexion
 
-# ──────────────────────────────────────────────────────────────
-# CLASE DTO
-# ──────────────────────────────────────────────────────────────
 class Usuario:
     def __init__(self, id_usuario, nombre_completo, correo, rol):
         self.id_usuario      = id_usuario
@@ -17,7 +9,7 @@ class Usuario:
         self.rol             = rol
 
 # ──────────────────────────────────────────────────────────────
-# AUTENTICAR USUARIO
+# AUTENTICAR
 # ──────────────────────────────────────────────────────────────
 def autenticarUsuario(correo, password):
     conn = obtenerconexion()
@@ -26,8 +18,7 @@ def autenticarUsuario(correo, password):
             cursor.execute("""
                 SELECT id_usuario, nombre_completo, correo,
                        rol, password_hash, activo
-                FROM usuarios
-                WHERE correo = %s
+                FROM usuarios WHERE correo = %s
             """, (correo.lower(),))
             usuario = cursor.fetchone()
 
@@ -66,7 +57,7 @@ def buscarUsuarioPorCorreo(correo):
             return cursor.fetchone() is not None
 
 # ──────────────────────────────────────────────────────────────
-# OBTENER USUARIOS (para dropdowns — igual que antes)
+# OBTENER USUARIOS (dropdowns)
 # ──────────────────────────────────────────────────────────────
 def obtenerUsuarios(rol=None):
     conn = obtenerconexion()
@@ -118,14 +109,13 @@ def obtenerPerfilUsuario(id_usuario):
 
 # ──────────────────────────────────────────────────────────────
 # ESTADÍSTICAS
-# Patrón copiado de ticketAD.listarTickets() y proyectoAD.listarProyectos()
 # ──────────────────────────────────────────────────────────────
 def estadisticasUsuario(id_usuario):
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
 
-            # Tickets por tipo — igual JOIN que ticketAD.py
+            # Tickets por tipo: solicitante en tickets, agente en detalle_ticket
             cursor.execute("""
                 SELECT t.tipo, COUNT(*) AS total
                 FROM tickets t
@@ -136,21 +126,22 @@ def estadisticasUsuario(id_usuario):
             """, (id_usuario, id_usuario))
             tickets_por_tipo = cursor.fetchall()
 
-            # Proyectos por estado — igual que proyectoAD.listarProyectos()
-            # usa id_responsable y tabla asignado, filtra estado2=1
+            # Proyectos por estado: id_Stakeholder (nombre exacto del SQL)
+            # o en tabla asignado
             cursor.execute("""
                 SELECT p.estado, COUNT(*) AS total
                 FROM proyectos p
                 LEFT JOIN asignado a
-                       ON a.id_proyecto = p.id_proyecto AND a.id_usuario = %s
+                       ON a.id_proyecto = p.id_proyecto
+                      AND a.id_usuario  = %s
                 WHERE p.estado2 = 1
-                  AND (p.id_responsable = %s OR a.id_usuario IS NOT NULL)
+                  AND (p.id_Stakeholder = %s OR a.id_usuario IS NOT NULL)
                 GROUP BY p.estado
                 ORDER BY total DESC
             """, (id_usuario, id_usuario))
             proyectos_por_estado = cursor.fetchall()
 
-            # Calificación como agente — agente está en detalle_ticket
+            # Calificación como agente
             cursor.execute("""
                 SELECT COUNT(*) AS total_agente,
                        SUM(CASE WHEN t.estado IN ('resuelto','cerrado') THEN 1 ELSE 0 END) AS resueltos
@@ -179,7 +170,6 @@ def historialParticipacionUsuario(id_usuario):
         with conn.cursor() as cursor:
 
             # Tickets como SOLICITANTE
-            # Columnas copiadas de ticketAD.listarTickets()
             cursor.execute("""
                 SELECT 'ticket'       AS tipo_item,
                        t.id_ticket    AS id_item,
@@ -216,19 +206,18 @@ def historialParticipacionUsuario(id_usuario):
             """, (id_usuario, id_usuario))
             como_agente = cursor.fetchall()
 
-            # Proyectos donde participa
-            # Patrón copiado de proyectoAD.listarProyectos():
-            # usa p.id_responsable, LEFT JOIN asignado, WHERE estado2=1
+            # Proyectos donde participa como Stakeholder o en asignado o con actividades
+            # id_Stakeholder es el nombre exacto de la columna en proyectos
             cursor.execute("""
                 SELECT DISTINCT
                        p.id_proyecto,
-                       p.nombre          AS titulo,
-                       p.estado          AS estado_proyecto,
-                       CASE WHEN p.id_responsable = %s
+                       p.nombre         AS titulo,
+                       p.estado         AS estado_proyecto,
+                       CASE WHEN p.id_Stakeholder = %s
                             THEN 'responsable'
                             ELSE 'asignado' END AS rol_usuario,
-                       p.nombre          AS nombre_proyecto,
-                       p.created_at      AS fecha
+                       p.nombre         AS nombre_proyecto,
+                       p.created_at     AS fecha
                 FROM proyectos p
                 LEFT JOIN asignado asig
                        ON asig.id_proyecto = p.id_proyecto
@@ -236,15 +225,16 @@ def historialParticipacionUsuario(id_usuario):
                 LEFT JOIN actividades a
                        ON a.id_proyecto = p.id_proyecto
                       AND a.id_asignado = %s
-                      AND a.estado2 = 1
+                      AND a.estado2     = 1
                 WHERE p.estado2 = 1
-                  AND (p.id_responsable = %s
+                  AND p.estado != 'eliminado'
+                  AND (p.id_Stakeholder = %s
                        OR asig.id_usuario IS NOT NULL
                        OR a.id_asignado  IS NOT NULL)
             """, (id_usuario, id_usuario, id_usuario, id_usuario))
             proyectos_raw = cursor.fetchall()
 
-            # Actividades propias — igual que actividadAD patrón
+            # Actividades propias
             cursor.execute("""
                 SELECT a.id_proyecto, a.titulo, a.codigo, a.estado
                 FROM actividades a
@@ -252,7 +242,7 @@ def historialParticipacionUsuario(id_usuario):
             """, (id_usuario,))
             actividades_propias = cursor.fetchall()
 
-            # Actividades de proyectos donde es responsable/asignado
+            # Actividades de proyectos donde es Stakeholder o asignado
             cursor.execute("""
                 SELECT a.id_proyecto, a.titulo, a.codigo, a.estado
                 FROM actividades a
@@ -260,24 +250,31 @@ def historialParticipacionUsuario(id_usuario):
                 LEFT JOIN asignado asig
                        ON asig.id_proyecto = p.id_proyecto
                       AND asig.id_usuario  = %s
-                WHERE p.estado2 = 1 AND a.estado2 = 1
-                  AND (p.id_responsable = %s OR asig.id_usuario IS NOT NULL)
+                WHERE p.estado2 = 1
+                  AND a.estado2 = 1
+                  AND (p.id_Stakeholder = %s OR asig.id_usuario IS NOT NULL)
             """, (id_usuario, id_usuario))
             todas_actividades = cursor.fetchall()
 
     # ── Lógica Kanban ─────────────────────────────────────────
+    # Estados de actividades según el ENUM del SQL:
+    # backlog, por_hacer, en_progreso, completada, cancelada, bloqueado, eliminado
     jerarquia = ['backlog', 'por_hacer', 'en_progreso', 'completada', 'cancelada']
 
+    # Estados de proyectos según el ENUM del SQL:
+    # en_revision, rechazado, planificado, en_desarrollo, qa, pausado, completado, eliminado
     mapa_proyecto = {
-        'planificado'  : 'backlog',
         'en_revision'  : 'backlog',
+        'rechazado'    : 'cancelada',
+        'planificado'  : 'por_hacer',
         'en_desarrollo': 'en_progreso',
         'qa'           : 'en_progreso',
-        'completado'   : 'completada',
         'pausado'      : 'cancelada',
-        'rechazado'    : 'cancelada',
+        'completado'   : 'completada',
+        'eliminado'    : 'cancelada',
     }
-    # Estados copiados del ENUM de tickets en ticketAD.py
+    # Estados de tickets según el ENUM del SQL:
+    # solicitado, en_progreso, resuelto, cerrado, cancelado
     mapa_ticket = {
         'solicitado' : 'backlog',
         'en_progreso': 'en_progreso',
@@ -287,9 +284,11 @@ def historialParticipacionUsuario(id_usuario):
     }
 
     def estado_mas_atrasado(acts):
-        estados = [a['estado'] for a in acts]
-        activos = [e for e in estados if e != 'cancelada']
+        estados = [a['estado'] for a in acts if a['estado'] != 'eliminado']
+        activos = [e for e in estados if e not in ('cancelada', 'completada')]
         pool    = activos if activos else estados
+        if not pool:
+            return 'backlog'
         return min(pool, key=lambda e: jerarquia.index(e) if e in jerarquia else 99)
 
     propias_por_proyecto = {}
@@ -339,11 +338,11 @@ def resumenHistorialUsuario(id_usuario):
     tickets_total = proyectos_total = 0
 
     for i in items:
-        estados[i['estado']] = estados.get(i['estado'], 0) + 1
-        if i['tipo_item'] == 'ticket':
-            tickets_total += 1
-        else:
-            proyectos_total += 1
+        k = i['estado']
+        if k in estados:
+            estados[k] += 1
+        tickets_total  += 1 if i['tipo_item'] == 'ticket'   else 0
+        proyectos_total += 1 if i['tipo_item'] == 'proyecto' else 0
 
     return {
         'estados'        : estados,
