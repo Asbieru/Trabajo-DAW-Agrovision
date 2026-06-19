@@ -1182,6 +1182,25 @@ def api_login():
     return jsonify({'ok': False, 'mensaje': mensaje})
 
 
+@app.route('/api/usuario/me')
+def api_usuario_me():
+    id_usuario = request.args.get('id_usuario', type=int)
+    if not id_usuario:
+        return jsonify({'ok': False, 'mensaje': 'Se requiere id_usuario'}), 401
+    usuario = obtenerPerfilUsuario(id_usuario)
+    if not usuario or not usuario.get('activo'):
+        return jsonify({'ok': False, 'mensaje': 'Usuario no encontrado o inactivo'}), 404
+    return jsonify({
+        'ok': True,
+        'usuario': {
+            'id_usuario'     : usuario['id_usuario'],
+            'nombre_completo': usuario['nombre_completo'],
+            'correo'         : usuario['correo'],
+            'rol'            : usuario['rol'],
+        }
+    })
+
+
 @app.route('/api/indicadores')
 def api_indicadores():
     return jsonify({

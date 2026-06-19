@@ -1,21 +1,99 @@
-/* ═══════════════════════════════════════════════════════════
-   AGROVISION CHATBOT — chatbot.js
-   IA: Groq — llama-3.1-8b-instant
-   Modo híbrido: FAQ hardcodeado + Groq para el resto
-   ═══════════════════════════════════════════════════════════ */
 
 const AV_CHATBOT = (function () {
 
-    // ── 🔑 KEYS CARGADAS DESDE keys.js (no está en GitHub) ──
+    // ── 🔑 KEYS CARGADAS DESDE keys.js ──
     const GROQ_KEYS = typeof GROQ_KEYS_LOCAL !== 'undefined' ? GROQ_KEYS_LOCAL : [];
+    const GROQ_URL  = 'https://api.groq.com/openai/v1/chat/completions';
+    const STORAGE_PREFIX = 'av-chat-';
+    const MAX_HISTORY    = 10; // últimos mensajes para contexto
+    const MAX_SAVED_MSGS = 50; // máximos mensajes guardados en localStorage
+
+    // ── Estado ──
     let groqKeyIndex = 0;
-    // ─────────────────────────────────────────────────────────
+    let usuario      = null;
+    let systemPrompt = '';
+    let convHistory  = []; // {role, content} para Groq
+    let abierto      = false;
 
-    const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+    // ═══════════════════════════════════════════════════════
+    //  USUARIO — validación contra backend
+    // ═══════════════════════════════════════════════════════
+    async function initUsuario() {
+        try {
+            const raw = localStorage.getItem('usuario');
+            if (!raw) return null;
+            const local = JSON.parse(raw);
+            if (!local || !local.id_usuario) return null;
 
-    // ══════════════════════════════════════════════════════════
-    //  FAQ HARDCODEADO — responde sin internet
-    // ══════════════════════════════════════════════════════════
+            const resp = await fetch('/api/usuario/me?id_usuario=' + local.id_usuario);
+            if (!resp.ok) return null;
+            const data = await resp.json();
+            if (!data.ok) return null;
+            return data.usuario;
+        } catch (e) {
+            try {
+                const raw = localStorage.getItem('usuario');
+                return raw ? JSON.parse(raw) : null;
+            } catch { return null; }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  SYSTEM PROMPT — construido UNA vez al iniciar
+    // ═══════════════════════════════════════════════════════
+    function buildSystemPrompt(u) {
+        const rol    = u.rol;
+        const nombre = u.nombre_completo;
+
+        const base = 'Eres AgroBot, el asistente virtual de AGROVISION, un sistema de gestión empresarial peruano.\n'
+                   + 'Responde siempre en español, de forma amigable, clara y concisa. Máximo 4 líneas por respuesta.\n'
+                   + 'Usa emojis con moderación. Usa etiquetas HTML <strong> para resaltar términos importantes.\n'
+                   + 'El usuario se llama ' + nombre + ' y tiene rol: ' + rol + '.\n'
+                   + 'IMPORTANTE: Solo responde preguntas relacionadas con AGROVISION. Si preguntan otra cosa, redirige amablemente.\n'
+                   + 'Si el usuario pregunta algo que su rol NO puede hacer, explícale claramente que no tiene acceso y qué sí puede hacer.\n'
+                   + 'No menciones que eres una IA de Groq o Meta. Eres AgroBot de AGROVISION.';
+
+        const contextos = {
+            admin:       '\nROL ADMIN — acceso total: Puede: Dashboard, todos los tickets, resolver tickets, aplicaciones, nuevo proyecto, ver proyectos, aprobación de proyectos, nueva actividad, indicadores KPI, lista de usuarios, reportes Excel.',
+            programador: '\nROL PROGRAMADOR — acceso parcial: Puede: Dashboard, crear ticket, ver sus tickets, resolver tickets asignados, ver proyectos donde participa, nueva actividad. NO puede: Crear/aprobar proyectos, aplicaciones, indicadores, reportes, lista de usuarios.',
+            soporte:     '\nROL SOPORTE — acceso básico: Puede: Dashboard, crear tickets, ver sus tickets, calificar tickets resueltos, cancelar sus tickets. NO puede: Resolver tickets, proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.',
+            agente:      '\nROL AGENTE — solo tickets asignados: Puede: Ver tickets asignados, resolver tickets asignados. NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.'
+        };
+
+        return base + (contextos[rol] || contextos.soporte);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  HISTORIAL PERSISTIDO
+    // ═══════════════════════════════════════════════════════
+    function storageKey() {
+        return STORAGE_PREFIX + (usuario ? usuario.id_usuario : 'anon');
+    }
+
+    function loadHistory() {
+        try {
+            const saved = localStorage.getItem(storageKey());
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                convHistory = parsed.conv || [];
+                return parsed.msgs || [];
+            }
+        } catch {}
+        return [];
+    }
+
+    function saveHistory(displayMsgs) {
+        try {
+            localStorage.setItem(storageKey(), JSON.stringify({
+                conv: convHistory.slice(-MAX_HISTORY),
+                msgs: displayMsgs.slice(-MAX_SAVED_MSGS)
+            }));
+        } catch {}
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  FAQ HARDCODEADO
+    // ═══════════════════════════════════════════════════════
     const FAQ_GENERAL = [
         {
             patrones: ['que es agrovision', 'para que sirve', 'de que trata', 'que hace agrovision'],
@@ -182,9 +260,9 @@ const AV_CHATBOT = (function () {
         ]
     };
 
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
     //  TUTORIALES POR ROL
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
     const TUTORIAL_POR_ROL = {
         soporte: [
             {
@@ -198,9 +276,9 @@ const AV_CHATBOT = (function () {
             {
                 seccion: '❓ Preguntas frecuentes',
                 items: [
-                    { ico: '🔴', titulo: 'Tipos de ticket', desc: 'Incidencia, Petición o Consulta', pregunta: '¿Qué tipos de ticket existen?' },
-                    { ico: '⚡', titulo: 'Prioridades',     desc: 'Crítica, Alta, Media, Baja',      pregunta: '¿Qué significa la prioridad?' },
-                    { ico: '❌', titulo: 'Cancelar ticket', desc: 'Solo si aún no está cerrado',     pregunta: '¿Cómo cancelo un ticket?' }
+                    { ico: '🔴', titulo: 'Tipos de ticket',   desc: 'Incidencia, Petición o Consulta', pregunta: '¿Qué tipos de ticket existen?' },
+                    { ico: '⚡', titulo: 'Prioridades',       desc: 'Crítica, Alta, Media, Baja',      pregunta: '¿Qué significa la prioridad?' },
+                    { ico: '❌', titulo: 'Cancelar ticket',   desc: 'Solo si aún no está cerrado',     pregunta: '¿Cómo cancelo un ticket?' }
                 ]
             }
         ],
@@ -208,17 +286,17 @@ const AV_CHATBOT = (function () {
             {
                 seccion: '🎯 Tu flujo principal',
                 items: [
-                    { ico: '🔧', titulo: 'Resolver tickets', desc: 'Menú → Resolver tickets → Tickets asignados a ti', pregunta: '¿Cómo resuelvo un ticket?' },
-                    { ico: '📁', titulo: 'Ver proyectos',    desc: 'Menú → Ver proyectos → Tus proyectos activos',     pregunta: '¿Cómo veo mis proyectos?' },
-                    { ico: '📋', titulo: 'Nueva actividad',  desc: 'Menú → Nueva actividad → Asigna a un sprint',      pregunta: '¿Cómo creo una actividad?' }
+                    { ico: '🔧', titulo: 'Resolver tickets',      desc: 'Menú → Resolver tickets → Tickets asignados a ti', pregunta: '¿Cómo resuelvo un ticket?' },
+                    { ico: '📁', titulo: 'Ver proyectos',         desc: 'Menú → Ver proyectos → Tus proyectos activos',     pregunta: '¿Cómo veo mis proyectos?' },
+                    { ico: '📋', titulo: 'Nueva actividad',       desc: 'Menú → Nueva actividad → Asigna a un sprint',      pregunta: '¿Cómo creo una actividad?' }
                 ]
             },
             {
                 seccion: '📚 Conceptos clave',
                 items: [
-                    { ico: '🏃', titulo: '¿Qué es un sprint?', desc: 'Período corto de trabajo con actividades', pregunta: '¿Qué es un sprint?' },
-                    { ico: '📊', titulo: 'Story points',        desc: 'Medida de esfuerzo de una actividad',      pregunta: '¿Qué son los story points?' },
-                    { ico: '📈', titulo: 'Registrar avance',    desc: 'Dentro del proyecto → Nuevo avance',       pregunta: '¿Cómo registro un avance?' }
+                    { ico: '🏃', titulo: '¿Qué es un sprint?',    desc: 'Período corto de trabajo con actividades', pregunta: '¿Qué es un sprint?' },
+                    { ico: '📊', titulo: 'Story points',          desc: 'Medida de esfuerzo de una actividad',      pregunta: '¿Qué son los story points?' },
+                    { ico: '📈', titulo: 'Registrar avance',      desc: 'Dentro del proyecto → Nuevo avance',       pregunta: '¿Cómo registro un avance?' }
                 ]
             }
         ],
@@ -226,16 +304,16 @@ const AV_CHATBOT = (function () {
             {
                 seccion: '🎯 Acciones principales',
                 items: [
-                    { ico: '✅', titulo: 'Aprobar proyectos',     desc: 'Menú → Aprobación de proyectos', pregunta: '¿Cómo apruebo un proyecto?' },
-                    { ico: '🚀', titulo: 'Nuevo proyecto',         desc: 'Menú → Nuevo proyecto',          pregunta: '¿Cómo creo un proyecto?' },
-                    { ico: '📦', titulo: 'Gestionar aplicaciones', desc: 'Menú → Aplicaciones',             pregunta: '¿Cómo gestiono aplicaciones?' }
+                    { ico: '✅', titulo: 'Aprobar proyectos',       desc: 'Menú → Aprobación de proyectos', pregunta: '¿Cómo apruebo un proyecto?' },
+                    { ico: '🚀', titulo: 'Nuevo proyecto',          desc: 'Menú → Nuevo proyecto',          pregunta: '¿Cómo creo un proyecto?' },
+                    { ico: '📦', titulo: 'Gestionar aplicaciones',  desc: 'Menú → Aplicaciones',            pregunta: '¿Cómo gestiono aplicaciones?' }
                 ]
             },
             {
                 seccion: '📊 Métricas y reportes',
                 items: [
-                    { ico: '📊', titulo: 'Ver indicadores KPI',   desc: 'Menú → Indicadores',          pregunta: '¿Qué indicadores hay?' },
-                    { ico: '📈', titulo: 'Generar reportes Excel', desc: 'Menú → Reportes → Exportar', pregunta: '¿Cómo genero reportes?' },
+                    { ico: '📊', titulo: 'Ver indicadores KPI',    desc: 'Menú → Indicadores',          pregunta: '¿Qué indicadores hay?' },
+                    { ico: '📈', titulo: 'Generar reportes Excel', desc: 'Menú → Reportes → Exportar',  pregunta: '¿Cómo genero reportes?' },
                     { ico: '👥', titulo: 'Gestionar usuarios',     desc: 'Menú → Lista de Usuarios',    pregunta: '¿Cómo gestiono usuarios?' }
                 ]
             }
@@ -251,120 +329,89 @@ const AV_CHATBOT = (function () {
         ]
     };
 
-    // ══════════════════════════════════════════════════════════
-    //  SYSTEM PROMPT POR ROL
-    // ══════════════════════════════════════════════════════════
-    function buildSystemPrompt(usuario) {
-        const rol    = usuario.rol || 'soporte';
-        const nombre = usuario.nombre_completo || 'Usuario';
-
-        const base = `Eres AgroBot, el asistente virtual de AGROVISION, un sistema de gestión empresarial peruano.
-Responde siempre en español, de forma amigable, clara y concisa. Máximo 4 líneas por respuesta.
-Usa emojis con moderación. Usa etiquetas HTML <strong> para resaltar términos importantes.
-El usuario se llama ${nombre} y tiene rol: ${rol}.
-IMPORTANTE: Solo responde preguntas relacionadas con AGROVISION. Si preguntan otra cosa, redirige amablemente.
-Si el usuario pregunta algo que su rol NO puede hacer, explícale claramente que no tiene acceso y qué sí puede hacer.
-No menciones que eres una IA de Groq o Meta. Eres AgroBot de AGROVISION.`;
-
-        const contextos = {
-            admin: `
-ROL ADMIN — acceso total:
-Puede: Dashboard, todos los tickets, resolver tickets, aplicaciones, nuevo proyecto, ver proyectos, aprobación de proyectos, nueva actividad, indicadores KPI, lista de usuarios, reportes Excel.`,
-            programador: `
-ROL PROGRAMADOR — acceso parcial:
-Puede: Dashboard, crear ticket, ver sus tickets, resolver tickets asignados, ver proyectos donde participa, nueva actividad.
-NO puede: Crear/aprobar proyectos, aplicaciones, indicadores, reportes, lista de usuarios.`,
-            soporte: `
-ROL SOPORTE — acceso básico:
-Puede: Dashboard, crear tickets, ver sus tickets, calificar tickets resueltos, cancelar sus tickets.
-NO puede: Resolver tickets, proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.`,
-            agente: `
-ROL AGENTE — solo tickets asignados:
-Puede: Ver tickets asignados, resolver tickets asignados.
-NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.`
-        };
-
-        return base + (contextos[rol] || contextos.soporte);
-    }
-
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
     //  RESPUESTAS DINÁMICAS
-    // ══════════════════════════════════════════════════════════
-    function respuestaDinamica(tipo, usuario) {
-        const nombre = (usuario.nombre_completo || 'Usuario').split(' ')[0];
-        const rol    = usuario.rol || 'soporte';
+    // ═══════════════════════════════════════════════════════
+    function respuestaDinamica(tipo) {
+        const nombre = usuario.nombre_completo.split(' ')[0];
+        const rol    = usuario.rol;
 
         if (tipo === 'saludo') {
             const saludos = {
-                admin:       `👋 ¡Hola <strong>${nombre}</strong>! Soy AgroBot 🌿\nComo <strong>administrador</strong> tienes acceso completo. Puedo ayudarte con proyectos, tickets, indicadores, reportes y usuarios.\n\n¿Qué necesitas hoy?`,
-                programador: `👋 ¡Hola <strong>${nombre}</strong>! Soy AgroBot 🌿\nComo <strong>programador</strong> puedes resolver tickets, ver tus proyectos y registrar actividades.\n\n¿En qué te ayudo?`,
-                soporte:     `👋 ¡Hola <strong>${nombre}</strong>! Soy AgroBot 🌿\nComo <strong>soporte</strong> puedes crear y hacer seguimiento de tus tickets.\n\n¿Qué necesitas hoy?`,
-                agente:      `👋 ¡Hola <strong>${nombre}</strong>! Soy AgroBot 🌿\nComo <strong>agente</strong> puedes ver y resolver los tickets asignados a ti.\n\n¿En qué te ayudo?`
+                admin:       '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>administrador</strong> tienes acceso completo. Puedo ayudarte con proyectos, tickets, indicadores, reportes y usuarios.\n\n¿Qué necesitas hoy?',
+                programador: '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>programador</strong> puedes resolver tickets, ver tus proyectos y registrar actividades.\n\n¿En qué te ayudo?',
+                soporte:     '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>soporte</strong> puedes crear y hacer seguimiento de tus tickets.\n\n¿Qué necesitas hoy?',
+                agente:      '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>agente</strong> puedes ver y resolver los tickets asignados a ti.\n\n¿En qué te ayudo?'
             };
             return saludos[rol] || saludos.soporte;
         }
 
         if (tipo === 'quePuedo') {
             const acciones = {
-                admin:       `Como <strong>administrador</strong> tienes acceso completo:\n\n🎫 Gestionar todos los tickets\n🚀 Crear y aprobar proyectos\n📊 Ver indicadores KPI\n📈 Generar reportes Excel\n👥 Administrar usuarios\n📦 Gestionar aplicaciones\n\n¿Sobre cuál quieres saber más?`,
-                programador: `Como <strong>programador</strong> puedes:\n\n🎫 Crear tickets de soporte\n🔧 Resolver tickets asignados a ti\n📁 Ver proyectos en los que participas\n📋 Registrar actividades por sprint\n📈 Registrar avances de proyecto\n\n¿Quieres que te explique alguno?`,
-                soporte:     `Como <strong>soporte</strong> puedes:\n\n🎫 Crear tickets de incidencia, petición o consulta\n📨 Ver el estado de tus tickets\n⭐ Calificar tickets resueltos\n❌ Cancelar tickets propios\n\n¿Quieres que te explique cómo hacer algo?`,
-                agente:      `Como <strong>agente</strong> puedes:\n\n📨 Ver los tickets asignados a ti\n🔧 Resolver los tickets asignados\n\n¿Te explico cómo resolver un ticket?`
+                admin:       'Como <strong>administrador</strong> tienes acceso completo:\n\n🎫 Gestionar todos los tickets\n🚀 Crear y aprobar proyectos\n📊 Ver indicadores KPI\n📈 Generar reportes Excel\n👥 Administrar usuarios\n📦 Gestionar aplicaciones\n\n¿Sobre cuál quieres saber más?',
+                programador: 'Como <strong>programador</strong> puedes:\n\n🎫 Crear tickets de soporte\n🔧 Resolver tickets asignados a ti\n📁 Ver proyectos en los que participas\n📋 Registrar actividades por sprint\n📈 Registrar avances de proyecto\n\n¿Quieres que te explique alguno?',
+                soporte:     'Como <strong>soporte</strong> puedes:\n\n🎫 Crear tickets de incidencia, petición o consulta\n📨 Ver el estado de tus tickets\n⭐ Calificar tickets resueltos\n❌ Cancelar tickets propios\n\n¿Quieres que te explique cómo hacer algo?',
+                agente:      'Como <strong>agente</strong> puedes:\n\n📨 Ver los tickets asignados a ti\n🔧 Resolver los tickets asignados\n\n¿Te explico cómo resolver un ticket?'
             };
             return acciones[rol] || acciones.soporte;
         }
         return null;
     }
 
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
     //  MOTOR DE BÚSQUEDA EN FAQ
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
     function normalizar(texto) {
         return texto.toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/[¿¡?!.,;:""'']/g, '')
+            .replace(/[¿¡?!.,;:"'']/g, '')
             .trim();
     }
 
-    function buscarEnFAQ(texto, rol) {
+    function buscarEnFAQ(texto) {
         const t = normalizar(texto);
 
-        // Saludos
-        if (['hola','buenas','buenos dias','buenas tardes','buenas noches','hey','saludos','hi'].some(p => t.includes(normalizar(p))))
+        if (['hola','buenas','buenos dias','buenas tardes','buenas noches','hey','saludos','hi'].some(function (p) { return t.includes(normalizar(p)); }))
             return { tipo: 'dinamico', subtipo: 'saludo' };
 
-        // Qué puedo hacer
-        if (['puedo hacer','que puedo','como empiezo','por donde empiezo','como funciona','ayudame'].some(p => t.includes(normalizar(p))))
+        if (['puedo hacer','que puedo','como empiezo','por donde empiezo','como funciona','ayudame'].some(function (p) { return t.includes(normalizar(p)); }))
             return { tipo: 'dinamico', subtipo: 'quePuedo' };
 
-        // FAQ general (sin "agrovision" solo, para no capturar todo)
-        for (const faq of FAQ_GENERAL) {
-            if (faq.patrones.some(p => t.includes(normalizar(p))))
+        for (var i = 0; i < FAQ_GENERAL.length; i++) {
+            var faq = FAQ_GENERAL[i];
+            if (faq.patrones.some(function (p) { return t.includes(normalizar(p)); }))
                 return { tipo: 'fijo', respuesta: faq.respuesta };
         }
 
-        // FAQ del rol específico
-        for (const faq of (FAQ_POR_ROL[rol] || [])) {
-            if (faq.patrones.some(p => t.includes(normalizar(p))))
-                return { tipo: 'fijo', respuesta: faq.respuesta };
+        var rolFAQ = FAQ_POR_ROL[usuario.rol];
+        if (rolFAQ) {
+            for (var j = 0; j < rolFAQ.length; j++) {
+                var faqR = rolFAQ[j];
+                if (faqR.patrones.some(function (p) { return t.includes(normalizar(p)); }))
+                    return { tipo: 'fijo', respuesta: faqR.respuesta };
+            }
         }
 
         return null;
     }
 
-    // ══════════════════════════════════════════════════════════
-    //  LLAMADA A GROQ API — con fallback entre keys
-    // ══════════════════════════════════════════════════════════
-    async function llamarGroq(pregunta, usuario) {
+    // ═══════════════════════════════════════════════════════
+    //  LLAMADA A GROQ API — con historial de conversación
+    // ═══════════════════════════════════════════════════════
+    async function llamarGroq(pregunta) {
         groqKeyIndex = 0;
-        const keysValidas = GROQ_KEYS.filter(k => k && k.trim() !== '');
+        var keysValidas = GROQ_KEYS.filter(function (k) { return k && k.trim() !== ''; });
         if (!keysValidas.length)
             return '⚠️ No hay API Keys configuradas. Agrega tus keys en <strong>keys.js</strong>.';
 
         while (groqKeyIndex < keysValidas.length) {
-            const key = keysValidas[groqKeyIndex];
+            var key = keysValidas[groqKeyIndex];
             try {
-                const resp = await fetch(GROQ_URL, {
+                var messages = [{ role: 'system', content: systemPrompt }]
+                    .concat(convHistory.slice(-MAX_HISTORY))
+                    .concat([{ role: 'user', content: pregunta }]);
+
+                var resp = await fetch(GROQ_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type':  'application/json',
@@ -374,18 +421,20 @@ NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.
                         model:       'llama-3.1-8b-instant',
                         temperature: 0.5,
                         max_tokens:  512,
-                        messages: [
-                            { role: 'system', content: buildSystemPrompt(usuario) },
-                            { role: 'user',   content: pregunta }
-                        ]
+                        messages:    messages
                     })
                 });
 
                 if (resp.status === 429) { groqKeyIndex++; continue; }
                 if (!resp.ok) { groqKeyIndex++; continue; }
 
-                const data  = await resp.json();
-                const texto = data?.choices?.[0]?.message?.content || '';
+                var data  = await resp.json();
+                var texto = data && data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '';
+                if (!texto) { groqKeyIndex++; continue; }
+
+                convHistory.push({ role: 'user',      content: pregunta });
+                convHistory.push({ role: 'assistant',  content: texto });
+
                 return texto
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.*?)\*/g,     '<em>$1</em>')
@@ -399,24 +448,11 @@ NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.
         return '⚠️ Todas las cuentas alcanzaron su límite por hoy. El FAQ sigue funcionando sin internet.';
     }
 
-    // ══════════════════════════════════════════════════════════
-    //  USUARIO DEL LOCALSTORAGE
-    // ══════════════════════════════════════════════════════════
-    function getUsuario() {
-        try {
-            const raw = localStorage.getItem('usuario');
-            if (!raw) return { nombre_completo: 'Usuario', rol: 'soporte' };
-            return JSON.parse(raw);
-        } catch (e) {
-            return { nombre_completo: 'Usuario', rol: 'soporte' };
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════
-    //  CHIPS POR ROL
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
+    //  CHIPS Y TUTORIAL
+    // ═══════════════════════════════════════════════════════
     function getChips(rol) {
-        const chips = {
+        var chips = {
             soporte:     ['¿Cómo creo un ticket?', '¿Tipos de ticket?', '¿Estados del ticket?'],
             programador: ['¿Cómo resuelvo un ticket?', '¿Qué es un sprint?', '¿Cómo creo una actividad?'],
             admin:       ['¿Cómo apruebo proyectos?', '¿Qué indicadores hay?', '¿Cómo genero reportes?'],
@@ -425,122 +461,132 @@ NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.
         return chips[rol] || chips.soporte;
     }
 
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
     //  RENDER DEL WIDGET
-    // ══════════════════════════════════════════════════════════
-    function render() {
-        const usuario  = getUsuario();
-        const rol      = usuario.rol || 'soporte';
-        const chips    = getChips(rol);
-        const tutorial = TUTORIAL_POR_ROL[rol] || [];
+    // ═══════════════════════════════════════════════════════
+    function render(savedMsgs) {
+        var rol      = usuario.rol;
+        var chips    = getChips(rol);
+        var tutorial = TUTORIAL_POR_ROL[rol] || [];
 
-        let tutHTML = '';
-        tutorial.forEach(sec => {
-            tutHTML += `<div class="av-tut-seccion"><h4>${sec.seccion}</h4>`;
-            sec.items.forEach(it => {
-                tutHTML += `
-                <div class="av-tut-item" onclick="AV_CHATBOT.preguntarDesde('${it.pregunta}')">
-                    <div class="av-tut-ico">${it.ico}</div>
-                    <div class="av-tut-texto">
-                        <strong>${it.titulo}</strong>
-                        <span>${it.desc}</span>
-                    </div>
-                </div>`;
+        var tutHTML = '';
+        tutorial.forEach(function (sec) {
+            tutHTML += '<div class="av-tut-seccion"><h4>' + sec.seccion + '</h4>';
+            sec.items.forEach(function (it) {
+                tutHTML += '<div class="av-tut-item" onclick="AV_CHATBOT.preguntarDesde(\'' + it.pregunta.replace(/'/g, "\\'") + '\')">'
+                    + '<div class="av-tut-ico">' + it.ico + '</div>'
+                    + '<div class="av-tut-texto"><strong>' + it.titulo + '</strong><span>' + it.desc + '</span></div>'
+                    + '</div>';
             });
-            tutHTML += `</div>`;
+            tutHTML += '</div>';
         });
 
-        const chipsHTML = chips.map(c =>
-            `<button class="av-chip" onclick="AV_CHATBOT.preguntarDesde('${c}')">${c}</button>`
-        ).join('');
+        var chipsHTML = chips.map(function (c) {
+            return '<button class="av-chip" onclick="AV_CHATBOT.preguntarDesde(\'' + c.replace(/'/g, "\\'") + '\')">' + c + '</button>';
+        }).join('');
 
-        const widget = document.createElement('div');
-        widget.innerHTML = `
-        <button id="av-chat-btn" onclick="AV_CHATBOT.toggle()" title="AgroBot - Asistente">
-            <span id="av-chat-ico">🤖</span>
-            <span class="av-badge" id="av-badge">1</span>
-        </button>
-
-        <div id="av-chat-window">
-            <div id="av-chat-header">
-                <div class="av-chat-avatar">🤖</div>
-                <div class="av-chat-info">
-                    <strong>AgroBot</strong>
-                    <span>🌿 Asistente de AGROVISION · ${rol}</span>
-                </div>
-                <div class="av-chat-header-btns">
-                    <button onclick="AV_CHATBOT.limpiar()" title="Limpiar chat">🗑️</button>
-                    <button onclick="AV_CHATBOT.toggle()"  title="Cerrar">✕</button>
-                </div>
-            </div>
-
-            <div id="av-chat-tabs">
-                <button class="av-tab activo" onclick="AV_CHATBOT.setTab('chat', this)">🤖 Chat</button>
-                <button class="av-tab"        onclick="AV_CHATBOT.setTab('tutorial', this)">🗺️ Tutorial</button>
-            </div>
-
-            <div id="av-chat-mensajes"></div>
-            <div id="av-panel-tutorial">${tutHTML}</div>
-
-            <div class="av-chips" id="av-chips">${chipsHTML}</div>
-
-            <div id="av-chat-input-wrap">
-                <input type="text" id="av-chat-input"
-                    placeholder="Escribe tu pregunta..."
-                    onkeydown="if(event.key==='Enter') AV_CHATBOT.enviar()">
-                <button id="av-chat-send" onclick="AV_CHATBOT.enviar()">➤</button>
-            </div>
-        </div>`;
+        var widget = document.createElement('div');
+        widget.innerHTML = '<button id="av-chat-btn" onclick="AV_CHATBOT.toggle()" title="AgroBot - Asistente">'
+            + '<span id="av-chat-ico">🤖</span>'
+            + '<span class="av-badge" id="av-badge">1</span>'
+            + '</button>'
+            + '<div id="av-chat-window">'
+            + '<div id="av-chat-header">'
+            + '<div class="av-chat-avatar">🤖</div>'
+            + '<div class="av-chat-info"><strong>AgroBot</strong><span>🌿 Asistente de AGROVISION · ' + rol + '</span></div>'
+            + '<div class="av-chat-header-btns">'
+            + '<button onclick="AV_CHATBOT.limpiar()" title="Limpiar chat">🗑️</button>'
+            + '<button onclick="AV_CHATBOT.toggle()" title="Cerrar">✕</button>'
+            + '</div></div>'
+            + '<div id="av-chat-tabs">'
+            + '<button class="av-tab activo" onclick="AV_CHATBOT.setTab(\'chat\', this)">🤖 Chat</button>'
+            + '<button class="av-tab" onclick="AV_CHATBOT.setTab(\'tutorial\', this)">🗺️ Tutorial</button>'
+            + '</div>'
+            + '<div id="av-chat-mensajes"></div>'
+            + '<div id="av-panel-tutorial">' + tutHTML + '</div>'
+            + '<div class="av-chips" id="av-chips">' + chipsHTML + '</div>'
+            + '<div id="av-chat-input-wrap">'
+            + '<input type="text" id="av-chat-input" placeholder="Escribe tu pregunta..." onkeydown="if(event.key===\'Enter\') AV_CHATBOT.enviar()">'
+            + '<button id="av-chat-send" onclick="AV_CHATBOT.enviar()">➤</button>'
+            + '</div></div>';
 
         document.body.appendChild(widget);
 
-        setTimeout(() => {
-            addMsg('bot', respuestaDinamica('saludo', usuario));
-            const badge = document.getElementById('av-badge');
+        // Restaurar historial si existe
+        if (savedMsgs && savedMsgs.length > 0) {
+            savedMsgs.forEach(function (m) {
+                addMsg(m.tipo, m.html, false);
+            });
+        }
+
+        setTimeout(function () {
+            if (!savedMsgs || savedMsgs.length === 0) {
+                addMsg('bot', respuestaDinamica('saludo'), true);
+            }
+            var badge = document.getElementById('av-badge');
             if (badge) badge.classList.add('visible');
         }, 800);
     }
 
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
     //  MENSAJES
-    // ══════════════════════════════════════════════════════════
-    function addMsg(tipo, html) {
-        const cont = document.getElementById('av-chat-mensajes');
+    // ═══════════════════════════════════════════════════════
+    function addMsg(tipo, html, persistir) {
+        var cont = document.getElementById('av-chat-mensajes');
         if (!cont) return;
-        const div = document.createElement('div');
-        div.className = `av-msg ${tipo}`;
+        var div = document.createElement('div');
+        div.className = 'av-msg ' + tipo;
         div.innerHTML = tipo === 'bot'
-            ? `<div class="av-msg-ico">🤖</div><div class="av-msg-burbuja">${html}</div>`
-            : `<div class="av-msg-burbuja">${html}</div>`;
+            ? '<div class="av-msg-ico">🤖</div><div class="av-msg-burbuja">' + html + '</div>'
+            : '<div class="av-msg-burbuja">' + html + '</div>';
         cont.appendChild(div);
         cont.scrollTop = cont.scrollHeight;
+
+        if (persistir !== false) persistirMensajes();
+    }
+
+    var _mensajesDisplay = [];
+
+    function persistirMensajes() {
+        var cont = document.getElementById('av-chat-mensajes');
+        if (!cont) return;
+        var msgs = [];
+        cont.querySelectorAll('.av-msg').forEach(function (el) {
+            var burbuja = el.querySelector('.av-msg-burbuja');
+            if (burbuja) {
+                msgs.push({
+                    tipo: el.classList.contains('bot') ? 'bot' : 'user',
+                    html: burbuja.innerHTML
+                });
+            }
+        });
+        _mensajesDisplay = msgs;
+        saveHistory(msgs);
     }
 
     function addTyping() {
-        const cont = document.getElementById('av-chat-mensajes');
+        var cont = document.getElementById('av-chat-mensajes');
         if (!cont) return;
-        const div = document.createElement('div');
+        var div = document.createElement('div');
         div.className = 'av-msg bot';
         div.id = 'av-typing';
-        div.innerHTML = `<div class="av-msg-ico">🤖</div><div class="av-typing"><span></span><span></span><span></span></div>`;
+        div.innerHTML = '<div class="av-msg-ico">🤖</div><div class="av-typing"><span></span><span></span><span></span></div>';
         cont.appendChild(div);
         cont.scrollTop = cont.scrollHeight;
     }
 
     function removeTyping() {
-        const t = document.getElementById('av-typing');
+        var t = document.getElementById('av-typing');
         if (t) t.remove();
     }
 
-    // ══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
     //  API PÚBLICA
-    // ══════════════════════════════════════════════════════════
-    let abierto = false;
-
+    // ═══════════════════════════════════════════════════════
     function toggle() {
-        const win   = document.getElementById('av-chat-window');
-        const ico   = document.getElementById('av-chat-ico');
-        const badge = document.getElementById('av-badge');
+        var win   = document.getElementById('av-chat-window');
+        var ico   = document.getElementById('av-chat-ico');
+        var badge = document.getElementById('av-badge');
         if (!win) return;
         abierto = !abierto;
         win.classList.toggle('abierto', abierto);
@@ -549,11 +595,11 @@ NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.
     }
 
     function setTab(tab, btn) {
-        const mensajes = document.getElementById('av-chat-mensajes');
-        const tutorial = document.getElementById('av-panel-tutorial');
-        const chips    = document.getElementById('av-chips');
-        const inputW   = document.getElementById('av-chat-input-wrap');
-        document.querySelectorAll('.av-tab').forEach(t => t.classList.remove('activo'));
+        var mensajes = document.getElementById('av-chat-mensajes');
+        var tutorial = document.getElementById('av-panel-tutorial');
+        var chips    = document.getElementById('av-chips');
+        var inputW   = document.getElementById('av-chat-input-wrap');
+        document.querySelectorAll('.av-tab').forEach(function (t) { t.classList.remove('activo'); });
         btn.classList.add('activo');
         if (tab === 'chat') {
             if (mensajes) mensajes.style.display = 'flex';
@@ -569,47 +615,55 @@ NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.
     }
 
     function limpiar() {
-        const cont = document.getElementById('av-chat-mensajes');
+        var cont = document.getElementById('av-chat-mensajes');
         if (cont) cont.innerHTML = '';
-        const ico = document.getElementById('av-chat-ico');
+        var ico = document.getElementById('av-chat-ico');
         if (ico) ico.textContent = '🤖';
-        setTimeout(() => addMsg('bot', respuestaDinamica('saludo', getUsuario())), 100);
+        convHistory = [];
+        _mensajesDisplay = [];
+        saveHistory([]);
+        setTimeout(function () { addMsg('bot', respuestaDinamica('saludo'), true); }, 100);
     }
 
     async function enviar() {
-        const input = document.getElementById('av-chat-input');
-        const btn   = document.getElementById('av-chat-send');
+        var input = document.getElementById('av-chat-input');
+        var btn   = document.getElementById('av-chat-send');
         if (!input) return;
-        const texto = input.value.trim();
+        var texto = input.value.trim();
         if (!texto) return;
 
         input.value = '';
         if (btn) btn.disabled = true;
-        addMsg('user', texto);
+        addMsg('user', texto, true);
 
-        const tabs = document.querySelectorAll('.av-tab');
+        var tabs = document.querySelectorAll('.av-tab');
         if (tabs[0] && !tabs[0].classList.contains('activo')) setTab('chat', tabs[0]);
 
-        const usuario   = getUsuario();
-        const faqResult = buscarEnFAQ(texto, usuario.rol || 'soporte');
+        var faqResult = buscarEnFAQ(texto);
 
         if (faqResult) {
             addTyping();
-            await new Promise(r => setTimeout(r, 400));
+            await new Promise(function (r) { setTimeout(r, 400); });
             removeTyping();
-            addMsg('bot', faqResult.tipo === 'dinamico'
-                ? respuestaDinamica(faqResult.subtipo, usuario)
-                : faqResult.respuesta
-            );
+            var resp = faqResult.tipo === 'dinamico'
+                ? respuestaDinamica(faqResult.subtipo)
+                : faqResult.respuesta;
+            addMsg('bot', resp, true);
+
+            if (faqResult.tipo === 'dinamico' && faqResult.subtipo === 'saludo') {
+                convHistory.push({ role: 'user', content: texto });
+                convHistory.push({ role: 'assistant', content: resp.replace(/<br>/g, '\n').replace(/<strong>/g, '').replace(/<\/strong>/g, '') });
+                saveHistory(_mensajesDisplay);
+            }
         } else {
             addTyping();
             try {
-                const respuesta = await llamarGroq(texto, usuario);
+                var respuesta = await llamarGroq(texto);
                 removeTyping();
-                addMsg('bot', respuesta);
+                addMsg('bot', respuesta, true);
             } catch (err) {
                 removeTyping();
-                addMsg('bot', '⚠️ No pude conectarme a la IA. Revisa tu conexión e intenta de nuevo.');
+                addMsg('bot', '⚠️ No pude conectarme a la IA. Revisa tu conexión e intenta de nuevo.', true);
                 console.error('Groq error:', err);
             }
         }
@@ -619,19 +673,32 @@ NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.
     }
 
     function preguntarDesde(texto) {
-        const tabs = document.querySelectorAll('.av-tab');
+        var tabs = document.querySelectorAll('.av-tab');
         if (tabs[0]) setTab('chat', tabs[0]);
-        const input = document.getElementById('av-chat-input');
+        var input = document.getElementById('av-chat-input');
         if (input) { input.value = texto; enviar(); }
     }
 
-    // ── Init ─────────────────────────────────────────────────
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', render);
-    } else {
-        render();
+    // ═══════════════════════════════════════════════════════
+    //  INICIALIZACIÓN
+    // ═══════════════════════════════════════════════════════
+    async function init() {
+        usuario = await initUsuario();
+        if (!usuario) return; // no renderizar si no hay usuario
+
+        systemPrompt = buildSystemPrompt(usuario);
+
+        var savedMsgs = loadHistory();
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () { render(savedMsgs); });
+        } else {
+            render(savedMsgs);
+        }
     }
 
-    return { toggle, setTab, limpiar, enviar, preguntarDesde };
+    init();
+
+    return { toggle: toggle, setTab: setTab, limpiar: limpiar, enviar: enviar, preguntarDesde: preguntarDesde };
 
 })();

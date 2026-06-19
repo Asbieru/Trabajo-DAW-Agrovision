@@ -120,8 +120,8 @@ body {
     gap: 2px;
     position: sticky;
     top: 60px;
-    align-self: flex-start;
-    max-height: calc(100vh - 60px);
+    align-self: stretch;
+    height: calc(100vh - 60px);
     overflow-y: auto;
 }
 .sidebar-section {

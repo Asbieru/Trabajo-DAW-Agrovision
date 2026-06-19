@@ -1,6 +1,5 @@
 # Trabajo-DAW-Agrovision
-
-# Instalar flesk y cambiar a la base de datos
+## Instalar flesk y cambiar a la base de datos
     py -3 -m venv .venv
     .venv\Scripts\activate
 
@@ -8,7 +7,7 @@
     Set-ExecutionPolicy RemoteSigned
     Y acepta con (S)
     
-    pip install Flask
+    pip install -r requirements.txt
     flask --app main run --debug
 
 Se usa esto
@@ -16,9 +15,8 @@ Se usa esto
     py main.py
     
 # Crea la base de datos y las tablas o si no, no corre 
-    pip install pymysql 
-
-    pip install openpyxl
+    pip install pymysql
+    pip install openpyxlxl
 
 --------------------------------------------------------------------------------------------------
 
