@@ -175,6 +175,7 @@
         <h3 style="color:var(--rojo); margin-top:0;">⚠️ Confirmar Eliminación</h3>
         <p>¿Estás seguro de que deseas eliminar el reporte de avance del <strong id="lbl-fecha-avance"></strong>?</p>
         <p style="font-size: 0.85rem; color: var(--gris-texto);">Esta acción no se puede deshacer y alterará la curva gráfica de avance del proyecto.</p>
+        <p id="error-eliminar-avance" style="color:var(--rojo); font-size:0.85rem; margin:10px 0; display:none;"></p>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
             <button class="btn btn-outline" onclick="cerrarModalEliminarAvance()">Cancelar</button>
             <button class="btn btn-rojo" id="btn-confirmar-eliminar-avance">Sí, eliminar</button>
@@ -183,7 +184,7 @@
 </div>
 
 <script>
-const ID_PROYECTO = {{ proyecto.id_proyecto }};
+var ID_PROYECTO = {{ proyecto.id_proyecto }};
 var instanciaGrafico = null;
 
 // ── 1. Dibujar gráfico inicial (Usa AJAX para traer real y estimado) ──
@@ -266,7 +267,7 @@ function refrescarGrafico() {
     var txtBtn = document.getElementById('txt-refresh-grafico');
     if(txtBtn) txtBtn.textContent = 'Cargando…';
 
-    fetch('/api/proyecto/' + ID_PROYECTO + '/avances-grafico')
+    apiFetch('/api/proyecto/' + ID_PROYECTO + '/avances-grafico')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             // Se le pasan los 3 arreglos devueltos por la nueva ruta API
@@ -330,22 +331,25 @@ document.addEventListener('DOMContentLoaded', function() {
             
             btnConf.textContent = 'Eliminando...';
             btnConf.disabled = true;
+            document.getElementById('error-eliminar-avance').style.display = 'none';
 
-            fetch('/api/avance/' + _avanceEliminarId + '/eliminar', {
-                method: 'POST'
-            })
+            apiPost('/api/proyecto/' + ID_PROYECTO + '/avances/eliminar/' + _avanceEliminarId, {})
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if(data.ok) {
                     location.reload(); 
                 } else {
-                    alert(data.mensaje || 'No se puede eliminar por restricciones de integridad.');
+                    var errEl = document.getElementById('error-eliminar-avance');
+                    errEl.textContent = data.mensaje || 'No se puede eliminar por restricciones de integridad.';
+                    errEl.style.display = 'block';
                     btnConf.textContent = 'Sí, eliminar';
                     btnConf.disabled = false;
                 }
             })
             .catch(function() {
-                alert('Error de conexión al intentar eliminar el reporte.');
+                var errEl = document.getElementById('error-eliminar-avance');
+                errEl.textContent = 'Error de conexión al intentar eliminar el reporte.';
+                errEl.style.display = 'block';
                 btnConf.textContent = 'Sí, eliminar';
                 btnConf.disabled = false;
             });

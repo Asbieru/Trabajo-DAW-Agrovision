@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 401 · AgroVisión</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+    <a class="topbar-logo" href="{{ url_for('login') }}">
+        🌿 Agro<em>visión</em>
+        <span class="topbar-badge">Sistemas</span>
+    </a>
+</header>
+
+<div class="error-page-wrap">
+    <div class="error-page-box">
+        <div class="error-page-banner error-page-banner--rojo">
+            <span class="error-page-icon">🔒</span>
+            <div class="error-page-code error-page-code--rojo">401</div>
+            <div class="error-page-title">No autorizado</div>
+        </div>
+        <div class="error-page-body">
+            <p class="error-page-desc">
+                {{ descripcion or 'No se proporcionaron credenciales de acceso válidas.' }}
+                Necesitas un token JWT para consumir este recurso.
+            </p>
+            <div class="error-page-actions">
+                <a href="{{ url_for('login') }}" class="btn btn-primary">Ir al login</a>
+                <a href="javascript:history.back()" class="btn btn-outline">← Volver atrás</a>
+            </div>
+        </div>
+        <div class="error-page-footer">
+            🌿 AgroVisión Sistemas &nbsp;·&nbsp; Error 401 Unauthorized
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

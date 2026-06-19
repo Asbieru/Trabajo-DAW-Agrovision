@@ -54,9 +54,80 @@ from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorT
                          reporteActividadesPorProyecto, resumenActividadesReporte,
                          reporteSLAPorAplicacion, reporteTicketsPorEstado,
                          reporteAgentesMetricas, reporteTendenciaPorMes)
+import jwt as pyjwt
+from datetime import datetime, timedelta
+from flask_jwt import JWT, jwt_required
+
+class User(object):
+    def __init__(self, id, username, password):
+        self.id = id
+        self.username = username
+        self.password = password
+
+    def __str__(self):
+        return "User(id='%s')" % self.id
+
+users = [
+    User(1, 'user1', 'abcxyz'),
+    User(2, 'user2', 'abcxyz'),
+]
+
+username_table = {u.username: u for u in users}
+userid_table = {u.id: u for u in users}
+
+def authenticate(username, password):
+    user = username_table.get(username, None)
+    if user and user.password.encode('utf-8') == password.encode('utf-8'):
+        return user
+    try:
+        from usuarioAD import autenticarUsuario
+        ok, mensaje, datos = autenticarUsuario(username, password)
+        if ok:
+            return User(datos['id_usuario'], username, password)
+    except:
+        pass
+    return None
+
+def identity(payload):
+    user_id = payload['identity']
+    if user_id in userid_table:
+        return userid_table[user_id]
+    try:
+        from usuarioAD import obtenerPerfilUsuario
+        perfil = obtenerPerfilUsuario(user_id)
+        if perfil:
+            return perfil
+    except:
+        pass
+    return {'id': user_id}
+
+def generar_token_jwt(user_id):
+    now = datetime.utcnow()
+    payload = {
+        'exp': now + timedelta(hours=24),
+        'iat': now,
+        'nbf': now,
+        'identity': user_id,
+    }
+    token = pyjwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+    if isinstance(token, bytes):
+        token = token.decode('utf-8')
+    return token
 
 app = Flask(__name__)
-app.secret_key = 'agrovision-clave-secreta-2024'
+app.config['SECRET_KEY'] = 'agrovision-clave-secreta-2024'
+app.debug = True
+
+jwt = JWT(app, authenticate, identity)
+
+
+@jwt.jwt_error_handler
+def custom_jwt_error(error):
+    if request.path.startswith('/api/'):
+        return jsonify({'ok': False, 'mensaje': 'Token requerido o inválido.'}), error.status_code
+    return render_template('error401.html',
+                           descripcion=error.description), error.status_code
+
 
 # ──────────────────────────────────────────────────────────────
 #  MANEJADORES DE ERROR
@@ -171,6 +242,7 @@ def form_ticket():
 
 
 @app.route('/ticket/guardar', methods=['POST'])
+@jwt_required()
 def guardar_ticket():
     try:
         obj = Ticket(
@@ -226,6 +298,7 @@ def form_resolver_ticket(id_ticket):
 
 
 @app.route('/ticket/<int:id_ticket>/resolver', methods=['POST'])
+@jwt_required()
 def guardar_resolucion(id_ticket):
     id_agente            = request.form.get('id_agente')
     notas                = request.form.get('notas_resolucion', '').strip()
@@ -234,40 +307,37 @@ def guardar_resolucion(id_ticket):
     return redirect(url_for('listar_tickets'))
 
 
-@app.route('/ticket/<int:id_ticket>/calificar', methods=['GET', 'POST'])
-def calificar_ticket(id_ticket):
+@app.route('/ticket/<int:id_ticket>/calificar', methods=['GET'])
+def form_calificar_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket:
         abort(404)
-
     if ticket['estado'] != 'resuelto':
         abort(400)
-
-    mensaje = None
-    tipo = None
-
-    if request.method == 'POST':
-        estrellas_raw = request.form.get('estrellas', '').strip()
-        observacion = request.form.get('observacion', '').strip()
-
-        try:
-            estrellas = int(estrellas_raw)
-        except (TypeError, ValueError):
-            estrellas = None
-
-        if estrellas not in (1, 2, 3, 4, 5):
-            mensaje = 'Selecciona una calificación válida entre 1 y 5 estrellas.'
-            tipo = 'error'
-        else:
-            guardarCalificacionTicket(id_ticket, estrellas, observacion)
-            ticket = obtenerTicket(id_ticket)
-            mensaje = 'Gracias. Tu calificación fue registrada correctamente.'
-            tipo = 'exito'
-
     return render_template('calificarTicket.html',
                            ticket=ticket,
-                           mensaje=mensaje,
-                           tipo=tipo)
+                           mensaje=None,
+                           tipo=None)
+
+
+@app.route('/ticket/<int:id_ticket>/calificar', methods=['POST'])
+@jwt_required()
+def guardar_calificacion_ticket(id_ticket):
+    ticket = obtenerTicket(id_ticket)
+    if not ticket:
+        abort(404)
+    if ticket['estado'] != 'resuelto':
+        abort(400)
+    estrellas_raw = request.form.get('estrellas', '').strip()
+    observacion = request.form.get('observacion', '').strip()
+    try:
+        estrellas = int(estrellas_raw)
+    except (TypeError, ValueError):
+        estrellas = None
+    if estrellas not in (1, 2, 3, 4, 5):
+        return redirect(url_for('form_calificar_ticket', id_ticket=id_ticket))
+    guardarCalificacionTicket(id_ticket, estrellas, observacion)
+    return redirect(url_for('listar_tickets'))
 
 
 # ── EDITAR TICKET (solicitado o en_progreso) ──────────────────────────────────
@@ -281,6 +351,7 @@ def form_editar_ticket(id_ticket):
 
 
 @app.route('/ticket/<int:id_ticket>/editar', methods=['POST'])
+@jwt_required()
 def guardar_edicion_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket or ticket['estado'] != 'solicitado':
@@ -301,6 +372,7 @@ def guardar_edicion_ticket(id_ticket):
 
 # ── CANCELAR TICKET ───────────────────────────────────────────────────────────
 @app.route('/ticket/<int:id_ticket>/cancelar', methods=['POST'])
+@jwt_required()
 def cancelar_ticket(id_ticket):
     cancelarTicket(id_ticket)
     return redirect(url_for('listar_tickets'))
@@ -318,6 +390,7 @@ def form_asignar_ticket(id_ticket):
 
 
 @app.route('/ticket/<int:id_ticket>/asignar', methods=['POST'])
+@jwt_required()
 def guardar_asignacion(id_ticket):
     id_agente = request.form.get('id_agente')
     if not id_agente:
@@ -353,42 +426,57 @@ def listar_aplicaciones():
     return render_template('gestionAplicaciones.html', aplicaciones=aplicaciones)
 
 
-@app.route('/aplicacion/nueva', methods=['GET', 'POST'])
-def nueva_aplicacion():
-    if request.method == 'POST':
-        nombre                = request.form.get('nombre', '').strip()
-        peso                  = request.form.get('peso', 3)
-        descripcion           = request.form.get('descripcion', '').strip()
-        participantes_promedio = request.form.get('participantes_promedio', 5)
-        if nombre:
-            insertarAplicacion(nombre, peso, descripcion, participantes_promedio)
-            return redirect(url_for('listar_aplicaciones') + '?creada=1')
+@app.route('/aplicacion/nueva', methods=['GET'])
+def form_nueva_aplicacion():
     return render_template('formularioAplicacion.html', aplicacion=None)
 
 
-@app.route('/aplicacion/<int:id_aplicacion>/editar', methods=['GET', 'POST'])
-def editar_aplicacion_route(id_aplicacion):
+@app.route('/aplicacion/nueva', methods=['POST'])
+@jwt_required()
+def guardar_nueva_aplicacion():
+    nombre                = request.form.get('nombre', '').strip()
+    peso                  = request.form.get('peso', 3)
+    descripcion           = request.form.get('descripcion', '').strip()
+    participantes_promedio = request.form.get('participantes_promedio', 5)
+    if nombre:
+        insertarAplicacion(nombre, peso, descripcion, participantes_promedio)
+        return redirect(url_for('listar_aplicaciones') + '?creada=1')
+    return redirect(url_for('form_nueva_aplicacion'))
+
+
+@app.route('/aplicacion/<int:id_aplicacion>/editar', methods=['GET'])
+def form_editar_aplicacion(id_aplicacion):
     app = obtenerAplicacion(id_aplicacion)
     if not app:
         abort(404)
-    if request.method == 'POST':
-        nombre                = request.form.get('nombre', '').strip()
-        peso                  = request.form.get('peso', 3)
-        descripcion           = request.form.get('descripcion', '').strip()
-        participantes_promedio = request.form.get('participantes_promedio', 5)
-        if nombre:
-            editarAplicacion(id_aplicacion, nombre, peso, descripcion, participantes_promedio)
-            return redirect(url_for('listar_aplicaciones') + '?editada=1')
     return render_template('formularioAplicacion.html', aplicacion=app)
 
 
+@app.route('/aplicacion/<int:id_aplicacion>/editar', methods=['POST'])
+@jwt_required()
+def guardar_edicion_aplicacion(id_aplicacion):
+    app = obtenerAplicacion(id_aplicacion)
+    if not app:
+        abort(404)
+    nombre                = request.form.get('nombre', '').strip()
+    peso                  = request.form.get('peso', 3)
+    descripcion           = request.form.get('descripcion', '').strip()
+    participantes_promedio = request.form.get('participantes_promedio', 5)
+    if nombre:
+        editarAplicacion(id_aplicacion, nombre, peso, descripcion, participantes_promedio)
+        return redirect(url_for('listar_aplicaciones') + '?editada=1')
+    return redirect(url_for('form_editar_aplicacion', id_aplicacion=id_aplicacion))
+
+
 @app.route('/aplicacion/<int:id_aplicacion>/eliminar', methods=['POST'])
+@jwt_required()
 def eliminar_aplicacion_route(id_aplicacion):
     eliminarAplicacion(id_aplicacion)
     return redirect(url_for('listar_aplicaciones') + '?eliminada=1')
 
 
 @app.route('/aplicacion/<int:id_aplicacion>/toggle-estado', methods=['POST'])
+@jwt_required()
 def toggle_estado_aplicacion(id_aplicacion):
     toggleEstadoAplicacion(id_aplicacion)
     return redirect(url_for('listar_aplicaciones'))
@@ -405,6 +493,7 @@ def form_proyecto():
 
 
 @app.route('/proyecto/guardar', methods=['POST'])
+@jwt_required()
 def guardar_proyecto():
     try:
         from datetime import date
@@ -446,6 +535,7 @@ def form_editar_proyecto(id_proyecto):
 
 
 @app.route('/proyecto/<int:id_proyecto>/editar', methods=['POST'])
+@jwt_required()
 def guardar_edicion_proyecto(id_proyecto):
     try:
         from proyectoAD import actualizarProyectoCompleto
@@ -476,6 +566,7 @@ def listar_proyectos():
     return render_template('listaProyectos.html', proyectos=proyectos)
 
 @app.route('/api/proyecto/<int:id_proyecto>/eliminar', methods=['POST'])
+@jwt_required()
 def api_eliminar_proyecto(id_proyecto):
     if tieneActividadesPendientes(id_proyecto):
         return jsonify({'ok': False, 'mensaje': 'No se puede eliminar: el proyecto tiene actividades pendientes.'})
@@ -486,6 +577,7 @@ def api_eliminar_proyecto(id_proyecto):
 
 
 @app.route('/api/reporte/proyecto/<int:id_proyecto>/actividades')
+@jwt_required()
 def api_reporte_actividades(id_proyecto):
     actividades = reporteActividadesPorProyecto(id_proyecto)
     resumen     = resumenActividadesReporte(id_proyecto)
@@ -534,8 +626,8 @@ def historial_avances(id_proyecto):
                            porcentajes_grafico=porcentajes_grafico)
 
 
-@app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['GET', 'POST'])
-def nuevo_avance(id_proyecto):
+@app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['GET'])
+def form_nuevo_avance(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
         abort(404)
@@ -559,19 +651,6 @@ def nuevo_avance(id_proyecto):
     from datetime import date
     hoy_mostrar = date.today().strftime('%d/%m/%Y')
 
-    if request.method == 'POST':
-        hoy_db          = date.today().strftime('%Y-%m-%d')
-        estado_salud    = request.form['estado_salud']
-        logros_periodo  = request.form['logros_periodo'].strip()
-        pendientes_next = request.form.get('pendientes_next', '').strip()
-        id_autor        = request.form.get('id_autor')
-
-        if id_autor:
-            insertarAvance(id_proyecto, id_autor, hoy_db, pct_calculado,
-                           estado_salud, logros_periodo, pendientes_next)
-
-        return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
-
     usuarios = obtenerUsuarios()
     return render_template('nuevoAvance.html',
                            proyecto=proyecto,
@@ -580,7 +659,39 @@ def nuevo_avance(id_proyecto):
                            usuarios=usuarios)
 
 
+@app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['POST'])
+@jwt_required()
+def guardar_nuevo_avance(id_proyecto):
+    proyecto = obtenerProyecto(id_proyecto)
+    if not proyecto:
+        abort(404)
+    from datetime import date
+    resumen     = resumenActividadesPorProyecto()
+    fila_actual = next((r for r in resumen
+                        if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
+    if fila_actual:
+        if isinstance(fila_actual, dict):
+            valor_raw = fila_actual.get('porcentaje_avance_real')
+        else:
+            valor_raw = fila_actual[3]
+        pct_calculado = round(float(valor_raw)) if valor_raw is not None else 0
+    else:
+        pct_calculado = 0
+    if proyecto.get('estado') == 'completado':
+        pct_calculado = 100
+    hoy_db          = date.today().strftime('%Y-%m-%d')
+    estado_salud    = request.form['estado_salud']
+    logros_periodo  = request.form['logros_periodo'].strip()
+    pendientes_next = request.form.get('pendientes_next', '').strip()
+    id_autor        = request.form.get('id_autor')
+    if id_autor:
+        insertarAvance(id_proyecto, id_autor, hoy_db, pct_calculado,
+                       estado_salud, logros_periodo, pendientes_next)
+    return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
+
+
 @app.route('/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
+@jwt_required()
 def eliminar_avance_ruta(id_proyecto, id_avance):
     eliminarAvance(id_avance)
     return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
@@ -1040,6 +1151,7 @@ def form_actividad():
 
 
 @app.route('/actividad/guardar', methods=['POST'])
+@jwt_required()
 def guardar_actividad():
     try:
         id_proyecto = request.form['id_proyecto']
@@ -1084,6 +1196,7 @@ def form_editar_actividad(id_actividad):
 
 
 @app.route('/actividad/<int:id_actividad>/editar', methods=['POST'])
+@jwt_required()
 def guardar_edicion_actividad(id_actividad):
     try:
         from actividadAD import actualizarActividad
@@ -1106,6 +1219,7 @@ def guardar_edicion_actividad(id_actividad):
 
 
 @app.route('/actividad/<int:id_actividad>/estado', methods=['POST'])
+@jwt_required()
 def cambiar_estado_actividad(id_actividad):
     nuevo_estado = request.form.get('estado')
     actualizarEstadoActividad(id_actividad, nuevo_estado)
@@ -1169,8 +1283,12 @@ def historial_usuario(id_usuario):
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    correo   = request.form.get('correo', '').strip()
-    password = request.form.get('password', '')
+    if request.is_json:
+        correo   = (request.json.get('correo') or '').strip()
+        password = (request.json.get('password') or '')
+    else:
+        correo   = request.form.get('correo', '').strip()
+        password = request.form.get('password', '')
     try:
         ok, mensaje, datos = autenticarUsuario(correo, password)
     except Exception as e:
@@ -1178,11 +1296,13 @@ def api_login():
         return jsonify({'ok': False, 'mensaje': 'Error de conexión con la base de datos.',
                         'error_servidor': True}), 500
     if ok:
-        return jsonify({'ok': True, 'usuario': datos})
+        token = generar_token_jwt(datos['id_usuario'])
+        return jsonify({'ok': True, 'usuario': datos, 'token': token})
     return jsonify({'ok': False, 'mensaje': mensaje})
 
 
 @app.route('/api/usuario/me')
+@jwt_required()
 def api_usuario_me():
     id_usuario = request.args.get('id_usuario', type=int)
     if not id_usuario:
@@ -1202,6 +1322,7 @@ def api_usuario_me():
 
 
 @app.route('/api/indicadores')
+@jwt_required()
 def api_indicadores():
     return jsonify({
         'por_app':       kpiPorAplicacion(),
@@ -1211,6 +1332,7 @@ def api_indicadores():
 
 
 @app.route('/api/tickets')
+@jwt_required()
 def api_tickets():
     estado = request.args.get('estado', '') or None
     texto  = request.args.get('texto',  '') or None
@@ -1231,6 +1353,7 @@ def api_tickets():
 
 
 @app.route('/api/actividad/<int:id_actividad>/estado', methods=['POST'])
+@jwt_required()
 def api_estado_actividad(id_actividad):
     data         = request.get_json()
     nuevo_estado = data.get('estado') if data else None
@@ -1241,12 +1364,14 @@ def api_estado_actividad(id_actividad):
 
 
 @app.route('/api/actividad/<int:id_actividad>/desbloquear', methods=['POST'])
+@jwt_required()
 def api_desbloquear_actividad(id_actividad):
     estado_retorno = desbloquearActividad(id_actividad)
     return jsonify({'ok': True, 'estado': estado_retorno})
 
 
 @app.route('/api/actividad/<int:id_actividad>/eliminar', methods=['POST'])
+@jwt_required()
 def api_eliminar_actividad(id_actividad):
     ok = eliminarActividad(id_actividad)
     if ok:
@@ -1254,6 +1379,7 @@ def api_eliminar_actividad(id_actividad):
     return jsonify({'ok': False, 'mensaje': 'Solo se pueden eliminar actividades canceladas.'})
 
 @app.route('/api/proyecto/<int:id_proyecto>/porcentaje')
+@jwt_required()
 def api_porcentaje_proyecto(id_proyecto):
     resumen     = resumenActividadesPorProyecto()
     fila_actual = next((r for r in resumen
@@ -1274,6 +1400,7 @@ def api_porcentaje_proyecto(id_proyecto):
     return jsonify({'porcentaje': pct})
 
 @app.route('/api/proyecto/<int:id_proyecto>/avances-grafico')
+@jwt_required()
 def api_avances_grafico(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     avances = listarAvances(id_proyecto)
@@ -1317,14 +1444,346 @@ def api_avances_grafico(id_proyecto):
     })
 
 @app.route('/api/avance/<int:id_avance>/eliminar', methods=['POST'])
+@jwt_required()
 def api_eliminar_avance(id_avance):
     try:
-        # Intenta eliminar. Si tu BD tiene restricciones, saltará una excepción
         eliminarAvance(id_avance)
         return jsonify({'ok': True})
     except Exception as e:
         print(f"Error de integridad al eliminar avance: {e}")
         return jsonify({'ok': False, 'mensaje': 'No se puede eliminar por restricciones de integridad en la base de datos.'})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API TICKETS CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/ticket/guardar', methods=['POST'])
+@jwt_required()
+def api_guardar_ticket():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    try:
+        obj = Ticket(
+            titulo                = data['titulo'],
+            tipo                  = data['tipo'],
+            id_solicitante        = data['id_solicitante'],
+            id_aplicacion         = data['id_aplicacion'],
+            descripcion           = data['descripcion'],
+            link_img_descripcion  = (data.get('link_img_descripcion') or '').strip() or None,
+        )
+        insertarTicket(obj)
+        return jsonify({'ok': True})
+    except KeyError as e:
+        return jsonify({'ok': False, 'mensaje': f'Campo requerido: {e}'}), 400
+    except Exception as e:
+        print(f'Error al guardar ticket: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al guardar ticket.'}), 500
+
+
+@app.route('/api/ticket/<int:id_ticket>/resolver', methods=['POST'])
+@jwt_required()
+def api_resolver_ticket(id_ticket):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    id_agente           = data.get('id_agente')
+    notas               = (data.get('notas_resolucion') or '').strip()
+    link_img_resolucion = (data.get('link_img_resolucion') or '').strip() or None
+    resolverTicket(id_ticket, id_agente, 'resuelto', notas, link_img_resolucion)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/ticket/<int:id_ticket>/calificar', methods=['POST'])
+@jwt_required()
+def api_calificar_ticket(id_ticket):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    ticket = obtenerTicket(id_ticket)
+    if not ticket:
+        return jsonify({'ok': False, 'mensaje': 'Ticket no encontrado'}), 404
+    if ticket['estado'] != 'resuelto':
+        return jsonify({'ok': False, 'mensaje': 'Solo se puede calificar tickets resueltos'}), 400
+    estrellas  = data.get('estrellas')
+    observacion = (data.get('observacion') or '').strip()
+    if estrellas not in (1, 2, 3, 4, 5):
+        return jsonify({'ok': False, 'mensaje': 'Calificación debe ser entre 1 y 5'}), 400
+    guardarCalificacionTicket(id_ticket, estrellas, observacion)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/ticket/<int:id_ticket>/editar', methods=['POST'])
+@jwt_required()
+def api_editar_ticket(id_ticket):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    ticket = obtenerTicket(id_ticket)
+    if not ticket or ticket['estado'] != 'solicitado':
+        return jsonify({'ok': False, 'mensaje': 'Solo se puede editar tickets en estado solicitado'}), 400
+    titulo               = (data.get('titulo') or '').strip()
+    tipo                 = data.get('tipo', '')
+    id_aplicacion        = data.get('id_aplicacion', '')
+    descripcion          = (data.get('descripcion') or '').strip()
+    link_img_descripcion = (data.get('link_img_descripcion') or '').strip() or None
+    if not titulo:
+        return jsonify({'ok': False, 'mensaje': 'Título requerido'}), 400
+    editarTicket(id_ticket, titulo, tipo, id_aplicacion, descripcion, link_img_descripcion)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/ticket/<int:id_ticket>/cancelar', methods=['POST'])
+@jwt_required()
+def api_cancelar_ticket(id_ticket):
+    cancelarTicket(id_ticket)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/ticket/<int:id_ticket>/asignar', methods=['POST'])
+@jwt_required()
+def api_asignar_ticket(id_ticket):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    id_agente = data.get('id_agente')
+    if not id_agente:
+        return jsonify({'ok': False, 'mensaje': 'id_agente requerido'}), 400
+    prioridad  = data.get('prioridad', 'media')
+    intensidad = data.get('intensidad', 'media')
+    sla_raw    = data.get('sla_horas')
+    if sla_raw:
+        sla_horas = int(sla_raw)
+    else:
+        id_app = data.get('id_aplicacion')
+        app_data = obtenerAplicacion(int(id_app)) if id_app else None
+        sla_horas = calcularSLA(prioridad, intensidad,
+                                app_data['peso'] if app_data else 3,
+                                app_data['participantes_promedio'] if app_data else 5)
+    try:
+        asignarTicket(id_ticket, int(id_agente), prioridad, intensidad, sla_horas)
+        return jsonify({'ok': True})
+    except ValueError:
+        return jsonify({'ok': False, 'mensaje': 'Datos inválidos'}), 400
+    except Exception as e:
+        print(f'Error al asignar ticket: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al asignar ticket.'}), 500
+
+
+# ──────────────────────────────────────────────────────────────
+#  API APLICACIONES CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/aplicacion/nueva', methods=['POST'])
+@jwt_required()
+def api_nueva_aplicacion():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    nombre                = (data.get('nombre') or '').strip()
+    peso                  = data.get('peso', 3)
+    descripcion           = (data.get('descripcion') or '').strip()
+    participantes_promedio = data.get('participantes_promedio', 5)
+    if not nombre:
+        return jsonify({'ok': False, 'mensaje': 'Nombre requerido'}), 400
+    insertarAplicacion(nombre, peso, descripcion, participantes_promedio)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/aplicacion/<int:id_aplicacion>/editar', methods=['POST'])
+@jwt_required()
+def api_editar_aplicacion(id_aplicacion):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    app = obtenerAplicacion(id_aplicacion)
+    if not app:
+        return jsonify({'ok': False, 'mensaje': 'Aplicación no encontrada'}), 404
+    nombre                = (data.get('nombre') or '').strip()
+    peso                  = data.get('peso', 3)
+    descripcion           = (data.get('descripcion') or '').strip()
+    participantes_promedio = data.get('participantes_promedio', 5)
+    if not nombre:
+        return jsonify({'ok': False, 'mensaje': 'Nombre requerido'}), 400
+    editarAplicacion(id_aplicacion, nombre, peso, descripcion, participantes_promedio)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/aplicacion/<int:id_aplicacion>/eliminar', methods=['POST'])
+@jwt_required()
+def api_eliminar_aplicacion(id_aplicacion):
+    eliminarAplicacion(id_aplicacion)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/aplicacion/<int:id_aplicacion>/toggle-estado', methods=['POST'])
+@jwt_required()
+def api_toggle_estado_aplicacion(id_aplicacion):
+    toggleEstadoAplicacion(id_aplicacion)
+    return jsonify({'ok': True})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API PROYECTOS CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/proyecto/guardar', methods=['POST'])
+@jwt_required()
+def api_guardar_proyecto():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    try:
+        ids_responsables = data.get('responsables', [])
+        if not ids_responsables:
+            return jsonify({'ok': False, 'mensaje': 'Al menos un responsable requerido'}), 400
+        obj = Proyecto(
+            nombre           = data['nombre'],
+            ids_responsables = ids_responsables,
+            estado           = 'en_revision',
+            fecha_inicio     = date.today().strftime('%Y-%m-%d'),
+            fecha_fin_plan   = data['fecha_fin_plan'],
+            problematica     = (data.get('problematica') or '').strip() or None,
+            justificacion    = (data.get('justificacion') or '').strip() or None,
+            beneficios       = (data.get('beneficios') or '').strip() or None,
+            descripcion      = data['descripcion'],
+        )
+        insertarProyecto(obj)
+        return jsonify({'ok': True})
+    except KeyError as e:
+        return jsonify({'ok': False, 'mensaje': f'Campo requerido: {e}'}), 400
+    except Exception as e:
+        print(f'Error al guardar proyecto: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al guardar proyecto.'}), 500
+
+
+@app.route('/api/proyecto/<int:id_proyecto>/editar', methods=['POST'])
+@jwt_required()
+def api_editar_proyecto(id_proyecto):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    try:
+        from proyectoAD import actualizarProyectoCompleto
+        ids_responsables = data.get('responsables', [])
+        if not ids_responsables:
+            return jsonify({'ok': False, 'mensaje': 'Al menos un responsable requerido'}), 400
+        nombre         = data['nombre']
+        estado         = data['estado']
+        fecha_fin_plan = data['fecha_fin_plan']
+        descripcion    = data['descripcion']
+        actualizarProyectoCompleto(id_proyecto, nombre, ids_responsables, estado,
+                                   fecha_fin_plan, descripcion)
+        return jsonify({'ok': True})
+    except KeyError as e:
+        return jsonify({'ok': False, 'mensaje': f'Campo requerido: {e}'}), 400
+    except Exception as e:
+        print(f'Error al editar proyecto: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al editar proyecto.'}), 500
+
+
+@app.route('/api/proyecto/<int:id_proyecto>/avances/nuevo', methods=['POST'])
+@jwt_required()
+def api_nuevo_avance(id_proyecto):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    proyecto = obtenerProyecto(id_proyecto)
+    if not proyecto:
+        return jsonify({'ok': False, 'mensaje': 'Proyecto no encontrado'}), 404
+    resumen     = resumenActividadesPorProyecto()
+    fila_actual = next((r for r in resumen
+                        if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
+    if fila_actual:
+        if isinstance(fila_actual, dict):
+            valor_raw = fila_actual.get('porcentaje_avance_real')
+        else:
+            valor_raw = fila_actual[3]
+        pct_calculado = round(float(valor_raw)) if valor_raw is not None else 0
+    else:
+        pct_calculado = 0
+    if proyecto.get('estado') == 'completado':
+        pct_calculado = 100
+    hoy_db          = date.today().strftime('%Y-%m-%d')
+    estado_salud    = data.get('estado_salud', 'ok')
+    logros_periodo  = (data.get('logros_periodo') or '').strip()
+    pendientes_next = (data.get('pendientes_next') or '').strip()
+    id_autor        = data.get('id_autor')
+    if not id_autor:
+        return jsonify({'ok': False, 'mensaje': 'id_autor requerido'}), 400
+    insertarAvance(id_proyecto, id_autor, hoy_db, pct_calculado,
+                   estado_salud, logros_periodo, pendientes_next)
+    return jsonify({'ok': True, 'porcentaje': pct_calculado})
+
+
+@app.route('/api/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
+@jwt_required()
+def api_eliminar_avance_ruta(id_proyecto, id_avance):
+    try:
+        eliminarAvance(id_avance)
+        return jsonify({'ok': True})
+    except Exception as e:
+        print(f"Error al eliminar avance: {e}")
+        return jsonify({'ok': False, 'mensaje': 'No se pudo eliminar el avance.'})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API ACTIVIDADES CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/actividad/guardar', methods=['POST'])
+@jwt_required()
+def api_guardar_actividad():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    try:
+        obj = Actividad(
+            id_proyecto  = data['id_proyecto'],
+            id_sprint    = data.get('id_sprint') or None,
+            id_asignado  = data.get('id_asignado') or None,
+            titulo       = data['titulo'],
+            prioridad    = data['prioridad'],
+            estado       = data['estado'],
+            story_points = data.get('story_points') or 0,
+        )
+        insertarActividad(obj)
+        return jsonify({'ok': True})
+    except KeyError as e:
+        return jsonify({'ok': False, 'mensaje': f'Campo requerido: {e}'}), 400
+    except Exception as e:
+        print(f'Error al guardar actividad: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al guardar actividad.'}), 500
+
+
+@app.route('/api/actividad/<int:id_actividad>/editar', methods=['POST'])
+@jwt_required()
+def api_editar_actividad(id_actividad):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    try:
+        from actividadAD import actualizarActividad, obtenerActividad
+        if not obtenerActividad(id_actividad):
+            return jsonify({'ok': False, 'mensaje': 'Actividad no encontrada'}), 404
+        actualizarActividad(
+            id_actividad = id_actividad,
+            id_proyecto  = data['id_proyecto'],
+            id_sprint    = data.get('id_sprint') or None,
+            id_asignado  = data.get('id_asignado') or None,
+            titulo       = data['titulo'],
+            prioridad    = data['prioridad'],
+            estado       = data['estado'],
+            story_points = data.get('story_points') or 0,
+        )
+        return jsonify({'ok': True})
+    except KeyError as e:
+        return jsonify({'ok': False, 'mensaje': f'Campo requerido: {e}'}), 400
+    except Exception as e:
+        print(f'Error al editar actividad: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al editar actividad.'}), 500
+
 
 # ──────────────────────────────────────────────────────────────
 #  APROBACION DE PROYECTOS (GERENTE)
@@ -1341,6 +1800,7 @@ def aprobacion_proyectos():
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/aprobar', methods=['POST'])
+@jwt_required()
 def api_aprobar_proyecto(id_proyecto):
     try:
         from datetime import date
@@ -1364,6 +1824,7 @@ def api_aprobar_proyecto(id_proyecto):
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/sprints')
+@jwt_required()
 def api_sprints_por_proyecto(id_proyecto):
     """Devuelve los sprints de un proyecto en JSON para el combo dinámico."""
     try:
@@ -1385,6 +1846,7 @@ def api_sprints_por_proyecto(id_proyecto):
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/rechazar', methods=['POST'])
+@jwt_required()
 def api_rechazar_proyecto(id_proyecto):
     try:
         rechazarProyecto(id_proyecto)

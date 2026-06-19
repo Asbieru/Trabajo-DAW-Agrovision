@@ -65,7 +65,9 @@
         <div class="card-header">🗣 Tu experiencia con la atención</div>
         <div class="card-body">
             {% set ya_calificado = ticket.calificacion_estrellas is not none %}
-            <form action="{{ url_for('calificar_ticket', id_ticket=ticket.id_ticket) }}" method="POST">
+            <div id="error-mensaje" class="calificacion-alerta error" style="display:none;"></div>
+            <div id="calificar-exito" class="calificacion-alerta exito" style="display:none;"></div>
+            <form onsubmit="return calificarTicket(event, {{ ticket.id_ticket }})">
                 <div class="calificacion-bloque">
                     <label class="ticket-summary-label calificacion-label">Selecciona una calificación</label>
                     <div class="rating-stars">
@@ -104,4 +106,42 @@
         </div>
     </div>
 </div>
+<script>
+function calificarTicket(event, idTicket) {
+    event.preventDefault();
+    var estrellas = document.querySelector('input[name="estrellas"]:checked');
+    if (!estrellas) {
+        var err = document.getElementById('error-mensaje');
+        err.textContent = 'Selecciona una calificación';
+        err.style.display = 'block';
+        return false;
+    }
+    var datos = {
+        estrellas: parseInt(estrellas.value, 10),
+        observacion: document.getElementById('observacion').value
+    };
+    var btn = event.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    apiPost('/api/ticket/' + idTicket + '/calificar', datos).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+            var form = document.querySelector('.card:last-child .card-body');
+            var exito = document.getElementById('calificar-exito');
+            exito.innerHTML = '<strong>✅ ¡Calificación registrada!</strong> Gracias por tu opinión.';
+            exito.style.display = 'block';
+            form.querySelector('form').style.display = 'none';
+        } else {
+            var err = document.getElementById('error-mensaje');
+            err.textContent = data.mensaje || 'Error al calificar el ticket';
+            err.style.display = 'block';
+        }
+    }).catch(function(err) {
+        btn.disabled = false;
+        var el = document.getElementById('error-mensaje');
+        el.textContent = 'Error de conexión: ' + err.message;
+        el.style.display = 'block';
+    });
+    return false;
+}
+</script>
 {% endblock %}

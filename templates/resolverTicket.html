@@ -186,7 +186,8 @@
 <div class="card">
     <div class="card-header">✅ Registrar resolución</div>
     <div class="card-body">
-        <form action="{{ url_for('guardar_resolucion', id_ticket=ticket.id_ticket) }}" method="POST">
+        <div id="error-mensaje" class="calificacion-alerta error" style="display:none;"></div>
+        <form onsubmit="return resolverTicket(event, {{ ticket.id_ticket }})">
 
             <input type="hidden" id="id_agente" name="id_agente" value="">
             <input type="hidden" name="estado" value="resuelto">
@@ -220,6 +221,33 @@
 {% endif %}
 
 <script>
+function resolverTicket(event, idTicket) {
+    event.preventDefault();
+    var datos = {
+        id_agente: document.getElementById('id_agente').value,
+        notas_resolucion: document.getElementById('notas_resolucion').value,
+        link_img_resolucion: document.getElementById('link_img_resolucion').value
+    };
+    var btn = event.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    apiPost('/api/ticket/' + idTicket + '/resolver', datos).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+            window.location.href = '{{ url_for("listar_tickets") }}';
+        } else {
+            var err = document.getElementById('error-mensaje');
+            err.textContent = data.mensaje || 'Error al resolver el ticket';
+            err.style.display = 'block';
+        }
+    }).catch(function(err) {
+        btn.disabled = false;
+        var el = document.getElementById('error-mensaje');
+        el.textContent = 'Error de conexión: ' + err.message;
+        el.style.display = 'block';
+    });
+    return false;
+}
+
 (function() {
     try {
         var raw = localStorage.getItem('usuario');

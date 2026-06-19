@@ -13,7 +13,9 @@
 <div class="card">
     <div class="card-header">Datos de la actividad</div>
     <div class="card-body">
-        <form action="{{ url_for('guardar_actividad') }}" method="POST">
+        <form onsubmit="return guardarActividad(event)">
+
+            <div id="msg-error" style="display:none;color:red"></div>
 
             <!-- Código (automático) y Título -->
             <div class="form-grid form-section-spacing">
@@ -70,7 +72,7 @@
                     <label for="estado">Estado inicial</label>
                     <input type="text" id="estado_display" value="📥 Backlog" disabled
                            style="background:var(--gris-fondo);color:var(--gris-texto);cursor:not-allowed;">
-                    <input type="hidden" name="estado" value="backlog">
+                    <input type="hidden" id="estado" name="estado" value="backlog">
                     <span class="form-hint">Las actividades siempre inician en Backlog</span>
                 </div>
             </div>
@@ -128,5 +130,40 @@ var asignadosPorProyecto = {{ asignados_json | tojson }};
         </button>
     </div>
 </div>
+
+<script>
+function guardarActividad(event) {
+    event.preventDefault();
+    var id_proyecto = document.getElementById('id_proyecto').value;
+    var id_sprint = document.getElementById('id_sprint').value;
+    var id_asignado = document.getElementById('id_asignado').value;
+    var titulo = document.getElementById('titulo').value;
+    var prioridad = document.getElementById('prioridad').value;
+    var estado = document.getElementById('estado').value;
+    var story_points = document.getElementById('story_points').value;
+    var msgError = document.getElementById('msg-error');
+    msgError.style.display = 'none';
+    apiPost('/api/actividad/guardar', {
+        id_proyecto: id_proyecto,
+        id_sprint: id_sprint,
+        id_asignado: id_asignado,
+        titulo: titulo,
+        prioridad: prioridad,
+        estado: estado,
+        story_points: story_points
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+            window.location.href = '{{ url_for("form_actividad") }}?actividad_creada=1';
+        } else {
+            msgError.textContent = data.mensaje || 'Error al guardar la actividad';
+            msgError.style.display = 'block';
+        }
+    }).catch(function(err) {
+        msgError.textContent = 'Error de conexión: ' + err.message;
+        msgError.style.display = 'block';
+    });
+    return false;
+}
+</script>
 
 {% endblock %}

@@ -15,7 +15,7 @@
     <div class="card-header">Datos del reporte de avance</div>
     <div class="card-body">
 
-        <form action="{{ url_for('nuevo_avance', id_proyecto=proyecto.id_proyecto) }}" method="POST">
+        <form onsubmit="return guardarAvance(event, {{ proyecto.id_proyecto }})">
 
             <div class="form-grid form-section-spacing">
 
@@ -101,7 +101,7 @@
 </div>
 
 <script>
-    const ID_PROYECTO = {{ proyecto.id_proyecto }};
+    var ID_PROYECTO = {{ proyecto.id_proyecto }};
 
     // ── Refresca el % de avance desde la API ──────────────────────
     function refrescarPorcentaje() {
@@ -110,7 +110,7 @@
         span.textContent = 'Cargando…';
         btn.disabled = true;
 
-        fetch('/api/proyecto/' + ID_PROYECTO + '/porcentaje')
+        apiFetch('/api/proyecto/' + ID_PROYECTO + '/porcentaje')
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 var pct = data.porcentaje;
@@ -138,6 +138,25 @@
             });
     }
 
+    function guardarAvance(event, idProyecto) {
+        event.preventDefault();
+        var data = {
+            estado_salud: document.getElementById('estado_salud').value,
+            logros_periodo: document.getElementById('logros_periodo').value,
+            pendientes_next: document.getElementById('pendientes_next').value,
+            id_autor: document.getElementById('id_autor').value
+        };
+        apiPost('/api/proyecto/' + idProyecto + '/avances/nuevo', data).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.ok) {
+                window.location.href = '{{ url_for("historial_avances", id_proyecto=proyecto.id_proyecto) }}';
+            } else {
+                showAlert(data.mensaje || 'Error al guardar el avance.', 'error');
+            }
+        }).catch(function() {
+            showAlert('Error de conexión.', 'error');
+        });
+        return false;
+    }
 
 document.addEventListener('DOMContentLoaded', function() {
     var usuarioRaw = localStorage.getItem('usuario');

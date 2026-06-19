@@ -13,8 +13,7 @@
 <div class="card">
     <div class="card-header">Datos de la aplicación</div>
     <div class="card-body">
-        <form action="{{ url_for('editar_aplicacion_route', id_aplicacion=aplicacion.id_aplicacion) if aplicacion else url_for('nueva_aplicacion') }}"
-              method="POST">
+        <form onsubmit="return guardarAplicacion(event)">
             <div class="form-group form-section-spacing">
                 <label for="nombre">Nombre de la aplicación *</label>
                 <input type="text" id="nombre" name="nombre"
@@ -55,4 +54,27 @@
         </form>
     </div>
 </div>
+<script>
+function guardarAplicacion(event) {
+    event.preventDefault();
+    var id = {{ aplicacion.id_aplicacion if aplicacion else 'null' }};
+    var url = id ? '/api/aplicacion/' + id + '/editar' : '/api/aplicacion/nueva';
+    var data = {
+        nombre: document.getElementById('nombre').value,
+        peso: document.getElementById('peso').value,
+        descripcion: document.getElementById('descripcion').value,
+        participantes_promedio: document.getElementById('participantes_promedio').value
+    };
+    apiPost(url, data).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+            window.location.href = '{{ url_for("listar_aplicaciones") }}' + (id ? '?editada=1' : '?creada=1');
+        } else {
+            showAlert(data.mensaje || 'Error al guardar la aplicación.', 'error');
+        }
+    }).catch(function() {
+        showAlert('Error de conexión.', 'error');
+    });
+    return false;
+}
+</script>
 {% endblock %}

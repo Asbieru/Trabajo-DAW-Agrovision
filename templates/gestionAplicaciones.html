@@ -7,7 +7,7 @@
         <h1>📦 Aplicaciones</h1>
         <p>Gestión de aplicaciones del sistema</p>
     </div>
-    <a class="btn btn-verde" href="{{ url_for('nueva_aplicacion') }}">+ Nueva aplicación</a>
+    <a class="btn btn-verde" href="{{ url_for('form_nueva_aplicacion') }}">+ Nueva aplicación</a>
 </div>
 
 {% if request.args.get('creada') %}
@@ -48,10 +48,9 @@
                         {% endif %}
                     </td>
                     <td class="td-accion td-accion-apps">
-                        <a href="{{ url_for('editar_aplicacion_route', id_aplicacion=app.id_aplicacion) }}"
+                        <a href="{{ url_for('form_editar_aplicacion', id_aplicacion=app.id_aplicacion) }}"
                            class="btn btn-sm btn-outline">✏️ Editar</a>
-                        <form action="{{ url_for('toggle_estado_aplicacion', id_aplicacion=app.id_aplicacion) }}"
-                              method="POST" style="display:inline;">
+                        <form onsubmit="return toggleEstado(event, {{ app.id_aplicacion }})" style="display:inline;">
                             {% if app.estado == 'activo' %}
                                 <button type="submit" class="btn btn-sm btn-acento">🔒 Cerrar</button>
                             {% else %}
@@ -66,7 +65,7 @@
                 <tr>
                     <td colspan="7" class="tabla-empty">
                         No hay aplicaciones registradas.
-                        <a href="{{ url_for('nueva_aplicacion') }}" style="color:var(--verde);">Crear primera aplicación →</a>
+                        <a href="{{ url_for('form_nueva_aplicacion') }}" style="color:var(--verde);">Crear primera aplicación →</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -81,12 +80,10 @@
         <h3 style="margin:0 0 8px 0;font-size:1.05rem;">¿Eliminar aplicación?</h3>
         <p id="modal-elim-app-texto" style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;"></p>
         <div style="display:flex;gap:10px;justify-content:center;">
-            <form id="modal-elim-app-form" method="POST" style="display:inline;">
-                <button type="submit" class="btn btn-sm"
-                        style="background:var(--rojo);color:#fff;border:none;border-radius:6px;cursor:pointer;padding:8px 24px;font-size:0.88rem;font-weight:600;">
-                    Sí, eliminar
-                </button>
-            </form>
+            <button type="button" onclick="ejecutarEliminarApp()" class="btn btn-sm"
+                    style="background:var(--rojo);color:#fff;border:none;border-radius:6px;cursor:pointer;padding:8px 24px;font-size:0.88rem;font-weight:600;">
+                Sí, eliminar
+            </button>
             <button onclick="cerrarModalEliminarApp()"
                     class="btn btn-sm btn-outline"
                     style="padding:8px 24px;font-size:0.88rem;">
@@ -104,8 +101,6 @@ function confirmarEliminarApp(id, nombre) {
     var modal = document.getElementById('modal-eliminar-app');
     var texto = document.getElementById('modal-elim-app-texto');
     if (texto) texto.textContent = '¿Eliminar "' + nombre + '"? Los tickets asociados perderán la referencia.';
-    var form = document.getElementById('modal-elim-app-form');
-    if (form) form.action = '/aplicacion/' + id + '/eliminar';
     if (modal) modal.style.display = 'flex';
 }
 
@@ -113,6 +108,33 @@ function cerrarModalEliminarApp() {
     var modal = document.getElementById('modal-eliminar-app');
     if (modal) modal.style.display = 'none';
     _elimAppId = null;
+}
+
+function ejecutarEliminarApp() {
+    if (!_elimAppId) return;
+    apiPost('/api/aplicacion/' + _elimAppId + '/eliminar', {}).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+            window.location.href = '{{ url_for("listar_aplicaciones") }}?eliminada=1';
+        } else {
+            showAlert(data.mensaje || 'Error al eliminar la aplicación.', 'error');
+        }
+    }).catch(function() {
+        showAlert('Error de conexión.', 'error');
+    });
+}
+
+function toggleEstado(event, id) {
+    event.preventDefault();
+    apiPost('/api/aplicacion/' + id + '/toggle-estado', {}).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+            location.reload();
+        } else {
+            showAlert(data.mensaje || 'Error al cambiar el estado.', 'error');
+        }
+    }).catch(function() {
+        showAlert('Error de conexión.', 'error');
+    });
+    return false;
 }
 
 document.addEventListener('click', function(e) {

@@ -103,7 +103,7 @@
                                 {% if t.calificacion_estrellas %}
                                     <span class="badge badge-acento estrella-badge">⭐ {{ t.calificacion_estrellas }}/5</span>
                                 {% elif t.estado == 'resuelto' %}
-                                    <a href="{{ url_for('calificar_ticket', id_ticket=t.id_ticket) }}"
+                                    <a href="{{ url_for('form_calificar_ticket', id_ticket=t.id_ticket) }}"
                                     class="btn btn-sm btn-outline btn-calificar"
                                     data-id-solicitante="{{ t.id_solicitante }}">⭐ Calificar</a>
                                 {% else %}

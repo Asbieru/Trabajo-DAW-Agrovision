@@ -183,7 +183,7 @@
     {% elif ticket.estado == 'en_progreso' %}
         <a href="{{ url_for('form_resolver_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-verde btn-resolver" data-id-agente="{{ ticket.id_agente or '' }}">🔧 Resolver</a>
     {% elif ticket.estado == 'resuelto' and not ticket.calificacion_estrellas %}
-        <a href="{{ url_for('calificar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline btn-calificar" data-id-solicitante="{{ ticket.id_solicitante }}">⭐ Calificar</a>
+        <a href="{{ url_for('form_calificar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline btn-calificar" data-id-solicitante="{{ ticket.id_solicitante }}">⭐ Calificar</a>
     {% endif %}
     <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">← Volver</a>
 </div>

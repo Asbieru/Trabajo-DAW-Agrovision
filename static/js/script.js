@@ -98,7 +98,7 @@ function hacerLogin() {
     msgError.style.display = 'none';
 
     if (!correo || !password) {
-        msgError.textContent   = '️ Completa todos los campos.';
+        msgError.textContent   = ' Completa todos los campos.';
         msgError.style.display = 'block';
         return;
     }
@@ -106,28 +106,41 @@ function hacerLogin() {
     btn.textContent = 'Verificando…';
     btn.disabled    = true;
 
-    var formData = new FormData();
-    formData.append('correo',   correo);
-    formData.append('password', password);
-
-    fetch(URL_API_LOGIN, { method: 'POST', body: formData })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data.ok) {
-                localStorage.setItem('usuario', JSON.stringify(data.usuario));
-                window.location.href = URL_INDEX;
-            } else if (data.error_servidor) {
-                window.location.href = URL_ERROR_500;
-            } else {
-                msgError.textContent   = '️ ' + data.mensaje;
-                msgError.style.display = 'block';
-                btn.textContent = 'Ingresar al sistema';
-                btn.disabled    = false;
-            }
-        })
-        .catch(function () {
-            window.location.href = URL_ERROR_500;
-        });
+    fetch(URL_AUTH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: correo, password: password })
+    })
+    .then(function (r) {
+        if (!r.ok) throw new Error('Credenciales inválidas');
+        return r.json();
+    })
+    .then(function (data) {
+        var token = data.access_token;
+        localStorage.setItem('jwt_token', token);
+        try {
+            var payload = JSON.parse(atob(token.split('.')[1]));
+            var userId = payload.identity;
+            return fetch(URL_USUARIO_ME + '?id_usuario=' + userId, {
+                headers: { 'Authorization': 'JWT ' + token }
+            }).then(function (r) { return r.json(); }).then(function (userData) {
+                if (userData.ok) {
+                    localStorage.setItem('usuario', JSON.stringify(userData.usuario));
+                    window.location.href = URL_INDEX;
+                } else {
+                    throw new Error(userData.mensaje || 'Error al obtener usuario');
+                }
+            });
+        } catch (e) {
+            throw new Error('Error al procesar la sesión');
+        }
+    })
+    .catch(function (err) {
+        msgError.textContent = ' ' + err.message;
+        msgError.style.display = 'block';
+        btn.textContent = 'Ingresar al sistema';
+        btn.disabled    = false;
+    });
 }
 
 
@@ -600,7 +613,7 @@ function _pdfAutoTable(doc, titulo, hdrs, filas, y) {
    ══════════════════════════════════════════════════ */
 function exportarTabla() {
     var jsPDF = _getjsPDF();
-    if (!jsPDF) { alert('Error: librería PDF no cargada.'); return; }
+    if (!jsPDF) { showAlert('Error: librería PDF no cargada.', 'error'); return; }
 
     var secProy = document.getElementById('seccion-proyectos');
     var esProyectos = secProy && secProy.style.display !== 'none';
@@ -634,7 +647,7 @@ function exportarTabla() {
             ]);
         });
 
-        if (filas.length === 0) { alert('No hay tickets para exportar.'); return; }
+        if (filas.length === 0) { showAlert('No hay tickets para exportar.', 'info'); return; }
         _pdfAutoTable(doc, 'Tickets (' + filas.length + ' registros)', hdrs, filas, y);
 
     } else {
@@ -661,7 +674,7 @@ function exportarTabla() {
             ]);
         });
 
-        if (filasP.length === 0) { alert('No hay proyectos para exportar.'); return; }
+        if (filasP.length === 0) { showAlert('No hay proyectos para exportar.', 'info'); return; }
 
         // Barra titulo
         var pageWP = doc.internal.pageSize.getWidth();
@@ -724,7 +737,7 @@ function exportarTabla() {
    ══════════════════════════════════════════════════ */
 function exportarResumen() {
     var jsPDF = _getjsPDF();
-    if (!jsPDF) { alert('Error: librería PDF no cargada.'); return; }
+    if (!jsPDF) { showAlert('Error: librería PDF no cargada.', 'error'); return; }
 
     var secProy = document.getElementById('seccion-proyectos');
     var esProyectos = secProy && secProy.style.display !== 'none';
@@ -1260,7 +1273,7 @@ function avanzarEstadoActividad(idActividad, estadoActual, btn) {
     btn.textContent = '…';
     btn.disabled    = true;
 
-    fetch('/api/actividad/' + idActividad + '/estado', {
+    apiFetch('/api/actividad/' + idActividad + '/estado', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ estado: nuevoEstado })
@@ -1270,13 +1283,13 @@ function avanzarEstadoActividad(idActividad, estadoActual, btn) {
         if (data.ok) {
             location.reload();
         } else {
-            alert('Error al cambiar estado.');
+            showAlert('Error al cambiar estado.', 'error');
             btn.textContent = '→';
             btn.disabled    = false;
         }
     })
     .catch(function () {
-        alert('Error de conexión.');
+        showAlert('Error de conexión.', 'error');
         btn.textContent = '→';
         btn.disabled    = false;
     });
@@ -1286,7 +1299,7 @@ function cancelarActividad(idActividad, btn) {
     btn.textContent = '…';
     btn.disabled    = true;
 
-    fetch('/api/actividad/' + idActividad + '/estado', {
+    apiFetch('/api/actividad/' + idActividad + '/estado', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ estado: 'cancelada' })
@@ -1296,13 +1309,13 @@ function cancelarActividad(idActividad, btn) {
         if (data.ok) {
             location.reload();
         } else {
-            alert('Error al cancelar actividad.');
+            showAlert('Error al cancelar actividad.', 'error');
             btn.textContent = 'Cancelar';
             btn.disabled    = false;
         }
     })
     .catch(function () {
-        alert('Error de conexión.');
+        showAlert('Error de conexión.', 'error');
         btn.textContent = 'Cancelar';
         btn.disabled    = false;
     });
@@ -1312,7 +1325,7 @@ function bloquearActividad(idActividad, btn) {
     btn.textContent = '…';
     btn.disabled    = true;
 
-    fetch('/api/actividad/' + idActividad + '/estado', {
+    apiFetch('/api/actividad/' + idActividad + '/estado', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ estado: 'bloqueado' })
@@ -1322,13 +1335,13 @@ function bloquearActividad(idActividad, btn) {
         if (data.ok) {
             location.reload();
         } else {
-            alert('Error al bloquear actividad.');
+            showAlert('Error al bloquear actividad.', 'error');
             btn.textContent = '🔒 Bloquear';
             btn.disabled    = false;
         }
     })
     .catch(function () {
-        alert('Error de conexión.');
+        showAlert('Error de conexión.', 'error');
         btn.textContent = '🔒 Bloquear';
         btn.disabled    = false;
     });
@@ -1338,7 +1351,7 @@ function desbloquearActividad(idActividad, btn) {
     btn.textContent = '…';
     btn.disabled    = true;
 
-    fetch('/api/actividad/' + idActividad + '/desbloquear', {
+    apiFetch('/api/actividad/' + idActividad + '/desbloquear', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' }
     })
@@ -1347,13 +1360,13 @@ function desbloquearActividad(idActividad, btn) {
         if (data.ok) {
             location.reload();
         } else {
-            alert('Error al desbloquear actividad.');
+            showAlert('Error al desbloquear actividad.', 'error');
             btn.textContent = '🔓 Desbloquear';
             btn.disabled    = false;
         }
     })
     .catch(function () {
-        alert('Error de conexión.');
+        showAlert('Error de conexión.', 'error');
         btn.textContent = '🔓 Desbloquear';
         btn.disabled    = false;
     });
@@ -1391,7 +1404,7 @@ function cerrarModalEliminarActividad() {
             var modal = document.getElementById('modal-eliminar-actividad');
             if (modal) modal.style.display = 'none';
 
-            fetch('/api/actividad/' + idParaEliminar + '/eliminar', {
+            apiFetch('/api/actividad/' + idParaEliminar + '/eliminar', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' }
             })
@@ -1442,7 +1455,7 @@ function cargarSprintsAjax(proyectoId, sprintSeleccionado) {
         return;
     }
 
-    fetch('/api/proyecto/' + proyectoId + '/sprints')
+    apiFetch('/api/proyecto/' + proyectoId + '/sprints')
         .then(function(resp) { return resp.json(); })
         .then(function(data) {
             if (!data.ok || !data.sprints || data.sprints.length === 0) {
@@ -1770,7 +1783,7 @@ function mostrarModalAviso(mensaje) {
     var txt     = document.getElementById('modal-aviso-mensaje');
     if (!overlay || !txt) {
         // Fallback si la plantilla no tiene el modal aún
-        window.alert(mensaje);
+        showAlert(mensaje, 'error');
         return;
     }
     txt.textContent = mensaje;
@@ -1812,7 +1825,7 @@ function cerrarModalEliminarProyecto() {
             var modal = document.getElementById('modal-eliminar-proyecto');
             if (modal) modal.style.display = 'none';
 
-            fetch('/api/proyecto/' + idParaEliminar + '/eliminar', {
+            apiFetch('/api/proyecto/' + idParaEliminar + '/eliminar', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' }
             })
@@ -2004,7 +2017,7 @@ function toggleActividades(btn) {
     }
 
     // Cargar via AJAX
-    fetch('/api/reporte/proyecto/' + idProyecto + '/actividades')
+    apiFetch('/api/reporte/proyecto/' + idProyecto + '/actividades')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.ok) {
@@ -2024,13 +2037,13 @@ function toggleActividades(btn) {
 /* Exportar proyectos + sus actividades a PDF */
 function exportarConActividades() {
     var jsPDF = _getjsPDF();
-    if (!jsPDF) { alert('Error: libreria PDF no cargada.'); return; }
+    if (!jsPDF) { showAlert('Error: libreria PDF no cargada.', 'error'); return; }
 
     var filasP   = Array.from(document.querySelectorAll('#tbody-proyectos tr[id^="fila-proy-"]'));
     var hayFiltro = filasP.some(function(f) { return f.style.display === 'none'; });
     var visibles  = hayFiltro ? filasP.filter(function(f) { return f.style.display !== 'none'; }) : filasP;
 
-    if (visibles.length === 0) { alert('No hay proyectos para exportar.'); return; }
+    if (visibles.length === 0) { showAlert('No hay proyectos para exportar.', 'info'); return; }
 
     var fecha = new Date().toLocaleDateString('es-PE');
     var ids   = visibles.map(function(tr) { return tr.id.replace('fila-proy-', ''); });
@@ -2182,7 +2195,7 @@ function exportarConActividades() {
         generarPDF();
     } else {
         var promesas = pendientes.map(function(id) {
-            return fetch('/api/reporte/proyecto/' + id + '/actividades')
+            return apiFetch('/api/reporte/proyecto/' + id + '/actividades')
                 .then(function(r) { return r.json(); })
                 .then(function(data) { if (data.ok) _actividadesCargadas[id] = data; });
         });
@@ -2209,7 +2222,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnConf.textContent = 'Eliminando...';
             btnConf.disabled = true;
 
-            fetch('/api/avance/' + _avanceEliminarId + '/eliminar', {
+            apiFetch('/api/avance/' + _avanceEliminarId + '/eliminar', {
                 method: 'POST'
             })
             .then(function(r) { return r.json(); })
@@ -2223,7 +2236,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(function() {
-                alert('Error de conexión.');
+                showAlert('Error de conexión.', 'error');
                 btnConf.textContent = 'Sí, eliminar';
                 btnConf.disabled = false;
             });
@@ -2401,7 +2414,7 @@ function filtrarTicketsAPI() {
         if (texto)  params.append('texto',  texto);
         if (estado) params.append('estado', estado);
 
-        fetch('/api/tickets?' + params.toString())
+        apiFetch('/api/tickets?' + params.toString())
             .then(function(r) { return r.json(); })
             .then(function(tickets) { renderizarFilas(tickets); });
     }, 300);

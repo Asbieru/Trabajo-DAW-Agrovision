@@ -25,7 +25,7 @@ const AV_CHATBOT = (function () {
             const local = JSON.parse(raw);
             if (!local || !local.id_usuario) return null;
 
-            const resp = await fetch('/api/usuario/me?id_usuario=' + local.id_usuario);
+            const resp = await apiFetch('/api/usuario/me?id_usuario=' + local.id_usuario);
             if (!resp.ok) return null;
             const data = await resp.json();
             if (!data.ok) return null;

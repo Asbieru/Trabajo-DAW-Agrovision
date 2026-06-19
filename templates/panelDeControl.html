@@ -119,7 +119,7 @@
         });
 
         // Cargar tickets desde la API
-        fetch('/api/tickets')
+        apiFetch('/api/tickets')
             .then(function(r) { return r.json(); })
             .then(function(tickets) {
                 // Actualizar contador de tickets abiertos (no cancelados)

@@ -49,7 +49,8 @@
 <div class="card">
     <div class="card-header">⚙️ Configurar asignación</div>
     <div class="card-body">
-        <form action="{{ url_for('guardar_asignacion', id_ticket=ticket.id_ticket) }}" method="POST">
+        <div id="error-mensaje" class="calificacion-alerta error" style="display:none;"></div>
+        <form onsubmit="return asignarTicket(event, {{ ticket.id_ticket }})">
             <input type="hidden" name="id_aplicacion_hidden" value="{{ ticket.id_aplicacion }}">
 
             <div class="form-grid tres form-section-spacing">
@@ -102,8 +103,7 @@
             </div>
         </form>
         <div class="form-actions" style="margin-top:12px;">
-            <form action="{{ url_for('cancelar_ticket', id_ticket=ticket.id_ticket) }}" method="POST"
-                  onsubmit="return confirm('¿Estás seguro de cancelar este ticket?');">
+            <form onsubmit="return cancelarTicket(event, {{ ticket.id_ticket }})">
                 <button type="submit" class="btn btn-rojo">🚫 Cancelar ticket</button>
             </form>
         </div>
@@ -111,6 +111,57 @@
 </div>
 
 <script>
+function asignarTicket(event, idTicket) {
+    event.preventDefault();
+    var btn = event.target.querySelector('button[type="submit"]');
+    showConfirm('¿Asignar este ticket y cambiar a En progreso?', 'Asignar ticket', function() {
+    var datos = {
+        id_agente: document.getElementById('id_agente').value,
+        prioridad: document.getElementById('prioridad').value,
+        intensidad: document.getElementById('intensidad').value,
+        sla_horas: document.getElementById('sla_horas').value || null,
+        id_aplicacion: document.querySelector('input[name="id_aplicacion_hidden"]').value
+    };
+    btn.disabled = true;
+    apiPost('/api/ticket/' + idTicket + '/asignar', datos).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+            window.location.href = '{{ url_for("listar_tickets") }}';
+        } else {
+            var err = document.getElementById('error-mensaje');
+            err.textContent = data.mensaje || 'Error al asignar el ticket';
+            err.style.display = 'block';
+        }
+    }).catch(function(err) {
+        btn.disabled = false;
+        var el = document.getElementById('error-mensaje');
+        el.textContent = 'Error de conexión: ' + err.message;
+        el.style.display = 'block';
+    });
+    });
+    return false;
+}
+
+function cancelarTicket(event, idTicket) {
+    event.preventDefault();
+    var btn = event.target.querySelector('button[type="submit"]');
+    showConfirm('¿Estás seguro de cancelar este ticket?', 'Cancelar ticket', function() {
+    btn.disabled = true;
+    apiPost('/api/ticket/' + idTicket + '/cancelar', {}).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+            window.location.href = '{{ url_for("listar_tickets") }}';
+        } else {
+            showAlert(data.mensaje || 'Error al cancelar el ticket', 'error');
+        }
+    }).catch(function(err) {
+        btn.disabled = false;
+        showAlert('Error de conexión: ' + err.message, 'error');
+    });
+    });
+    return false;
+}
+
 function calcularSLA() {
     var prioridad = document.getElementById('prioridad').value;
     var intensidad = document.getElementById('intensidad').value;

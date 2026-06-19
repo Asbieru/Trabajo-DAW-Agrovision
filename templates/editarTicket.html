@@ -17,7 +17,8 @@
 <div class="card">
     <div class="card-header">Datos del ticket</div>
     <div class="card-body">
-        <form action="{{ url_for('guardar_edicion_ticket', id_ticket=ticket.id_ticket) }}" method="POST">
+        <div id="error-mensaje" class="calificacion-alerta error" style="display:none;"></div>
+        <form onsubmit="return editarTicket(event, {{ ticket.id_ticket }})">
 
             <!-- Título -->
             <div class="form-group form-section-spacing">
@@ -73,4 +74,34 @@
         </form>
     </div>
 </div>
+<script>
+function editarTicket(event, idTicket) {
+    event.preventDefault();
+    var datos = {
+        titulo: document.getElementById('titulo').value,
+        tipo: document.getElementById('tipo').value,
+        id_aplicacion: document.getElementById('id_aplicacion').value,
+        descripcion: document.getElementById('descripcion').value,
+        link_img_descripcion: document.getElementById('link_img_descripcion').value
+    };
+    var btn = event.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    apiPost('/api/ticket/' + idTicket + '/editar', datos).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+            window.location.href = '{{ url_for("listar_tickets") }}?editado=1';
+        } else {
+            var err = document.getElementById('error-mensaje');
+            err.textContent = data.mensaje || 'Error al editar el ticket';
+            err.style.display = 'block';
+        }
+    }).catch(function(err) {
+        btn.disabled = false;
+        var el = document.getElementById('error-mensaje');
+        el.textContent = 'Error de conexión: ' + err.message;
+        el.style.display = 'block';
+    });
+    return false;
+}
+</script>
 {% endblock %}

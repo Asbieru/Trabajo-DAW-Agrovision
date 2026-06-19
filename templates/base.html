@@ -26,7 +26,7 @@
             <span class="topbar-nombre" id="topbar-nombre">—</span>
             <span class="topbar-rol" id="topbar-rol"></span>
             <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline topbar-logout"
-                onclick="localStorage.removeItem('usuario')">
+                onclick="localStorage.removeItem('usuario');localStorage.removeItem('jwt_token')">
                 🚪 Salir
             </a>
         </div>
@@ -58,7 +58,7 @@
                 <span class="ico">🔧</span> Resolver tickets
             </a>
             <a href="{{ url_for('listar_aplicaciones') }}"
-                class="{{ 'activo' if request.endpoint in ('listar_aplicaciones', 'nueva_aplicacion', 'editar_aplicacion_route') else '' }}"
+                class="{{ 'activo' if request.endpoint in ('listar_aplicaciones', 'form_nueva_aplicacion', 'form_editar_aplicacion') else '' }}"
                 data-vis="admin">
                 <span class="ico">📦</span> Aplicaciones
             </a>
@@ -117,10 +117,101 @@
             } catch (e) { return null; }
         }
 
+        function getToken() {
+            try { return localStorage.getItem('jwt_token'); } catch (e) { return null; }
+        }
+
+        function decodeToken(token) {
+            try {
+                var parts = token.split('.');
+                if (parts.length !== 3) return null;
+                return JSON.parse(atob(parts[1]));
+            } catch (e) { return null; }
+        }
+
+        function tokenExpirado() {
+            var token = getToken();
+            if (!token) return true;
+            var payload = decodeToken(token);
+            if (!payload || !payload.exp) return true;
+            return Date.now() >= payload.exp * 1000;
+        }
+
+        function apiFetch(url, options) {
+            options = options || {};
+            options.headers = options.headers || {};
+            var token = getToken();
+            if (token) {
+                options.headers['Authorization'] = 'JWT ' + token;
+            }
+            return fetch(url, options);
+        }
+
+        function apiPost(url, body) {
+            return apiFetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+        }
+
+        function showAlert(mensaje, tipo) {
+            tipo = tipo || 'error';
+            var overlay = document.createElement('div');
+            overlay.className = 'agro-modal-overlay';
+            overlay.innerHTML =
+                '<div class="agro-modal-box">' +
+                    '<div class="agro-modal-icon">' + (tipo === 'error' ? '&#9888;' : tipo === 'success' ? '&#10003;' : '&#8505;') + '</div>' +
+                    '<div class="agro-modal-title">' + (tipo === 'error' ? 'Error' : tipo === 'success' ? 'Correcto' : 'Aviso') + '</div>' +
+                    '<div class="agro-modal-msg">' + mensaje + '</div>' +
+                    '<div class="agro-modal-actions">' +
+                        '<button class="agro-modal-cancel" onclick="this.closest(\'.agro-modal-overlay\').remove()">Cerrar</button>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        }
+
+        function showConfirm(mensaje, titulo, cbAceptar, cbCancelar) {
+            var overlay = document.createElement('div');
+            overlay.className = 'agro-modal-overlay';
+            overlay.innerHTML =
+                '<div class="agro-modal-box">' +
+                    '<div class="agro-modal-icon">&#9888;</div>' +
+                    '<div class="agro-modal-title">' + (titulo || 'Confirmar') + '</div>' +
+                    '<div class="agro-modal-msg">' + mensaje + '</div>' +
+                    '<div class="agro-modal-actions">' +
+                        '<button class="agro-modal-cancel" id="agro-cancel-btn">Cancelar</button>' +
+                        '<button class="agro-modal-confirm" id="agro-confirm-btn">Aceptar</button>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(overlay);
+            document.getElementById('agro-confirm-btn').onclick = function () { overlay.remove(); if (cbAceptar) cbAceptar(); };
+            document.getElementById('agro-cancel-btn').onclick = function () { overlay.remove(); if (cbCancelar) cbCancelar(); };
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) { overlay.remove(); if (cbCancelar) cbCancelar(); } });
+        }
+
+        function showToast(mensaje, tipo) {
+            tipo = tipo || 'success';
+            var existing = document.querySelector('.agro-toast');
+            if (existing) existing.remove();
+            var toast = document.createElement('div');
+            toast.className = 'agro-toast ' + tipo;
+            toast.innerHTML = '<span>' + mensaje + '</span>';
+            document.body.appendChild(toast);
+            setTimeout(function () { if (toast.parentNode) toast.remove(); }, 3000);
+        }
+
         // Leer usuario de localStorage y mostrarlo en el topbar
         (function () {
             var u = obtenerUsuario();
             if (!u) {
+                window.location.href = '{{ url_for("login") }}';
+                return;
+            }
+            if (tokenExpirado()) {
+                localStorage.removeItem('usuario');
+                localStorage.removeItem('jwt_token');
                 window.location.href = '{{ url_for("login") }}';
                 return;
             }

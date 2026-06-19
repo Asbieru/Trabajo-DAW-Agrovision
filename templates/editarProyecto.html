@@ -13,7 +13,7 @@
 <div class="card">
     <div class="card-header">Datos del proyecto</div>
     <div class="card-body">
-        <form action="{{ url_for('guardar_edicion_proyecto', id_proyecto=proyecto.id_proyecto) }}" method="POST">
+        <form onsubmit="return editarProyecto(event, {{ proyecto.id_proyecto }})">
 
             <!-- Nombre del proyecto -->
             <div class="form-group form-section-spacing">
@@ -93,6 +93,32 @@
 </div>
 
 <script>
+function editarProyecto(event, id) {
+    event.preventDefault();
+    var responsables = [];
+    var checks = document.querySelectorAll('input[name="responsables"]:checked');
+    for (var i = 0; i < checks.length; i++) {
+        responsables.push(parseInt(checks[i].value));
+    }
+    var data = {
+        nombre: document.getElementById('nombre').value,
+        responsables: responsables,
+        estado: document.getElementById('estado').value,
+        fecha_fin_plan: document.getElementById('fecha_fin_plan').value,
+        descripcion: document.getElementById('descripcion').value
+    };
+    apiPost('/api/proyecto/' + id + '/editar', data).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+            window.location.href = '?editado=1';
+        } else {
+            showAlert(data.mensaje || 'Error al editar el proyecto.', 'error');
+        }
+    }).catch(function() {
+        showAlert('Error de conexión.', 'error');
+    });
+    return false;
+}
+
 (function() {
     var params = new URLSearchParams(window.location.search);
     if (params.get('editado') === '1') {
