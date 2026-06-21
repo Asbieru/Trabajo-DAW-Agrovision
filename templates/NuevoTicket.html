@@ -50,8 +50,6 @@
                 </div>
             </div>
 
-            <input type="hidden" id="id_solicitante" name="id_solicitante">
-
             <!-- Descripción -->
             <div class="form-group form-section-spacing">
                 <label for="descripcion">Descripción detallada *</label>
@@ -83,7 +81,6 @@ function guardarTicket(event) {
     var datos = {
         titulo: document.getElementById('titulo').value,
         tipo: document.getElementById('tipo').value,
-        id_solicitante: document.getElementById('id_solicitante').value,
         id_aplicacion: document.getElementById('id_aplicacion').value,
         descripcion: document.getElementById('descripcion').value,
         link_img_descripcion: document.getElementById('link_img_descripcion').value
@@ -110,12 +107,7 @@ function guardarTicket(event) {
 
 (function() {
     try {
-        var raw = localStorage.getItem('usuario');
-        if (!raw) return;
-        var u = JSON.parse(raw);
-        if (u.id_usuario != null) {
-            document.getElementById('id_solicitante').value = u.id_usuario;
-        }
+        if (!USUARIO) return;
     } catch(e) {}
 })();
 </script>

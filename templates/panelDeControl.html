@@ -11,18 +11,18 @@
 
 <!-- STATS -->
 <div class="stats-grid">
-    <div class="stat-card" data-vis="soporte programador admin">
+    <div class="stat-card" data-permiso="dashboard">
         <div class="stat-num azul">40</div>
         <div class="stat-label">Sistemas en producción</div>
     </div>
-    <div class="stat-card" data-vis="soporte programador admin">
+    <div class="stat-card" data-permiso="dashboard">
         <div class="stat-num acento" id="stat-tickets-abiertos">—</div>
         <div class="stat-label">Tickets abiertos</div>
     </div>
 </div>
 
 <!-- TICKETS A RESOLVER -->
-<div class="card" id="tickets-pendientes-resolver" data-vis="programador soporte admin" style="display:none;">
+<div class="card" id="tickets-pendientes-resolver" data-permiso="resolver_tickets" style="display:none;">
     <div class="card-header">🔧 Tickets pendientes de resolver</div>
     <div class="card-body">
         <div id="tickets-resolver-lista">
@@ -34,7 +34,7 @@
 <!-- ACCESOS RÁPIDOS -->
 <div class="accesos-grid-container" id="accesos-rapidos">
 
-    <div class="card" data-vis="soporte programador admin">
+    <div class="card" data-permiso="ver_tickets">
         <div class="card-header">🎫 Soporte</div>
         <div class="card-body">
             <p class="card-body-text">
@@ -47,7 +47,7 @@
         </div>
     </div>
 
-    <div class="card" data-vis="programador admin">
+    <div class="card" data-permiso="ver_proyectos">
         <div class="card-header">🚀 Proyectos de software</div>
         <div class="card-body">
             <p class="card-body-text">
@@ -59,7 +59,7 @@
         </div>
     </div>
 
-    <div class="card" data-vis="admin">
+    <div class="card" data-permiso="indicadores">
         <div class="card-header">📊 Reportes e Indicadores</div>
         <div class="card-body">
             <p class="card-body-text">
@@ -76,7 +76,7 @@
 <!-- INFORMACIÓN ADICIONAL -->
 <div class="info-adicional-container" id="info-adicional">
 
-    <div class="card" data-vis="soporte programador admin">
+    <div class="card" data-permiso="ver_tickets">
         <div class="card-header">📢 Avisos del Sistema</div>
         <div class="card-body">
             <div class="aviso-item">
@@ -86,7 +86,7 @@
         </div>
     </div>
 
-    <div class="card" data-vis="programador admin">
+    <div class="card" data-permiso="nueva_actividad">
         <div class="card-header">📋 Actividades</div>
         <div class="card-body">
             <p class="card-body-text">
@@ -102,18 +102,20 @@
 </div>
 
 <script>
+function obtenerUsuario() {
+    return typeof USUARIO !== 'undefined' ? USUARIO : null;
+}
 (function() {
     try {
-        var raw = localStorage.getItem('usuario');
-        if (!raw) return;
-        var u = JSON.parse(raw);
-        var rol = u.rol || '';
+        var u = obtenerUsuario();
+        if (!u) return;
+        var permisos = u.permisos || [];
         var uid = String(u.id_usuario).trim();
 
-        // Filtro por rol
-        document.querySelectorAll('#accesos-rapidos .card[data-vis], #info-adicional .card[data-vis], .stats-grid .stat-card[data-vis], #tickets-pendientes-resolver[data-vis]').forEach(function(el) {
-            var rolesPermitidos = (el.getAttribute('data-vis') || '').split(' ');
-            if (rolesPermitidos.indexOf(rol) === -1) {
+        // Filtro por permisos
+        document.querySelectorAll('#accesos-rapidos .card[data-permiso], #info-adicional .card[data-permiso], .stats-grid .stat-card[data-permiso], #tickets-pendientes-resolver[data-permiso]').forEach(function(el) {
+            var permisoRequerido = el.getAttribute('data-permiso');
+            if (permisoRequerido && permisos.indexOf(permisoRequerido) === -1) {
                 el.style.display = 'none';
             }
         });

@@ -33,115 +33,8 @@ document.addEventListener('click', function (e) {
 
 
 /* ============================================================
-   2. LOGIN – login.html
+   2. LOGIN – login.html (obsoleto, ahora usa form POST)
    ============================================================ */
-
-// 2.1  Tabs de la vista login (si existieran)
-function mostrarTab(tab, btn) {
-    document.querySelectorAll('.tab-panel').forEach(function (p) {
-        p.classList.remove('activo');
-    });
-    document.querySelectorAll('.tab-btn').forEach(function (b) {
-        b.classList.remove('activo');
-    });
-    document.getElementById('panel-' + tab).classList.add('activo');
-    btn.classList.add('activo');
-}
-
-(function iniciarLogin() {
-    if (!document.getElementById('panel-registro')) return;
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('tab') === 'registro') {
-        var botonesTab = document.querySelectorAll('.tab-btn');
-        if (botonesTab.length >= 2) {
-            botonesTab[1].click();
-        }
-    }
-})();
-
-// 2.2  Autenticación: hacerLogin() y chequeo de sesión
-(function iniciarLoginAuth() {
-    if (!document.getElementById('btn-ingresar')) return;
-
-    // Si ya hay sesión guardada, ir directo al dashboard
-    if (localStorage.getItem('usuario') && typeof URL_INDEX !== 'undefined') {
-        window.location.href = URL_INDEX;
-        return;
-    }
-
-    // Listener Enter en los campos correo y password
-    function attachEnter() {
-        ['correo', 'password'].forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('keydown', function (e) {
-                    if (e.key === 'Enter') hacerLogin();
-                });
-            }
-        });
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', attachEnter);
-    } else {
-        attachEnter();
-    }
-})();
-
-function hacerLogin() {
-    var correo   = document.getElementById('correo').value.trim();
-    var password = document.getElementById('password').value;
-    var msgError = document.getElementById('msg-error');
-    var btn      = document.getElementById('btn-ingresar');
-
-    msgError.style.display = 'none';
-
-    if (!correo || !password) {
-        msgError.textContent   = ' Completa todos los campos.';
-        msgError.style.display = 'block';
-        return;
-    }
-
-    btn.textContent = 'Verificando…';
-    btn.disabled    = true;
-
-    fetch(URL_AUTH, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: correo, password: password })
-    })
-    .then(function (r) {
-        if (!r.ok) throw new Error('Credenciales inválidas');
-        return r.json();
-    })
-    .then(function (data) {
-        var token = data.access_token;
-        localStorage.setItem('jwt_token', token);
-        try {
-            var payload = JSON.parse(atob(token.split('.')[1]));
-            var userId = payload.identity;
-            return fetch(URL_USUARIO_ME + '?id_usuario=' + userId, {
-                headers: { 'Authorization': 'JWT ' + token }
-            }).then(function (r) { return r.json(); }).then(function (userData) {
-                if (userData.ok) {
-                    localStorage.setItem('usuario', JSON.stringify(userData.usuario));
-                    window.location.href = URL_INDEX;
-                } else {
-                    throw new Error(userData.mensaje || 'Error al obtener usuario');
-                }
-            });
-        } catch (e) {
-            throw new Error('Error al procesar la sesión');
-        }
-    })
-    .catch(function (err) {
-        msgError.textContent = ' ' + err.message;
-        msgError.style.display = 'block';
-        btn.textContent = 'Ingresar al sistema';
-        btn.disabled    = false;
-    });
-}
 
 
 /* ============================================================
@@ -1273,7 +1166,7 @@ function avanzarEstadoActividad(idActividad, estadoActual, btn) {
     btn.textContent = '…';
     btn.disabled    = true;
 
-    apiFetch('/api/actividad/' + idActividad + '/estado', {
+    fetch('/api/actividad/' + idActividad + '/estado', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ estado: nuevoEstado })
@@ -1299,7 +1192,7 @@ function cancelarActividad(idActividad, btn) {
     btn.textContent = '…';
     btn.disabled    = true;
 
-    apiFetch('/api/actividad/' + idActividad + '/estado', {
+    fetch('/api/actividad/' + idActividad + '/estado', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ estado: 'cancelada' })
@@ -1325,7 +1218,7 @@ function bloquearActividad(idActividad, btn) {
     btn.textContent = '…';
     btn.disabled    = true;
 
-    apiFetch('/api/actividad/' + idActividad + '/estado', {
+    fetch('/api/actividad/' + idActividad + '/estado', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ estado: 'bloqueado' })
@@ -1351,7 +1244,7 @@ function desbloquearActividad(idActividad, btn) {
     btn.textContent = '…';
     btn.disabled    = true;
 
-    apiFetch('/api/actividad/' + idActividad + '/desbloquear', {
+    fetch('/api/actividad/' + idActividad + '/desbloquear', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' }
     })
@@ -1404,7 +1297,7 @@ function cerrarModalEliminarActividad() {
             var modal = document.getElementById('modal-eliminar-actividad');
             if (modal) modal.style.display = 'none';
 
-            apiFetch('/api/actividad/' + idParaEliminar + '/eliminar', {
+            fetch('/api/actividad/' + idParaEliminar + '/eliminar', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' }
             })
@@ -1455,7 +1348,7 @@ function cargarSprintsAjax(proyectoId, sprintSeleccionado) {
         return;
     }
 
-    apiFetch('/api/proyecto/' + proyectoId + '/sprints')
+    fetch('/api/proyecto/' + proyectoId + '/sprints')
         .then(function(resp) { return resp.json(); })
         .then(function(data) {
             if (!data.ok || !data.sprints || data.sprints.length === 0) {
@@ -1825,7 +1718,7 @@ function cerrarModalEliminarProyecto() {
             var modal = document.getElementById('modal-eliminar-proyecto');
             if (modal) modal.style.display = 'none';
 
-            apiFetch('/api/proyecto/' + idParaEliminar + '/eliminar', {
+            fetch('/api/proyecto/' + idParaEliminar + '/eliminar', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' }
             })
@@ -2017,7 +1910,7 @@ function toggleActividades(btn) {
     }
 
     // Cargar via AJAX
-    apiFetch('/api/reporte/proyecto/' + idProyecto + '/actividades')
+    fetch('/api/reporte/proyecto/' + idProyecto + '/actividades')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.ok) {
@@ -2195,7 +2088,7 @@ function exportarConActividades() {
         generarPDF();
     } else {
         var promesas = pendientes.map(function(id) {
-            return apiFetch('/api/reporte/proyecto/' + id + '/actividades')
+            return fetch('/api/reporte/proyecto/' + id + '/actividades')
                 .then(function(r) { return r.json(); })
                 .then(function(data) { if (data.ok) _actividadesCargadas[id] = data; });
         });
@@ -2222,7 +2115,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnConf.textContent = 'Eliminando...';
             btnConf.disabled = true;
 
-            apiFetch('/api/avance/' + _avanceEliminarId + '/eliminar', {
+            fetch('/api/avance/' + _avanceEliminarId + '/eliminar', {
                 method: 'POST'
             })
             .then(function(r) { return r.json(); })
@@ -2250,11 +2143,7 @@ document.addEventListener('DOMContentLoaded', function() {
    ============================================================ */
 
 function obtenerUsuarioSesion() {
-    try {
-        var raw = localStorage.getItem('usuario');
-        if (!raw) return null;
-        return JSON.parse(raw);
-    } catch(e) { return null; }
+    return typeof USUARIO !== 'undefined' ? USUARIO : null;
 }
 
 function filtrarBotonesEditarTicket() {
@@ -2272,14 +2161,14 @@ function filtrarBotonesEditarTicket() {
 function usuarioPuedeVerTicket(userId, ticketUserId) {
     var usuario = obtenerUsuarioSesion();
     if (!usuario || usuario.id_usuario == null) return true;
-    if (usuario.rol === 'admin') return true;
+    if (usuario.rol_nombre === 'Admin') return true;
     return String(ticketUserId).trim() === String(usuario.id_usuario).trim();
 }
 
 function filtrarFilasPorRol() {
     var usuario = obtenerUsuarioSesion();
     if (!usuario) return;
-    if (usuario.rol === 'admin') return;
+    if (usuario.rol_nombre === 'Admin') return;
     var userId = String(usuario.id_usuario).trim();
     document.querySelectorAll('#tbody-tickets tr').forEach(function(tr) {
         var sid   = tr.getAttribute('data-id-solicitante');
@@ -2295,7 +2184,7 @@ function filtrarFilasPorRol() {
 function filtrarBotonesAccion() {
     var usuario = obtenerUsuarioSesion();
     if (!usuario) return;
-    var rol = usuario.rol || '';
+    var rol = usuario.rol_nombre || '';
     var uid = String(usuario.id_usuario).trim();
 
     // Resolver: solo visible al agente asignado
@@ -2351,7 +2240,7 @@ function renderizarFilas(tickets) {
         var accion = '';
         if (t.estado === 'solicitado') {
             accion = '<div class="ticket-actions">' +
-                     '<a href="/ticket/' + t.id_ticket + '/asignar" class="btn btn-sm btn-acento" data-vis-asignar="admin soporte">👤 Asignar</a>' +
+                     '<a href="/ticket/' + t.id_ticket + '/asignar" class="btn btn-sm btn-acento" data-vis-asignar="Admin Soporte">👤 Asignar</a>' +
                      '<a href="/ticket/' + t.id_ticket + '/editar" class="btn btn-sm btn-outline btn-editar-ticket" data-id-solicitante="' + t.id_solicitante + '">✏️ Editar</a>' +
                      '</div>';
         } else if (t.estado === 'en_progreso') {
@@ -2414,7 +2303,7 @@ function filtrarTicketsAPI() {
         if (texto)  params.append('texto',  texto);
         if (estado) params.append('estado', estado);
 
-        apiFetch('/api/tickets?' + params.toString())
+        fetch('/api/tickets?' + params.toString())
             .then(function(r) { return r.json(); })
             .then(function(tickets) { renderizarFilas(tickets); });
     }, 300);

@@ -87,16 +87,7 @@
 
                     <!-- Rol -->
                     <td>
-                        <span class="badge
-                            {% if u.rol == 'admin' %}badge-rojo
-                            {% elif u.rol == 'programador' %}badge-verde
-                            {% else %}
-                            " style="background:var(--azul-claro);color:var(--azul);
-                            {% endif %}">
-                            {% if u.rol == 'admin' %}⚙️ Admin
-                            {% elif u.rol == 'programador' %}💻 Programador
-                            {% else %}🎧 Soporte{% endif %}
-                        </span>
+                        <span class="badge badge-acento">{{ u.rol_nombre }}</span>
                     </td>
 
                     <!-- Correo -->

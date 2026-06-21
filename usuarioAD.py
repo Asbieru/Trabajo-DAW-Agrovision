@@ -1,12 +1,20 @@
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from conexion import obtenerconexion
 
 class Usuario:
-    def __init__(self, id_usuario, nombre_completo, correo, rol):
+    def __init__(self, id_usuario, nombre_completo, correo, nivel=1, id_rol=None, rol_nombre=None):
         self.id_usuario      = id_usuario
         self.nombre_completo = nombre_completo
         self.correo          = correo
-        self.rol             = rol
+        self.nivel           = nivel
+        self.id_rol          = id_rol
+        self.rol_nombre      = rol_nombre
+
+def _obtenerPermisosUsuario(id_rol):
+    if not id_rol:
+        return []
+    from permisoAD import obtenerPermisosPorRol
+    return obtenerPermisosPorRol(id_rol)
 
 # ──────────────────────────────────────────────────────────────
 # AUTENTICAR
@@ -16,9 +24,12 @@ def autenticarUsuario(correo, password):
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT id_usuario, nombre_completo, correo,
-                       rol, password_hash, activo
-                FROM usuarios WHERE correo = %s
+                SELECT u.id_usuario, u.nombre_completo, u.correo,
+                       u.password_hash, u.activo, u.id_rol, u.nivel,
+                       r.nombre AS rol_nombre
+                FROM usuarios u
+                LEFT JOIN rol r ON r.id_rol = u.id_rol
+                WHERE u.correo = %s
             """, (correo.lower(),))
             usuario = cursor.fetchone()
 
@@ -36,11 +47,16 @@ def autenticarUsuario(correo, password):
     if not ok:
         return False, 'Correo o contraseña incorrectos.', None
 
+    permisos = _obtenerPermisosUsuario(usuario['id_rol'])
+
     return True, '', {
         'id_usuario'     : usuario['id_usuario'],
         'nombre_completo': usuario['nombre_completo'],
         'correo'         : usuario['correo'],
-        'rol'            : usuario['rol'],
+        'rol_nombre'     : usuario['rol_nombre'] or '',
+        'rol_id'         : usuario['id_rol'],
+        'nivel'          : usuario['nivel'] or 1,
+        'permisos'       : permisos,
     }
 
 # ──────────────────────────────────────────────────────────────
@@ -64,16 +80,21 @@ def obtenerUsuarios(rol=None):
     with conn:
         with conn.cursor() as cursor:
             if rol:
-                cursor.execute(
-                    "SELECT id_usuario, nombre_completo, rol "
-                    "FROM usuarios WHERE activo=1 AND rol=%s ORDER BY nombre_completo",
-                    (rol,)
-                )
+                cursor.execute("""
+                    SELECT u.id_usuario, u.nombre_completo, r.nombre AS rol_nombre
+                    FROM usuarios u
+                    JOIN rol r ON r.id_rol = u.id_rol
+                    WHERE u.activo=1 AND r.nombre=%s
+                    ORDER BY u.nombre_completo
+                """, (rol,))
             else:
-                cursor.execute(
-                    "SELECT id_usuario, nombre_completo, rol "
-                    "FROM usuarios WHERE activo=1 ORDER BY nombre_completo"
-                )
+                cursor.execute("""
+                    SELECT u.id_usuario, u.nombre_completo, r.nombre AS rol_nombre
+                    FROM usuarios u
+                    LEFT JOIN rol r ON r.id_rol = u.id_rol
+                    WHERE u.activo=1
+                    ORDER BY u.nombre_completo
+                """)
             return cursor.fetchall()
 
 # ──────────────────────────────────────────────────────────────
@@ -84,13 +105,34 @@ def listarUsuariosCompleto():
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT id_usuario, nombre_completo, apellido,
-                       correo, rol, foto_url, created_at
-                FROM usuarios
-                WHERE activo = 1
-                ORDER BY nombre_completo
+                SELECT u.id_usuario, u.nombre_completo, u.apellido,
+                       u.correo, u.nivel, u.foto_url, u.created_at,
+                       u.id_rol, r.nombre AS rol_nombre
+                FROM usuarios u
+                LEFT JOIN rol r ON r.id_rol = u.id_rol
+                WHERE u.activo = 1
+                ORDER BY u.nombre_completo
             """)
             return cursor.fetchall()
+
+# ──────────────────────────────────────────────────────────────
+# INSERTAR USUARIO
+# ──────────────────────────────────────────────────────────────
+def insertarUsuario(nombre_completo, correo, password, id_rol, nivel=1, apellido=None, edad=None, dni=None, direccion=None, foto_url=None):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            password_hash = generate_password_hash(password)
+            cursor.execute("""
+                INSERT INTO usuarios
+                (nombre_completo, apellido, edad, dni, direccion, correo, password_hash, nivel, id_rol, foto_url)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                nombre_completo, apellido, edad, dni, direccion,
+                correo.lower(), password_hash, nivel, id_rol, foto_url
+            ))
+            conn.commit()
+            return True, cursor.lastrowid
 
 # ──────────────────────────────────────────────────────────────
 # PERFIL DE USUARIO
@@ -100,10 +142,13 @@ def obtenerPerfilUsuario(id_usuario):
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT id_usuario, nombre_completo, apellido,
-                       edad, dni, direccion, correo, rol,
-                       foto_url, activo, created_at
-                FROM usuarios WHERE id_usuario = %s
+                SELECT u.id_usuario, u.nombre_completo, u.apellido,
+                       u.edad, u.dni, u.direccion, u.correo, u.nivel,
+                       u.foto_url, u.activo, u.created_at,
+                       u.id_rol, r.nombre AS rol_nombre
+                FROM usuarios u
+                LEFT JOIN rol r ON r.id_rol = u.id_rol
+                WHERE u.id_usuario = %s
             """, (id_usuario,))
             return cursor.fetchone()
 

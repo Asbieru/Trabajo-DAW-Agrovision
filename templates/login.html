@@ -19,25 +19,26 @@
 <!-- CAJA DE AUTH -->
 <div class="auth-wrap">
     <div class="auth-box">
-        <div class="auth-content">
+        <form method="POST" action="{{ url_for('login') }}" class="auth-content">
 
             <p class="auth-title">Bienvenido al sistema</p>
             <p class="auth-sub">
                 Ingresa con tus credenciales de <strong>AGROVISION Sistemas</strong>.
             </p>
 
-            <!-- Mensaje de error -->
-            <div class="error-msg" id="msg-error" style="display:none;"></div>
+            {% if error %}
+            <div class="error-msg" id="msg-error">{{ error }}</div>
+            {% endif %}
 
             <div class="form-group">
                 <label for="correo">Correo corporativo</label>
-                <input type="email" id="correo" placeholder="usuario@agrovision.pe"
+                <input type="email" name="correo" id="correo" placeholder="usuario@agrovision.pe"
                        required autocomplete="email">
             </div>
 
             <div class="form-group">
                 <label for="password">Contraseña</label>
-                <input type="password" id="password" placeholder="••••••••"
+                <input type="password" name="password" id="password" placeholder="••••••••"
                        required autocomplete="current-password">
             </div>
 
@@ -45,11 +46,11 @@
                 ¿Olvidaste tu contraseña?
             </a>
 
-            <button id="btn-ingresar" class="btn-full" onclick="hacerLogin()">
+            <button type="submit" id="btn-ingresar" class="btn-full">
                 Ingresar al sistema
             </button>
 
-        </div>
+        </form>
 
         <div class="auth-footer">
             🔒 Acceso restringido · Solo personal autorizado de AGROVISION
@@ -57,16 +58,5 @@
     </div>
 </div>
 
-<!-- URLs de Flask para script.js -->
-<script>
-var URL_INDEX        = '{{ url_for("index") }}';
-var URL_API_LOGIN    = '{{ url_for("api_login") }}';
-var URL_ERROR_500    = '{{ url_for("pagina_error_500") }}';
-var URL_APROBACION   = '{{ url_for("aprobacion_proyectos") }}';
-var URL_AUTH         = '/auth';
-var URL_USUARIO_ME   = '{{ url_for("api_usuario_me") }}';
-</script>
-
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

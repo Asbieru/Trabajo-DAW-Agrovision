@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% block title %}Configuración{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --config-tab-bg: #f0f2f5;
+        --config-card-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        --config-radius: 10px;
+    }
+    .config-layout { width: 100%; }
+    .config-tabs {
+        display: flex; gap: 4px; margin-bottom: 20px;
+        background: var(--config-tab-bg); border-radius: var(--config-radius);
+        padding: 4px; flex-wrap: wrap;
+    }
+    .config-tab-btn {
+        flex: 1 0 auto; padding: 12px 32px; border: none; border-radius: 8px;
+        font-size: 0.95rem; font-weight: 600; cursor: pointer;
+        transition: all .2s; background: transparent; color: #555;
+        min-width: 140px;
+    }
+    .config-tab-btn:hover { background: rgba(255,255,255,0.7); color: #222; }
+    .config-tab-btn.active { background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.12); color: var(--verde); }
+    .config-card {
+        background: #fff; border-radius: var(--config-radius);
+        box-shadow: var(--config-card-shadow); overflow: hidden;
+    }
+    .config-card-header {
+        padding: 14px 20px; background: #fafbfc; border-bottom: 1px solid #eef0f3;
+        font-weight: 700; font-size: 1rem; color: #333;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .config-card-body { padding: 20px; }
+    .config-table-wrap { border: 1px solid #eef0f3; border-radius: 8px; overflow: hidden; }
+    .config-table-wrap .tabla { margin: 0; border: none; }
+    .config-table-wrap .tabla thead th {
+        background: #f5f6f8; font-size: 0.78rem;
+        text-transform: uppercase; letter-spacing: 0.4px; color: #666;
+    }
+    .config-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .config-badge.activo { background: #e6f7ee; color: #1a7a4a; }
+    .config-badge.inactivo { background: #f0f0f0; color: #888; }
+
+    .permiso-input-group { display: flex; gap: 8px; align-items: flex-start; }
+    .permiso-input-group select { flex: 1; }
+    .permiso-input-group input { flex: 1; }
+    .permiso-input-group input[disabled] { background: #f5f5f5; color: #999; }
+
+    @media (max-width: 768px) {
+        .config-layout { padding: 0 4px; }
+        .config-tabs { flex-direction: column; gap: 2px; }
+        .config-tab-btn { flex: none; text-align: left; padding: 10px 14px; font-size: 0.85rem; min-width: auto; }
+        .config-table-wrap { overflow-x: auto; }
+        .config-table-wrap .tabla { font-size: 0.78rem; min-width: 500px; }
+        .config-card-body { padding: 14px; }
+        .config-card-header { padding: 12px 14px; font-size: 0.9rem; flex-wrap: wrap; gap: 8px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>⚙️ Configuración</h1>
+        <p>Administración del sistema</p>
+    </div>
+</div>
+
+{% if request.args.get('rol_creado') %}
+<div class="calificacion-alerta exito">✅ Rol creado correctamente.</div>
+{% elif request.args.get('rol_editado') %}
+<div class="calificacion-alerta exito">✅ Rol actualizado correctamente.</div>
+{% elif request.args.get('usuario_creado') %}
+<div class="calificacion-alerta exito">✅ Usuario creado correctamente.</div>
+{% endif %}
+
+<div class="config-layout">
+<div class="config-tabs">
+    <button class="config-tab-btn active" data-tab="tab-aplicaciones" onclick="mostrarTab('tab-aplicaciones')">📦 Aplicaciones</button>
+    <button class="config-tab-btn" data-tab="tab-roles" onclick="mostrarTab('tab-roles')">👤 Roles</button>
+    <button class="config-tab-btn" data-tab="tab-usuarios" onclick="mostrarTab('tab-usuarios')">👤 Usuarios</button>
+    <button class="config-tab-btn" data-tab="tab-permisos" onclick="mostrarTab('tab-permisos')">🔑 Permisos</button>
+</div>
+
+<!-- ── APLICACIONES (server-rendered table) ── -->
+<div id="tab-aplicaciones" class="config-tab" style="display:none;">
+    <div class="config-card">
+        <div class="config-card-header">
+            <span>📦 Aplicaciones</span>
+            <a href="{{ url_for('form_nueva_aplicacion') }}" class="btn btn-sm btn-verde">+ Nueva</a>
+        </div>
+        <div class="config-card-body">
+            <div class="config-table-wrap">
+                <table class="tabla">
+                    <thead><tr><th>ID</th><th>Nombre</th><th>Peso</th><th>Participantes</th><th>Estado</th><th></th></tr></thead>
+                    <tbody>
+                        {% for app in aplicaciones | sort(attribute='id_aplicacion', reverse=True) %}
+                        <tr>
+                            <td>{{ app.id_aplicacion }}</td>
+                            <td><strong>{{ app.nombre }}</strong></td>
+                            <td>{{ app.peso }}</td>
+                            <td>{{ app.participantes_promedio or '-' }}</td>
+                            <td><span class="config-badge {{ 'activo' if app.estado == 'activo' else 'inactivo' }}">{{ app.estado }}</span></td>
+                            <td class="td-accion" style="white-space:nowrap;">
+                                <a href="{{ url_for('form_editar_aplicacion', id_aplicacion=app.id_aplicacion) }}" class="btn btn-sm btn-outline">Editar</a>
+                                <button class="btn btn-sm btn-outline" onclick="toggleApp({{ app.id_aplicacion }})">{{ 'Cerrar' if app.estado == 'activo' else 'Abrir' }}</button>
+                                <button class="btn btn-sm btn-rojo" onclick="eliminarApp({{ app.id_aplicacion }})">Eliminar</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="tabla-empty">Sin aplicaciones registradas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ROLES (server-rendered table) ── -->
+<div id="tab-roles" class="config-tab" style="display:none;">
+    <div class="config-card">
+        <div class="config-card-header">
+            <span>👤 Roles</span>
+            <a href="{{ url_for('form_nuevo_rol') }}" class="btn btn-sm btn-verde">+ Nuevo</a>
+        </div>
+        <div class="config-card-body">
+            <div class="config-table-wrap">
+                <table class="tabla">
+                    <thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th></th></tr></thead>
+                    <tbody>
+                        {% for rol in roles %}
+                        <tr>
+                            <td>{{ rol.id_rol }}</td>
+                            <td><strong>{{ rol.nombre }}</strong></td>
+                            <td style="color:var(--gris-texto);font-size:0.84rem;">{{ rol.descripcion or '—' }}</td>
+                            <td class="td-accion">
+                                <a href="{{ url_for('form_editar_rol', id_rol=rol.id_rol) }}" class="btn btn-sm btn-outline">✏️</a>
+                                <button class="btn btn-sm btn-rojo" onclick="eliminarRol({{ rol.id_rol }})">🗑️</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="tabla-empty">Sin roles registrados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── USUARIOS ── -->
+<div id="tab-usuarios" class="config-tab" style="display:none;">
+    <div class="config-card">
+        <div class="config-card-header">👤 Nuevo Usuario</div>
+        <div class="config-card-body">
+            <form id="form-usuario" onsubmit="return guardarUsuario(event)">
+                <div class="config-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Nombre completo *</label>
+                        <input type="text" id="usu-nombre" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;" required>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Apellido</label>
+                        <input type="text" id="usu-apellido" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Correo *</label>
+                        <input type="email" id="usu-correo" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;" required>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Contraseña *</label>
+                        <input type="password" id="usu-password" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;" required minlength="4">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Rol *</label>
+                        <select id="usu-rol" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;" required></select>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Nivel *</label>
+                        <input type="number" id="usu-nivel" value="1" min="1" max="10" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Edad</label>
+                        <input type="number" id="usu-edad" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">DNI</label>
+                        <input type="text" id="usu-dni" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Foto URL</label>
+                        <input type="url" id="usu-foto" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;" placeholder="https://ejemplo.com/foto.jpg">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;grid-column:span 2;">
+                        <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Dirección</label>
+                        <input type="text" id="usu-direccion" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding-top:6px;">
+                        <button type="submit" class="btn btn-verde" id="btn-usu-guardar">Crear Usuario</button>
+                    </div>
+                </div>
+            </form>
+            <div id="msg-usuario" style="margin-top:12px;display:none;" class="error-msg"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── PERMISOS ── -->
+<div id="tab-permisos" class="config-tab" style="display:none;">
+    <div class="config-card">
+        <div class="config-card-header">
+            <span>🔑 Permisos por Rol</span>
+            <a class="btn btn-sm btn-verde" href="{{ url_for('form_nuevo_permiso') }}">+ Nuevo</a>
+        </div>
+        <div class="config-card-body">
+            <div style="max-width:320px;margin-bottom:16px;display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:0.8rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.3px;">Seleccionar rol</label>
+                <select id="permiso-filtro-rol" style="padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;" onchange="cargarPermisos()"></select>
+            </div>
+            <div class="config-table-wrap">
+                <table class="tabla">
+                    <thead><tr><th>Permiso</th><th>Nivel</th><th>Rol</th><th></th></tr></thead>
+                    <tbody id="tabla-permisos"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</div> <!-- config-layout -->
+
+<script>
+function mostrarTab(tabId) {
+    document.querySelectorAll('.config-tab').forEach(function(t) { t.style.display = 'none'; });
+    document.getElementById(tabId).style.display = '';
+    document.querySelectorAll('.config-tab-btn').forEach(function(b) {
+        b.classList.remove('active');
+        if (b.getAttribute('data-tab') === tabId) b.classList.add('active');
+    });
+    if (tabId === 'tab-permisos') { cargarRolesSelect(); cargarPermisos(); }
+    if (tabId === 'tab-usuarios') { cargarRolesSelectUsuarios(); }
+}
+// leer ?tab= de la URL al cargar
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var tab = params.get('tab') || 'aplicaciones';
+    mostrarTab('tab-' + tab);
+})();
+
+// ── APLICACIONES (API helpers for inline actions) ──
+function apiPost(url, data) {
+    return fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+    });
+}
+
+function toggleApp(id) {
+    apiPost('/api/aplicacion/' + id + '/toggle-estado', {}).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) location.reload();
+    });
+}
+
+function eliminarApp(id) {
+    showConfirm('¿Eliminar esta aplicación? Los tickets asociados perderán la referencia.', 'Confirmar', function() {
+        apiPost('/api/aplicacion/' + id + '/eliminar', {}).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.ok) location.reload();
+            else { showAlert(data.mensaje || 'Error', 'error'); }
+        });
+    });
+}
+
+// ── ROLES (API helpers) ──
+function eliminarRol(id) {
+    showConfirm('¿Eliminar este rol? Los usuarios con este rol quedarán sin asignación.', 'Confirmar', function() {
+        fetch('/api/rol/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.ok) location.reload();
+            else { showAlert(data.mensaje || 'Error', 'error'); }
+        });
+    });
+}
+
+// ── USUARIOS ──
+function cargarRolesSelectUsuarios() {
+    fetch('/api/roles').then(function(r) { return r.json(); }).then(function(data) {
+        var sel = document.getElementById('usu-rol');
+        sel.innerHTML = '<option value="">Seleccione un rol</option>' + data.roles.map(function(r) {
+            return '<option value="' + r.id_rol + '">' + r.nombre + '</option>';
+        }).join('');
+    });
+}
+
+function guardarUsuario(e) {
+    e.preventDefault();
+    var datos = {
+        nombre_completo: document.getElementById('usu-nombre').value.trim(),
+        apellido: document.getElementById('usu-apellido').value.trim(),
+        correo: document.getElementById('usu-correo').value.trim(),
+        password: document.getElementById('usu-password').value,
+        id_rol: parseInt(document.getElementById('usu-rol').value) || null,
+        nivel: parseInt(document.getElementById('usu-nivel').value) || 1,
+        edad: parseInt(document.getElementById('usu-edad').value) || null,
+        dni: document.getElementById('usu-dni').value.trim() || null,
+        foto_url: document.getElementById('usu-foto').value.trim() || null,
+        direccion: document.getElementById('usu-direccion').value.trim() || null,
+    };
+    if (!datos.nombre_completo || !datos.correo || !datos.password || !datos.id_rol) {
+        showAlert('Complete los campos obligatorios', 'error'); return false;
+    }
+    var btn = document.getElementById('btn-usu-guardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    apiPost('/api/usuario/nuevo', datos).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false;
+        btn.textContent = 'Crear Usuario';
+        var msg = document.getElementById('msg-usuario');
+        if (data.ok) {
+            window.location.href = '{{ url_for("configuracion") }}?tab=usuarios&usuario_creado=1';
+        } else {
+            msg.className = 'calificacion-alerta error';
+            msg.textContent = data.mensaje || 'Error al crear usuario';
+            msg.style.display = '';
+        }
+    }).catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Crear Usuario';
+        showAlert('Error de conexión: ' + err.message, 'error');
+    });
+    return false;
+}
+
+// ── PERMISOS ──
+
+function cargarRolesSelect() {
+    fetch('/api/roles').then(function(r) { return r.json(); }).then(function(data) {
+        var sel = document.getElementById('permiso-filtro-rol');
+        var current = sel.value;
+        sel.innerHTML = '<option value="">Seleccione un rol</option>' + data.roles.map(function(r) {
+            return '<option value="' + r.id_rol + '">' + r.nombre + '</option>';
+        }).join('');
+        if (current) sel.value = current;
+    });
+}
+
+function cargarPermisos() {
+    var idRol = document.getElementById('permiso-filtro-rol').value;
+    if (!idRol) { document.getElementById('tabla-permisos').innerHTML = '<tr><td colspan="4" class="tabla-empty">Seleccione un rol</td></tr>'; return; }
+    fetch('/api/rol/' + idRol + '/permisos').then(function(r) { return r.json(); }).then(function(data) {
+        var tbody = document.getElementById('tabla-permisos');
+        if (!data.ok || !data.permisos.length) { tbody.innerHTML = '<tr><td colspan="4" class="tabla-empty">Sin permisos para este rol</td></tr>'; return; }
+        tbody.innerHTML = data.permisos.map(function(p) {
+            return '<tr>' +
+                '<td><code>' + p.nombre + '</code></td>' +
+                '<td>' + p.nivel + '</td>' +
+                '<td>' + (p.rol_nombre || '') + '</td>' +
+                '<td class="td-accion">' +
+                    '<a class="btn btn-sm btn-outline" href="/permiso/' + p.id_rol_permiso + '/editar">✏️ Editar</a> ' +
+                    '<button class="btn btn-sm btn-rojo" onclick="eliminarPermiso(' + p.id_rol_permiso + ')">🗑️ Eliminar</button>' +
+                '</td></tr>';
+        }).join('');
+    });
+}
+
+function eliminarPermiso(id) {
+    showConfirm('¿Eliminar este permiso?', 'Confirmar', function() {
+        fetch('/api/permiso/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.ok) { showToast('Permiso eliminado', 'success'); cargarPermisos(); }
+            else { showAlert(data.mensaje || 'Error', 'error'); }
+        });
+    });
+}
+</script>
+{% endblock %}

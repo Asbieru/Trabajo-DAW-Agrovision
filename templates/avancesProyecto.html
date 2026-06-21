@@ -15,7 +15,7 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Volver</a>
         <button class="btn btn-exportar-pdf" onclick="exportarPDF()">📄 Exportar PDF</button>
-        <a class="btn btn-verde" href="{{ url_for('nuevo_avance', id_proyecto=proyecto.id_proyecto) }}">+ Nuevo Reporte</a>
+        <a class="btn btn-verde" href="{{ url_for('form_nuevo_avance', id_proyecto=proyecto.id_proyecto) }}">+ Nuevo Reporte</a>
     </div>
 </div>
 

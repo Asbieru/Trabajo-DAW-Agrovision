@@ -1,10 +1,10 @@
 """
 main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
-Sin uso de session ni import json.
 """
 
 
-from flask import Flask, render_template, request, redirect, url_for, abort, jsonify, make_response
+from flask import Flask, render_template, request, redirect, url_for, abort, jsonify, make_response, session
+from functools import wraps
 import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -13,13 +13,17 @@ from openpyxl.utils import get_column_letter
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios,
                        listarUsuariosCompleto, obtenerPerfilUsuario,
                        estadisticasUsuario, historialParticipacionUsuario,
-                       resumenHistorialUsuario)
+                       resumenHistorialUsuario, insertarUsuario)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       resolverTicket, guardarCalificacionTicket,
                       editarTicket, cancelarTicket, listarAplicaciones,
                       listarAplicacionesActivas,
                       listarPosiblesAgentes, asignarTicket,
+                      reasignarTicket, reabrirTicket,
+                      listarUsuariosNivelMenor,
                       obtenerAplicacion, calcularSLA,
+                      obtenerDetallesTicket,
+                      obtenerCalificacionTicket,
                       insertarAplicacion, editarAplicacion, eliminarAplicacion,
                       toggleEstadoAplicacion)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
@@ -54,79 +58,29 @@ from reportesAD import (reporteResumen, reporteTicketsPorApp, reporteTicketsPorT
                          reporteActividadesPorProyecto, resumenActividadesReporte,
                          reporteSLAPorAplicacion, reporteTicketsPorEstado,
                          reporteAgentesMetricas, reporteTendenciaPorMes)
-import jwt as pyjwt
-from datetime import datetime, timedelta
-from flask_jwt import JWT, jwt_required
-
-class User(object):
-    def __init__(self, id, username, password):
-        self.id = id
-        self.username = username
-        self.password = password
-
-    def __str__(self):
-        return "User(id='%s')" % self.id
-
-users = [
-    User(1, 'user1', 'abcxyz'),
-    User(2, 'user2', 'abcxyz'),
-]
-
-username_table = {u.username: u for u in users}
-userid_table = {u.id: u for u in users}
-
-def authenticate(username, password):
-    user = username_table.get(username, None)
-    if user and user.password.encode('utf-8') == password.encode('utf-8'):
-        return user
-    try:
-        from usuarioAD import autenticarUsuario
-        ok, mensaje, datos = autenticarUsuario(username, password)
-        if ok:
-            return User(datos['id_usuario'], username, password)
-    except:
-        pass
-    return None
-
-def identity(payload):
-    user_id = payload['identity']
-    if user_id in userid_table:
-        return userid_table[user_id]
-    try:
-        from usuarioAD import obtenerPerfilUsuario
-        perfil = obtenerPerfilUsuario(user_id)
-        if perfil:
-            return perfil
-    except:
-        pass
-    return {'id': user_id}
-
-def generar_token_jwt(user_id):
-    now = datetime.utcnow()
-    payload = {
-        'exp': now + timedelta(hours=24),
-        'iat': now,
-        'nbf': now,
-        'identity': user_id,
-    }
-    token = pyjwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
-    if isinstance(token, bytes):
-        token = token.decode('utf-8')
-    return token
+from rolAD import (listarRoles, obtenerRol, insertarRol, actualizarRol, eliminarRol)
+from permisoAD import (listarPermisos, obtenerPermiso, insertarPermiso,
+                       actualizarPermiso, eliminarPermiso, obtenerPermisosPorRol)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'agrovision-clave-secreta-2024'
 app.debug = True
 
-jwt = JWT(app, authenticate, identity)
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('usuario'):
+            if request.path.startswith('/api/'):
+                return jsonify({'ok': False, 'mensaje': 'No autenticado.'}), 401
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
 
 
-@jwt.jwt_error_handler
-def custom_jwt_error(error):
-    if request.path.startswith('/api/'):
-        return jsonify({'ok': False, 'mensaje': 'Token requerido o inválido.'}), error.status_code
-    return render_template('error401.html',
-                           descripcion=error.description), error.status_code
+@app.context_processor
+def inject_usuario():
+    return dict(usuario=session.get('usuario'))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -178,6 +132,8 @@ def login():
             abort(500)
 
         if ok:
+            session['usuario'] = datos
+            session.permanent = True
             return redirect(url_for('index'))
         else:
             error = mensaje
@@ -219,6 +175,7 @@ def olvide_contrasena():
 
 @app.route('/logout')
 def logout():
+    session.clear()
     return redirect(url_for('login'))
 
 
@@ -227,6 +184,7 @@ def logout():
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/dashboard')
+@login_required
 def index():
     return render_template('panelDeControl.html')
 
@@ -236,19 +194,20 @@ def index():
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/ticket/nuevo')
+@login_required
 def form_ticket():
     aplicaciones = listarAplicacionesActivas()
     return render_template('NuevoTicket.html', aplicaciones=aplicaciones)
 
 
 @app.route('/ticket/guardar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_ticket():
     try:
         obj = Ticket(
             titulo                = request.form['titulo'],
             tipo                  = request.form['tipo'],
-            id_solicitante        = request.form['id_solicitante'],
+            id_solicitante        = session['usuario']['id_usuario'],
             id_aplicacion         = request.form['id_aplicacion'],
             descripcion           = request.form['descripcion'],
             link_img_descripcion  = request.form.get('link_img_descripcion', '').strip() or None,
@@ -263,6 +222,7 @@ def guardar_ticket():
 
 
 @app.route('/tickets')
+@login_required
 def listar_tickets():
     try:
         tickets = listarTickets()
@@ -273,34 +233,47 @@ def listar_tickets():
 
 
 @app.route('/tickets/resolver')
+@login_required
 def resolver_tickets():
+    id_usuario = session['usuario']['id_usuario']
     todos = listarTickets()
-    pendientes = [t for t in todos if t['estado'] == 'en_progreso']
+    pendientes = [t for t in todos if t['estado'] == 'en_progreso'
+                  and t.get('id_agente') == id_usuario]
     return render_template('resolverTicket.html', tickets_pendientes=pendientes)
 
 
 @app.route('/ticket/<int:id_ticket>')
+@login_required
 def ver_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket:
         abort(404)
-    return render_template('verTicket.html', ticket=ticket)
+    detalles = obtenerDetallesTicket(id_ticket)
+    calificacion = obtenerCalificacionTicket(id_ticket)
+    return render_template('verTicket.html', ticket=ticket,
+                           detalles=detalles, calificacion=calificacion)
 
 
 @app.route('/ticket/<int:id_ticket>/resolver')
+@login_required
 def form_resolver_ticket(id_ticket):
     ticket   = obtenerTicket(id_ticket)
     if not ticket or ticket['estado'] != 'en_progreso':
         return redirect(url_for('listar_tickets'))
-    usuarios = obtenerUsuarios()
-    aplicaciones = listarAplicaciones()
-    return render_template('resolverTicket.html', ticket=ticket, usuarios=usuarios, aplicaciones=aplicaciones)
+    nivel_usuario = session['usuario'].get('nivel', 1)
+    agentes_disponibles = listarUsuariosNivelMenor(nivel_usuario) if nivel_usuario > 1 else []
+    detalles = obtenerDetallesTicket(id_ticket)
+    calificacion = obtenerCalificacionTicket(id_ticket)
+    return render_template('resolverTicket.html', ticket=ticket,
+                           nivel_usuario=nivel_usuario,
+                           agentes_disponibles=agentes_disponibles,
+                           detalles=detalles, calificacion=calificacion)
 
 
 @app.route('/ticket/<int:id_ticket>/resolver', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_resolucion(id_ticket):
-    id_agente            = request.form.get('id_agente')
+    id_agente            = session['usuario']['id_usuario']
     notas                = request.form.get('notas_resolucion', '').strip()
     link_img_resolucion  = request.form.get('link_img_resolucion', '').strip() or None
     resolverTicket(id_ticket, id_agente, 'resuelto', notas, link_img_resolucion)
@@ -308,6 +281,7 @@ def guardar_resolucion(id_ticket):
 
 
 @app.route('/ticket/<int:id_ticket>/calificar', methods=['GET'])
+@login_required
 def form_calificar_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket:
@@ -321,7 +295,7 @@ def form_calificar_ticket(id_ticket):
 
 
 @app.route('/ticket/<int:id_ticket>/calificar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_calificacion_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket:
@@ -342,6 +316,7 @@ def guardar_calificacion_ticket(id_ticket):
 
 # ── EDITAR TICKET (solicitado o en_progreso) ──────────────────────────────────
 @app.route('/ticket/<int:id_ticket>/editar', methods=['GET'])
+@login_required
 def form_editar_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket or ticket['estado'] != 'solicitado':
@@ -351,7 +326,7 @@ def form_editar_ticket(id_ticket):
 
 
 @app.route('/ticket/<int:id_ticket>/editar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_edicion_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket or ticket['estado'] != 'solicitado':
@@ -372,7 +347,7 @@ def guardar_edicion_ticket(id_ticket):
 
 # ── CANCELAR TICKET ───────────────────────────────────────────────────────────
 @app.route('/ticket/<int:id_ticket>/cancelar', methods=['POST'])
-@jwt_required()
+@login_required
 def cancelar_ticket(id_ticket):
     cancelarTicket(id_ticket)
     return redirect(url_for('listar_tickets'))
@@ -380,6 +355,7 @@ def cancelar_ticket(id_ticket):
 
 # ── ASIGNAR AGENTE ────────────────────────────────────────────────────────────
 @app.route('/ticket/<int:id_ticket>/asignar')
+@login_required
 def form_asignar_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket or ticket['estado'] != 'solicitado':
@@ -390,7 +366,7 @@ def form_asignar_ticket(id_ticket):
 
 
 @app.route('/ticket/<int:id_ticket>/asignar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_asignacion(id_ticket):
     id_agente = request.form.get('id_agente')
     if not id_agente:
@@ -420,19 +396,14 @@ def guardar_asignacion(id_ticket):
 #  APLICACIONES CRUD  (solo admin)
 # ──────────────────────────────────────────────────────────────
 
-@app.route('/aplicaciones')
-def listar_aplicaciones():
-    aplicaciones = listarAplicaciones()
-    return render_template('gestionAplicaciones.html', aplicaciones=aplicaciones)
-
-
 @app.route('/aplicacion/nueva', methods=['GET'])
+@login_required
 def form_nueva_aplicacion():
     return render_template('formularioAplicacion.html', aplicacion=None)
 
 
 @app.route('/aplicacion/nueva', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_nueva_aplicacion():
     nombre                = request.form.get('nombre', '').strip()
     peso                  = request.form.get('peso', 3)
@@ -440,11 +411,12 @@ def guardar_nueva_aplicacion():
     participantes_promedio = request.form.get('participantes_promedio', 5)
     if nombre:
         insertarAplicacion(nombre, peso, descripcion, participantes_promedio)
-        return redirect(url_for('listar_aplicaciones') + '?creada=1')
+        return redirect(url_for('configuracion') + '?creada=1')
     return redirect(url_for('form_nueva_aplicacion'))
 
 
 @app.route('/aplicacion/<int:id_aplicacion>/editar', methods=['GET'])
+@login_required
 def form_editar_aplicacion(id_aplicacion):
     app = obtenerAplicacion(id_aplicacion)
     if not app:
@@ -453,7 +425,7 @@ def form_editar_aplicacion(id_aplicacion):
 
 
 @app.route('/aplicacion/<int:id_aplicacion>/editar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_edicion_aplicacion(id_aplicacion):
     app = obtenerAplicacion(id_aplicacion)
     if not app:
@@ -464,22 +436,22 @@ def guardar_edicion_aplicacion(id_aplicacion):
     participantes_promedio = request.form.get('participantes_promedio', 5)
     if nombre:
         editarAplicacion(id_aplicacion, nombre, peso, descripcion, participantes_promedio)
-        return redirect(url_for('listar_aplicaciones') + '?editada=1')
+        return redirect(url_for('configuracion') + '?editada=1')
     return redirect(url_for('form_editar_aplicacion', id_aplicacion=id_aplicacion))
 
 
 @app.route('/aplicacion/<int:id_aplicacion>/eliminar', methods=['POST'])
-@jwt_required()
+@login_required
 def eliminar_aplicacion_route(id_aplicacion):
     eliminarAplicacion(id_aplicacion)
-    return redirect(url_for('listar_aplicaciones') + '?eliminada=1')
+    return redirect(url_for('configuracion') + '?eliminada=1')
 
 
 @app.route('/aplicacion/<int:id_aplicacion>/toggle-estado', methods=['POST'])
-@jwt_required()
+@login_required
 def toggle_estado_aplicacion(id_aplicacion):
     toggleEstadoAplicacion(id_aplicacion)
-    return redirect(url_for('listar_aplicaciones'))
+    return redirect(url_for('configuracion'))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -487,13 +459,14 @@ def toggle_estado_aplicacion(id_aplicacion):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/proyecto/nuevo')
+@login_required
 def form_proyecto():
     responsables = obtenerUsuarios()
     return render_template('nuevoProyecto.html', responsables=responsables)
 
 
 @app.route('/proyecto/guardar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_proyecto():
     try:
         from datetime import date
@@ -521,6 +494,7 @@ def guardar_proyecto():
 
 
 @app.route('/proyecto/<int:id_proyecto>/editar')
+@login_required
 def form_editar_proyecto(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
@@ -535,7 +509,7 @@ def form_editar_proyecto(id_proyecto):
 
 
 @app.route('/proyecto/<int:id_proyecto>/editar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_edicion_proyecto(id_proyecto):
     try:
         from proyectoAD import actualizarProyectoCompleto
@@ -557,6 +531,7 @@ def guardar_edicion_proyecto(id_proyecto):
 
 
 @app.route('/proyectos')
+@login_required
 def listar_proyectos():
     try:
         proyectos = listarProyectos()
@@ -566,7 +541,7 @@ def listar_proyectos():
     return render_template('listaProyectos.html', proyectos=proyectos)
 
 @app.route('/api/proyecto/<int:id_proyecto>/eliminar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_eliminar_proyecto(id_proyecto):
     if tieneActividadesPendientes(id_proyecto):
         return jsonify({'ok': False, 'mensaje': 'No se puede eliminar: el proyecto tiene actividades pendientes.'})
@@ -577,7 +552,7 @@ def api_eliminar_proyecto(id_proyecto):
 
 
 @app.route('/api/reporte/proyecto/<int:id_proyecto>/actividades')
-@jwt_required()
+@login_required
 def api_reporte_actividades(id_proyecto):
     actividades = reporteActividadesPorProyecto(id_proyecto)
     resumen     = resumenActividadesReporte(id_proyecto)
@@ -585,6 +560,7 @@ def api_reporte_actividades(id_proyecto):
 
 
 @app.route('/proyecto/<int:id_proyecto>/gestion')
+@login_required
 def gestion_proyecto(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
@@ -608,6 +584,7 @@ def gestion_proyecto(id_proyecto):
 
 
 @app.route('/proyecto/<int:id_proyecto>/avances')
+@login_required
 def historial_avances(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
@@ -627,6 +604,7 @@ def historial_avances(id_proyecto):
 
 
 @app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['GET'])
+@login_required
 def form_nuevo_avance(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
@@ -660,7 +638,7 @@ def form_nuevo_avance(id_proyecto):
 
 
 @app.route('/proyecto/<int:id_proyecto>/avances/nuevo', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_nuevo_avance(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
@@ -691,7 +669,7 @@ def guardar_nuevo_avance(id_proyecto):
 
 
 @app.route('/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
-@jwt_required()
+@login_required
 def eliminar_avance_ruta(id_proyecto, id_avance):
     eliminarAvance(id_avance)
     return redirect(url_for('historial_avances', id_proyecto=id_proyecto))
@@ -702,6 +680,7 @@ def eliminar_avance_ruta(id_proyecto, id_avance):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/indicadores')
+@login_required
 def indicadores_soporte():
     mes_inicio  = request.args.get('mes_inicio', '')  or None
     anio_inicio = request.args.get('anio_inicio', '') or None
@@ -776,6 +755,7 @@ def limpiar(valor):
 
 
 @app.route('/reportes')
+@login_required
 def gestion_reportes():
     fecha_inicio  = limpiar(request.args.get('fecha_inicio', ''))
     fecha_fin     = limpiar(request.args.get('fecha_fin', ''))
@@ -857,6 +837,7 @@ def _fila_alterna(ws, fila, n_cols, par=True):
         ws.cell(row=fila, column=c).fill = fill
 
 @app.route('/reportes/exportar-excel')
+@login_required
 def exportar_excel():
     fecha_inicio  = limpiar(request.args.get('fecha_inicio', ''))
     fecha_fin     = limpiar(request.args.get('fecha_fin', ''))
@@ -1051,6 +1032,7 @@ def exportar_excel():
 
 
 @app.route('/reportes/exportar-excel-proyectos')
+@login_required
 def exportar_excel_proyectos():
     estado        = limpiar(request.args.get('estado', ''))
     id_responsable = limpiar(request.args.get('id_responsable', ''))
@@ -1127,6 +1109,7 @@ def exportar_excel_proyectos():
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/actividad/nueva')
+@login_required
 def form_actividad():
     id_proyecto_pre = request.args.get('id_proyecto', type=int)
     proyectos       = listarProyectos()
@@ -1151,7 +1134,7 @@ def form_actividad():
 
 
 @app.route('/actividad/guardar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_actividad():
     try:
         id_proyecto = request.form['id_proyecto']
@@ -1174,6 +1157,7 @@ def guardar_actividad():
 
 
 @app.route('/actividad/<int:id_actividad>/editar')
+@login_required
 def form_editar_actividad(id_actividad):
     from actividadAD import obtenerActividad
     actividad = obtenerActividad(id_actividad)
@@ -1196,7 +1180,7 @@ def form_editar_actividad(id_actividad):
 
 
 @app.route('/actividad/<int:id_actividad>/editar', methods=['POST'])
-@jwt_required()
+@login_required
 def guardar_edicion_actividad(id_actividad):
     try:
         from actividadAD import actualizarActividad
@@ -1219,7 +1203,7 @@ def guardar_edicion_actividad(id_actividad):
 
 
 @app.route('/actividad/<int:id_actividad>/estado', methods=['POST'])
-@jwt_required()
+@login_required
 def cambiar_estado_actividad(id_actividad):
     nuevo_estado = request.form.get('estado')
     actualizarEstadoActividad(id_actividad, nuevo_estado)
@@ -1231,6 +1215,7 @@ def cambiar_estado_actividad(id_actividad):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/usuarios')
+@login_required
 def lista_usuarios():
     nombre   = request.args.get('nombre', '').strip()
     try:
@@ -1247,6 +1232,7 @@ def lista_usuarios():
 
 
 @app.route('/usuario/<int:id_usuario>/perfil')
+@login_required
 def perfil_usuario(id_usuario):
     usuario = obtenerPerfilUsuario(id_usuario)
     if not usuario:
@@ -1265,6 +1251,7 @@ def perfil_usuario(id_usuario):
 
 
 @app.route('/usuario/<int:id_usuario>/historial')
+@login_required
 def historial_usuario(id_usuario):
     usuario = obtenerPerfilUsuario(id_usuario)
     if not usuario:
@@ -1296,33 +1283,41 @@ def api_login():
         return jsonify({'ok': False, 'mensaje': 'Error de conexión con la base de datos.',
                         'error_servidor': True}), 500
     if ok:
-        token = generar_token_jwt(datos['id_usuario'])
-        return jsonify({'ok': True, 'usuario': datos, 'token': token})
+        session['usuario'] = datos
+        session.permanent = True
+        return jsonify({'ok': True, 'usuario': datos})
     return jsonify({'ok': False, 'mensaje': mensaje})
 
 
 @app.route('/api/usuario/me')
-@jwt_required()
+@login_required
 def api_usuario_me():
-    id_usuario = request.args.get('id_usuario', type=int)
+    usuario_session = session.get('usuario')
+    id_usuario = usuario_session.get('id_usuario') if usuario_session else None
     if not id_usuario:
-        return jsonify({'ok': False, 'mensaje': 'Se requiere id_usuario'}), 401
+        return jsonify({'ok': False, 'mensaje': 'Sesión inválida'}), 401
     usuario = obtenerPerfilUsuario(id_usuario)
     if not usuario or not usuario.get('activo'):
         return jsonify({'ok': False, 'mensaje': 'Usuario no encontrado o inactivo'}), 404
+    permisos = []
+    if usuario.get('id_rol'):
+        permisos = obtenerPermisosPorRol(usuario['id_rol'])
     return jsonify({
         'ok': True,
         'usuario': {
             'id_usuario'     : usuario['id_usuario'],
             'nombre_completo': usuario['nombre_completo'],
             'correo'         : usuario['correo'],
-            'rol'            : usuario['rol'],
+            'rol_nombre'     : usuario.get('rol_nombre') or '',
+            'rol_id'         : usuario.get('id_rol'),
+            'nivel'          : usuario.get('nivel') or 1,
+            'permisos'       : permisos,
         }
     })
 
 
 @app.route('/api/indicadores')
-@jwt_required()
+@login_required
 def api_indicadores():
     return jsonify({
         'por_app':       kpiPorAplicacion(),
@@ -1332,7 +1327,7 @@ def api_indicadores():
 
 
 @app.route('/api/tickets')
-@jwt_required()
+@login_required
 def api_tickets():
     estado = request.args.get('estado', '') or None
     texto  = request.args.get('texto',  '') or None
@@ -1353,7 +1348,7 @@ def api_tickets():
 
 
 @app.route('/api/actividad/<int:id_actividad>/estado', methods=['POST'])
-@jwt_required()
+@login_required
 def api_estado_actividad(id_actividad):
     data         = request.get_json()
     nuevo_estado = data.get('estado') if data else None
@@ -1364,14 +1359,14 @@ def api_estado_actividad(id_actividad):
 
 
 @app.route('/api/actividad/<int:id_actividad>/desbloquear', methods=['POST'])
-@jwt_required()
+@login_required
 def api_desbloquear_actividad(id_actividad):
     estado_retorno = desbloquearActividad(id_actividad)
     return jsonify({'ok': True, 'estado': estado_retorno})
 
 
 @app.route('/api/actividad/<int:id_actividad>/eliminar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_eliminar_actividad(id_actividad):
     ok = eliminarActividad(id_actividad)
     if ok:
@@ -1379,7 +1374,7 @@ def api_eliminar_actividad(id_actividad):
     return jsonify({'ok': False, 'mensaje': 'Solo se pueden eliminar actividades canceladas.'})
 
 @app.route('/api/proyecto/<int:id_proyecto>/porcentaje')
-@jwt_required()
+@login_required
 def api_porcentaje_proyecto(id_proyecto):
     resumen     = resumenActividadesPorProyecto()
     fila_actual = next((r for r in resumen
@@ -1400,7 +1395,7 @@ def api_porcentaje_proyecto(id_proyecto):
     return jsonify({'porcentaje': pct})
 
 @app.route('/api/proyecto/<int:id_proyecto>/avances-grafico')
-@jwt_required()
+@login_required
 def api_avances_grafico(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     avances = listarAvances(id_proyecto)
@@ -1444,7 +1439,7 @@ def api_avances_grafico(id_proyecto):
     })
 
 @app.route('/api/avance/<int:id_avance>/eliminar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_eliminar_avance(id_avance):
     try:
         eliminarAvance(id_avance)
@@ -1459,16 +1454,20 @@ def api_eliminar_avance(id_avance):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/api/ticket/guardar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_guardar_ticket():
     data = request.get_json()
     if not data:
         return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    usuario_session = session.get('usuario')
+    id_solicitante = usuario_session.get('id_usuario') if usuario_session else None
+    if not id_solicitante:
+        return jsonify({'ok': False, 'mensaje': 'Sesión inválida'}), 401
     try:
         obj = Ticket(
             titulo                = data['titulo'],
             tipo                  = data['tipo'],
-            id_solicitante        = data['id_solicitante'],
+            id_solicitante        = id_solicitante,
             id_aplicacion         = data['id_aplicacion'],
             descripcion           = data['descripcion'],
             link_img_descripcion  = (data.get('link_img_descripcion') or '').strip() or None,
@@ -1483,20 +1482,45 @@ def api_guardar_ticket():
 
 
 @app.route('/api/ticket/<int:id_ticket>/resolver', methods=['POST'])
-@jwt_required()
+@login_required
 def api_resolver_ticket(id_ticket):
     data = request.get_json()
     if not data:
         return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
-    id_agente           = data.get('id_agente')
+    id_agente           = session['usuario']['id_usuario']
     notas               = (data.get('notas_resolucion') or '').strip()
     link_img_resolucion = (data.get('link_img_resolucion') or '').strip() or None
     resolverTicket(id_ticket, id_agente, 'resuelto', notas, link_img_resolucion)
     return jsonify({'ok': True})
 
 
+@app.route('/api/ticket/<int:id_ticket>/reasignar', methods=['POST'])
+@login_required
+def api_reasignar_ticket(id_ticket):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    nuevo_agente = data.get('id_agente')
+    if not nuevo_agente:
+        return jsonify({'ok': False, 'mensaje': 'id_agente requerido'}), 400
+    descripcion = (data.get('descripcion') or '').strip()
+    if not descripcion:
+        return jsonify({'ok': False, 'mensaje': 'Descripción requerida'}), 400
+    link_img = (data.get('link_img') or '').strip() or None
+    # Verificar que el nuevo agente tiene nivel menor al usuario actual
+    nivel_usuario = session['usuario'].get('nivel', 1)
+    if nivel_usuario <= 1:
+        return jsonify({'ok': False, 'mensaje': 'No tienes permiso para reasignar'}), 403
+    try:
+        reasignarTicket(id_ticket, int(nuevo_agente), descripcion, link_img)
+        return jsonify({'ok': True})
+    except Exception as e:
+        print(f'Error al reasignar ticket: {e}')
+        return jsonify({'ok': False, 'mensaje': 'Error al reasignar ticket.'}), 500
+
+
 @app.route('/api/ticket/<int:id_ticket>/calificar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_calificar_ticket(id_ticket):
     data = request.get_json()
     if not data:
@@ -1514,8 +1538,33 @@ def api_calificar_ticket(id_ticket):
     return jsonify({'ok': True})
 
 
+@app.route('/api/ticket/<int:id_ticket>/no-solucionado', methods=['POST'])
+@login_required
+def api_no_solucionado_ticket(id_ticket):
+    """Califica y reabre el ticket (nuevo detalle con mismo agente, estado=en_progreso)."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    ticket = obtenerTicket(id_ticket)
+    if not ticket:
+        return jsonify({'ok': False, 'mensaje': 'Ticket no encontrado'}), 404
+    if ticket['estado'] != 'resuelto':
+        return jsonify({'ok': False, 'mensaje': 'Solo se puede reabrir tickets resueltos'}), 400
+    estrellas  = data.get('estrellas')
+    observacion = (data.get('observacion') or '').strip()
+    if estrellas not in (1, 2, 3, 4, 5):
+        return jsonify({'ok': False, 'mensaje': 'Calificación debe ser entre 1 y 5'}), 400
+    descripcion = (data.get('descripcion') or '').strip()
+    if not descripcion:
+        return jsonify({'ok': False, 'mensaje': 'Descripción requerida para reabrir el ticket'}), 400
+    link_img = (data.get('link_img') or '').strip() or None
+    guardarCalificacionTicket(id_ticket, estrellas, observacion)
+    reabrirTicket(id_ticket, descripcion, link_img)
+    return jsonify({'ok': True})
+
+
 @app.route('/api/ticket/<int:id_ticket>/editar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_editar_ticket(id_ticket):
     data = request.get_json()
     if not data:
@@ -1535,14 +1584,14 @@ def api_editar_ticket(id_ticket):
 
 
 @app.route('/api/ticket/<int:id_ticket>/cancelar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_cancelar_ticket(id_ticket):
     cancelarTicket(id_ticket)
     return jsonify({'ok': True})
 
 
 @app.route('/api/ticket/<int:id_ticket>/asignar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_asignar_ticket(id_ticket):
     data = request.get_json()
     if not data:
@@ -1576,7 +1625,7 @@ def api_asignar_ticket(id_ticket):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/api/aplicacion/nueva', methods=['POST'])
-@jwt_required()
+@login_required
 def api_nueva_aplicacion():
     data = request.get_json()
     if not data:
@@ -1592,7 +1641,7 @@ def api_nueva_aplicacion():
 
 
 @app.route('/api/aplicacion/<int:id_aplicacion>/editar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_editar_aplicacion(id_aplicacion):
     data = request.get_json()
     if not data:
@@ -1611,14 +1660,14 @@ def api_editar_aplicacion(id_aplicacion):
 
 
 @app.route('/api/aplicacion/<int:id_aplicacion>/eliminar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_eliminar_aplicacion(id_aplicacion):
     eliminarAplicacion(id_aplicacion)
     return jsonify({'ok': True})
 
 
 @app.route('/api/aplicacion/<int:id_aplicacion>/toggle-estado', methods=['POST'])
-@jwt_required()
+@login_required
 def api_toggle_estado_aplicacion(id_aplicacion):
     toggleEstadoAplicacion(id_aplicacion)
     return jsonify({'ok': True})
@@ -1629,12 +1678,13 @@ def api_toggle_estado_aplicacion(id_aplicacion):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/api/proyecto/guardar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_guardar_proyecto():
     data = request.get_json()
     if not data:
         return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
     try:
+        from datetime import date
         ids_responsables = data.get('responsables', [])
         if not ids_responsables:
             return jsonify({'ok': False, 'mensaje': 'Al menos un responsable requerido'}), 400
@@ -1659,7 +1709,7 @@ def api_guardar_proyecto():
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/editar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_editar_proyecto(id_proyecto):
     data = request.get_json()
     if not data:
@@ -1684,7 +1734,7 @@ def api_editar_proyecto(id_proyecto):
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/avances/nuevo', methods=['POST'])
-@jwt_required()
+@login_required
 def api_nuevo_avance(id_proyecto):
     data = request.get_json()
     if not data:
@@ -1692,6 +1742,8 @@ def api_nuevo_avance(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     if not proyecto:
         return jsonify({'ok': False, 'mensaje': 'Proyecto no encontrado'}), 404
+    from datetime import date
+    id_autor = session['usuario']['id_usuario']
     resumen     = resumenActividadesPorProyecto()
     fila_actual = next((r for r in resumen
                         if (r['id_proyecto'] if isinstance(r, dict) else r[0]) == id_proyecto), None)
@@ -1709,16 +1761,13 @@ def api_nuevo_avance(id_proyecto):
     estado_salud    = data.get('estado_salud', 'ok')
     logros_periodo  = (data.get('logros_periodo') or '').strip()
     pendientes_next = (data.get('pendientes_next') or '').strip()
-    id_autor        = data.get('id_autor')
-    if not id_autor:
-        return jsonify({'ok': False, 'mensaje': 'id_autor requerido'}), 400
     insertarAvance(id_proyecto, id_autor, hoy_db, pct_calculado,
                    estado_salud, logros_periodo, pendientes_next)
     return jsonify({'ok': True, 'porcentaje': pct_calculado})
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
-@jwt_required()
+@login_required
 def api_eliminar_avance_ruta(id_proyecto, id_avance):
     try:
         eliminarAvance(id_avance)
@@ -1733,7 +1782,7 @@ def api_eliminar_avance_ruta(id_proyecto, id_avance):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/api/actividad/guardar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_guardar_actividad():
     data = request.get_json()
     if not data:
@@ -1758,7 +1807,7 @@ def api_guardar_actividad():
 
 
 @app.route('/api/actividad/<int:id_actividad>/editar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_editar_actividad(id_actividad):
     data = request.get_json()
     if not data:
@@ -1790,6 +1839,7 @@ def api_editar_actividad(id_actividad):
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/admin/aprobacion-proyectos')
+@login_required
 def aprobacion_proyectos():
     try:
         proyectos = listarProyectosEnRevision()
@@ -1800,7 +1850,7 @@ def aprobacion_proyectos():
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/aprobar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_aprobar_proyecto(id_proyecto):
     try:
         from datetime import date
@@ -1824,7 +1874,7 @@ def api_aprobar_proyecto(id_proyecto):
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/sprints')
-@jwt_required()
+@login_required
 def api_sprints_por_proyecto(id_proyecto):
     """Devuelve los sprints de un proyecto en JSON para el combo dinámico."""
     try:
@@ -1846,7 +1896,7 @@ def api_sprints_por_proyecto(id_proyecto):
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/rechazar', methods=['POST'])
-@jwt_required()
+@login_required
 def api_rechazar_proyecto(id_proyecto):
     try:
         rechazarProyecto(id_proyecto)
@@ -1854,6 +1904,188 @@ def api_rechazar_proyecto(id_proyecto):
     except Exception as e:
         print(f'Error al rechazar proyecto: {e}')
         return jsonify({'ok': False, 'mensaje': 'Error al rechazar el proyecto.'})
+
+
+@app.route('/api/usuario/nuevo', methods=['POST'])
+@login_required
+def api_nuevo_usuario():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    nombre_completo = (data.get('nombre_completo') or '').strip()
+    correo = (data.get('correo') or '').strip()
+    password = data.get('password') or ''
+    id_rol = data.get('id_rol')
+    if not nombre_completo or not correo or not password or not id_rol:
+        return jsonify({'ok': False, 'mensaje': 'nombre_completo, correo, password e id_rol son requeridos'}), 400
+    ok, result = insertarUsuario(
+        nombre_completo=nombre_completo,
+        correo=correo,
+        password=password,
+        id_rol=id_rol,
+        nivel=data.get('nivel', 1),
+        apellido=(data.get('apellido') or '').strip() or None,
+        edad=data.get('edad'),
+        dni=(data.get('dni') or '').strip() or None,
+        direccion=(data.get('direccion') or '').strip() or None,
+        foto_url=(data.get('foto_url') or '').strip() or None,
+    )
+    if ok:
+        return jsonify({'ok': True, 'id_usuario': result})
+    return jsonify({'ok': False, 'mensaje': result}), 400
+
+
+# ──────────────────────────────────────────────────────────────
+#  CONFIGURACIÓN
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/configuracion')
+@login_required
+def configuracion():
+    roles = listarRoles()
+    aplicaciones = listarAplicaciones()
+    return render_template('configuracion.html', roles=roles, aplicaciones=aplicaciones)
+
+
+# ──────────────────────────────────────────────────────────────
+#  ROLES — Formularios (páginas)
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/rol/nuevo')
+@login_required
+def form_nuevo_rol():
+    return render_template('formularioRol.html')
+
+
+@app.route('/rol/<int:id_rol>/editar')
+@login_required
+def form_editar_rol(id_rol):
+    roles = listarRoles()
+    rol = next((r for r in roles if r['id_rol'] == id_rol), None)
+    if not rol:
+        abort(404)
+    return render_template('formularioRol.html', rol=rol)
+
+
+# ──────────────────────────────────────────────────────────────
+#  API ROLES CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/roles')
+@login_required
+def api_listar_roles():
+    return jsonify({'ok': True, 'roles': listarRoles()})
+
+
+@app.route('/api/rol', methods=['POST'])
+@login_required
+def api_crear_rol():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    nombre = (data.get('nombre') or '').strip()
+    descripcion = (data.get('descripcion') or '').strip()
+    if not nombre:
+        return jsonify({'ok': False, 'mensaje': 'Nombre requerido'}), 400
+    id_rol = insertarRol(nombre, descripcion)
+    return jsonify({'ok': True, 'id_rol': id_rol})
+
+
+@app.route('/api/rol/<int:id_rol>', methods=['PUT'])
+@login_required
+def api_actualizar_rol(id_rol):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    nombre = (data.get('nombre') or '').strip()
+    descripcion = (data.get('descripcion') or '').strip()
+    if not nombre:
+        return jsonify({'ok': False, 'mensaje': 'Nombre requerido'}), 400
+    actualizarRol(id_rol, nombre, descripcion)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/rol/<int:id_rol>', methods=['DELETE'])
+@login_required
+def api_eliminar_rol(id_rol):
+    ok = eliminarRol(id_rol)
+    if ok:
+        return jsonify({'ok': True})
+    return jsonify({'ok': False, 'mensaje': 'No se puede eliminar: el rol tiene usuarios asignados.'})
+
+
+# ──────────────────────────────────────────────────────────────
+#  PERMISO FORM ROUTES
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/permiso/nuevo')
+@login_required
+def form_nuevo_permiso():
+    from rolAD import listarRoles
+    return render_template('formularioPermiso.html', roles=listarRoles())
+
+
+@app.route('/permiso/<int:id_rol_permiso>/editar')
+@login_required
+def form_editar_permiso(id_rol_permiso):
+    permiso = obtenerPermiso(id_rol_permiso)
+    if not permiso:
+        abort(404)
+    return render_template('formularioPermiso.html', permiso=permiso)
+
+
+# ──────────────────────────────────────────────────────────────
+#  API PERMISOS CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/rol/<int:id_rol>/permisos')
+@login_required
+def api_permisos_por_rol(id_rol):
+    return jsonify({'ok': True, 'permisos': listarPermisos(id_rol)})
+
+
+@app.route('/api/permisos')
+@login_required
+def api_listar_permisos():
+    id_rol = request.args.get('id_rol', type=int)
+    return jsonify({'ok': True, 'permisos': listarPermisos(id_rol)})
+
+
+@app.route('/api/permiso', methods=['POST'])
+@login_required
+def api_crear_permiso():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    nombre = (data.get('nombre') or '').strip()
+    nivel = data.get('nivel', 1)
+    id_rol = data.get('id_rol')
+    if not nombre or not id_rol:
+        return jsonify({'ok': False, 'mensaje': 'Nombre e id_rol requeridos'}), 400
+    id_rol_permiso = insertarPermiso(nombre, nivel, id_rol)
+    return jsonify({'ok': True, 'id_rol_permiso': id_rol_permiso})
+
+
+@app.route('/api/permiso/<int:id_rol_permiso>', methods=['PUT'])
+@login_required
+def api_actualizar_permiso(id_rol_permiso):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    nombre = (data.get('nombre') or '').strip()
+    nivel = data.get('nivel', 1)
+    id_rol = data.get('id_rol')
+    if not nombre or not id_rol:
+        return jsonify({'ok': False, 'mensaje': 'Nombre e id_rol requeridos'}), 400
+    actualizarPermiso(id_rol_permiso, nombre, nivel, id_rol)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/permiso/<int:id_rol_permiso>', methods=['DELETE'])
+@login_required
+def api_eliminar_permiso(id_rol_permiso):
+    eliminarPermiso(id_rol_permiso)
+    return jsonify({'ok': True})
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE

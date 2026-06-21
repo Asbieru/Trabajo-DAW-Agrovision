@@ -8,6 +8,29 @@ CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE bd_proyectofinal;
 
 -- ============================================================
+-- TABLA ROL
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS rol (
+    id_rol INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- TABLA ROL_PERMISO
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS rol_permiso (
+    id_rol_permiso INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    nivel INT NOT NULL DEFAULT 1,
+    id_rol INT NOT NULL,
+    FOREIGN KEY (id_rol) REFERENCES rol(id_rol) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ============================================================
 -- TABLA USUARIOS
 -- ============================================================
 
@@ -20,20 +43,13 @@ CREATE TABLE IF NOT EXISTS usuarios (
     direccion VARCHAR(255),
     correo VARCHAR(120) NOT NULL UNIQUE,
     password_hash VARCHAR(255),
-    rol ENUM('admin','soporte','programador','agente') NOT NULL DEFAULT 'soporte',
+    nivel INT NOT NULL DEFAULT 1,
     foto_url VARCHAR(500),
     activo TINYINT(1) NOT NULL DEFAULT 1,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id_rol INT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_rol) REFERENCES rol(id_rol)
 ) ENGINE=InnoDB;
-
-INSERT INTO usuarios
-(nombre_completo, apellido, edad, dni, direccion, correo, password_hash, rol, foto_url)
-VALUES
-('Renzo Carranza', 'Carranza López', 29, '74123456', 'Av. La Molina 342, Lima', 'renzo@agrovision.pe', '1', 'admin', NULL),
-('Carlos Mendoza', 'Mendoza Quispe', 34, '72345678', 'Jr. Huallaga 198, Cercado de Lima', 'carlos@agrovision.pe', '123456', 'soporte', NULL),
-('Juan Pérez', 'Pérez Salas', 26, '71234567', 'Calle Los Cedros 55, San Borja', 'juan@agrovision.pe', '123456', 'programador', NULL),
-('Ana Torres', 'Torres Vásquez', 31, '73456789', 'Av. Arequipa 1250, Miraflores', 'ana@agrovision.pe', '123456', 'programador', NULL),
-('Luis Flores', 'Flores Huanca', 28, '70987654', 'Psje. Los Pinos 12, Surco', 'luis@agrovision.pe', '123456', 'soporte', NULL);
 
 -- ============================================================
 -- TABLA APLICACIONES
@@ -47,18 +63,6 @@ CREATE TABLE IF NOT EXISTS aplicaciones (
     participantes_promedio INT NOT NULL DEFAULT 1,
     estado ENUM('activo','cerrado') NOT NULL DEFAULT 'activo'
 ) ENGINE=InnoDB;
-
-INSERT INTO aplicaciones (nombre, peso, descripcion, participantes_promedio) VALUES
-('Sistema Empaque',    5, 'Sistema de control de empaque y etiquetado', 8),
-('App Móvil Campo',    4, 'Aplicación móvil para trabajadores de campo', 12),
-('API Ventas',         4, 'API de integración de ventas', 6),
-('Portal RRHH',        3, 'Portal de recursos humanos', 5),
-('Dashboard BI',       3, 'Dashboard de inteligencia de negocio', 4),
-('Reportes',           2, 'Sistema de reportes personalizados', 3),
-('Panel',              4, 'Panel de administración general', 7),
-('Usuarios',           3, 'Gestión de usuarios y permisos', 4),
-('Mesa Ayuda',         5, 'Mesa de ayuda y soporte técnico', 10),
-('Autenticación',      5, 'Sistema de autenticación y SSO', 6);
 
 -- ============================================================
 -- TABLA TICKETS
@@ -83,7 +87,7 @@ CREATE TABLE IF NOT EXISTS tickets (
 
 CREATE TABLE IF NOT EXISTS detalle_ticket (
     id_detalle INT AUTO_INCREMENT PRIMARY KEY,
-    id_ticket INT NOT NULL UNIQUE,
+    id_ticket INT NOT NULL,
     f_asignacion_agente DATETIME NULL,
     id_agente INT NULL,
     f_solucion DATETIME NULL,
@@ -95,6 +99,7 @@ CREATE TABLE IF NOT EXISTS detalle_ticket (
     prioridad ENUM('critica','alta','media','baja') DEFAULT 'media',
     intensidad ENUM('critica','alta','media','baja') DEFAULT 'media',
     sla_horas SMALLINT DEFAULT 24,
+    activo TINYINT(1) NOT NULL DEFAULT 1,
     CONSTRAINT fk_detalle_ticket FOREIGN KEY (id_ticket)
         REFERENCES tickets(id_ticket) ON DELETE CASCADE,
     CONSTRAINT fk_detalle_agente FOREIGN KEY (id_agente)
@@ -137,13 +142,6 @@ CREATE TABLE IF NOT EXISTS proyectos (
     REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
-INSERT INTO proyectos
-(nombre, descripcion, estado, id_Stakeholder, fecha_inicio, fecha_fin_plan)
-VALUES
-('Sistema AgroVision v2','Sistema de soporte','planificado',1,'2025-01-01','2025-12-31'),
-('App Movil Tecnicos','Aplicacion movil','planificado',1,'2025-02-01','2025-09-30'),
-('Portal Reportes','Dashboard gerencial','planificado',1,'2025-03-01','2025-10-31');
-
 -- ============================================================
 -- TABLA SPRINTS
 -- ============================================================
@@ -162,13 +160,6 @@ CREATE TABLE IF NOT EXISTS sprints (
     CONSTRAINT fk_sprint_proy FOREIGN KEY (id_proyecto)
     REFERENCES proyectos(id_proyecto)
 ) ENGINE=InnoDB;
-
-INSERT INTO sprints
-(id_proyecto, nombre, objetivo, estado, capacidad_pts, fecha_inicio, fecha_fin)
-VALUES
-(1,'Sprint KPIs','Dashboard KPIs','activo',60,CURDATE(),CURDATE()+INTERVAL 10 DAY),
-(2,'Sprint Movil','Core App','activo',40,CURDATE(),CURDATE()+INTERVAL 10 DAY);
-
 
 -- ============================================================
 -- TABLA AVANCES
@@ -191,11 +182,6 @@ CREATE TABLE IF NOT EXISTS avances_proyecto (
     REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
-INSERT INTO avances_proyecto
-(id_proyecto, id_autor, fecha_reporte, porcentaje_avance, estado_salud, logros_periodo)
-VALUES
-(1,1,CURDATE(),43.00,'a_tiempo','Modulo reportes finalizado');
-
 -- ============================================================
 -- TABLA ASIGNADO
 -- ============================================================
@@ -209,9 +195,6 @@ CREATE TABLE IF NOT EXISTS asignado (
     CONSTRAINT fk_asig_usuario FOREIGN KEY (id_usuario)
     REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-
-INSERT IGNORE INTO asignado (id_proyecto, id_usuario)
-SELECT id_proyecto, id_Stakeholder FROM proyectos;
 
 -- ============================================================
 -- TABLA ACTIVIDADES
@@ -239,36 +222,53 @@ CREATE TABLE IF NOT EXISTS actividades (
     REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
-INSERT INTO actividades
-(id_proyecto, id_sprint, id_asignado, codigo, titulo, prioridad, estado, story_points)
-VALUES
-(1,1,3,'ACT-001','Panel KPIs','alta','completada',8),
-(1,1,2,'ACT-002','Exportar PDF','media','en_progreso',5),
-(2,2,3,'ACT-003','Login movil','critica','completada',8);
-
 -- ============================================================
--- DATOS DE EJEMPLO: TICKETS + DETALLES
+-- DATOS INICIALES
 -- ============================================================
 
-INSERT INTO tickets (id_ticket, titulo, tipo, id_solicitante, id_aplicacion, estado, f_registro, f_cierre)
-VALUES
-(1, 'Error al exportar PDF',  'incidencia', 1, 6, 'cerrado',  '2025-05-01 10:00:00', '2025-05-03 15:00:00'),
-(2, 'Acceso denegado',        'incidencia', 1, 8, 'cerrado',  '2025-05-02 09:00:00', '2025-05-02 18:00:00'),
-(3, 'Nuevo usuario',          'peticion',   1,10, 'cerrado',  '2025-05-03 08:00:00', '2025-05-05 12:00:00'),
-(4, 'Lentitud tickets',       'incidencia', 1, 9, 'resuelto', '2025-05-04 14:00:00', NULL),
-(5, 'Error login',            'incidencia', 1,10, 'cerrado',  '2025-05-05 07:00:00', '2025-05-05 16:00:00');
+INSERT INTO rol (nombre, descripcion) VALUES
+('Admin', 'Acceso total al sistema'),
+('Soporte', 'Mesa de ayuda y atención de tickets'),
+('Programador', 'Desarrollo y gestión de proyectos'),
+('Agente', 'Agente de soporte con acceso limitado'),
+('Usuario Final', 'Usuario final del sistema');
 
-INSERT INTO detalle_ticket (id_ticket, f_asignacion_agente, id_agente, f_solucion, f_revision, descripcion, notas_resolucion, prioridad, intensidad, sla_horas)
-VALUES
-(1, '2025-05-01 11:00:00', 2, '2025-05-03 14:00:00', '2025-05-03 15:00:00', 'No exporta PDF', 'Se corrigió la librería de exportación', 'alta', 'alta', 8),
-(2, '2025-05-02 10:00:00', 5, '2025-05-02 17:00:00', '2025-05-02 18:00:00', 'No puede ingresar', 'Se restauró acceso desde el panel', 'critica', 'critica', 4),
-(3, '2025-05-03 09:00:00', 2, '2025-05-05 11:00:00', '2025-05-05 12:00:00', 'Crear usuario', 'Usuario creado exitosamente', 'media', 'baja', 24),
-(4, '2025-05-04 15:00:00', 5, '2025-05-06 10:00:00', NULL, 'Carga lenta', 'Se optimizaron consultas, pendiente revisión', 'alta', 'alta', 8),
-(5, '2025-05-05 08:00:00', 2, '2025-05-05 15:00:00', '2025-05-05 16:00:00', 'Error 500 login', 'Corregido error en microservicio de autenticación', 'critica', 'critica', 2);
+INSERT INTO rol_permiso (nombre, nivel, id_rol) VALUES
+-- Admin (id=1)
+('dashboard', 5, 1), ('nuevo_ticket', 5, 1), ('ver_tickets', 5, 1), ('resolver_tickets', 5, 1), 
+('nuevo_proyecto', 5, 1), ('ver_proyectos', 5, 1), ('aprobacion_proyectos', 5, 1),
+('nueva_actividad', 5, 1), ('indicadores', 5, 1), ('lista_usuarios', 5, 1), ('reportes', 5, 1),
+('configuracion', 5, 1),
+-- Soporte (id=2)
+('dashboard', 4, 2), ('nuevo_ticket', 4, 2), ('ver_tickets', 4, 2), ('resolver_tickets', 4, 2),
+-- Programador (id=3)
+('dashboard', 3, 3), ('nuevo_ticket', 3, 3), ('ver_tickets', 3, 3), ('resolver_tickets', 3, 3),
+('ver_proyectos', 3, 3), ('nueva_actividad', 3, 3),
+-- Agente (id=4)
+('dashboard', 2, 4), ('nuevo_ticket', 2, 4), ('ver_tickets', 2, 4),
+-- Usuario Final (id=5)
+('dashboard', 1, 5), ('nuevo_ticket', 1, 5);
 
-INSERT INTO calificaciones_ticket (id_ticket, estrellas, observacion) VALUES
-(1, 4, 'Atencion buena, se resolvio con seguimiento.'),
-(4, 5, 'Excelente atencion, solucion rapida y clara.');
+INSERT INTO usuarios
+(nombre_completo, apellido, edad, dni, direccion, correo, password_hash, nivel, id_rol)
+VALUES
+('Renzo Carranza', 'Carranza López', 29, '74123456', 'Av. La Molina 342, Lima',  'renzo@agrovision.pe', 'scrypt:32768:8:1$iaR7uleTvmvuGwBx$ae3840efdbbfd2129ef1d251c77a712d3155caf470af7e4d89e07bed76eed39be686d6aa834873e960ecf94e88a69bf799fb22af9c0ebefc60a364de4dd0ca2b', 5, 1),
+('Carlos Mendoza', 'Mendoza Quispe', 34, '72345678', 'Jr. Huallaga 198, Cercado de Lima', 'carlos@agrovision.pe', 'scrypt:32768:8:1$geg5CNy9PksRAdKG$0b112cd044c79592293deeab08836a24e2a91a0981f27fb7b38848bb2532e8e60867f2112a23641945cb94cf101ab888c73bdb172b4c7c14b0dc00e4efe97f76', 4, 2),
+('Juan Pérez',     'Pérez Salas',    26, '71234567', 'Calle Los Cedros 55, San Borja', 'juan@agrovision.pe', 'scrypt:32768:8:1$geg5CNy9PksRAdKG$0b112cd044c79592293deeab08836a24e2a91a0981f27fb7b38848bb2532e8e60867f2112a23641945cb94cf101ab888c73bdb172b4c7c14b0dc00e4efe97f76', 3, 3),
+('Ana Torres',     'Torres Vásquez', 31, '73456789', 'Av. Arequipa 1250, Miraflores',  'ana@agrovision.pe', 'scrypt:32768:8:1$geg5CNy9PksRAdKG$0b112cd044c79592293deeab08836a24e2a91a0981f27fb7b38848bb2532e8e60867f2112a23641945cb94cf101ab888c73bdb172b4c7c14b0dc00e4efe97f76', 3, 3),
+('Luis Flores',    'Flores Huanca',  28, '70987654', 'Psje. Los Pinos 12, Surco', 'luis@agrovision.pe', 'scrypt:32768:8:1$geg5CNy9PksRAdKG$0b112cd044c79592293deeab08836a24e2a91a0981f27fb7b38848bb2532e8e60867f2112a23641945cb94cf101ab888c73bdb172b4c7c14b0dc00e4efe97f76', 4, 2);
+
+INSERT INTO aplicaciones (nombre, peso, descripcion, participantes_promedio) VALUES
+('Sistema Empaque',    5, 'Sistema de control de empaque y etiquetado', 8),
+('App Móvil Campo',    4, 'Aplicación móvil para trabajadores de campo', 12),
+('API Ventas',         4, 'API de integración de ventas', 6),
+('Portal RRHH',        3, 'Portal de recursos humanos', 5),
+('Dashboard BI',       3, 'Dashboard de inteligencia de negocio', 4),
+('Reportes',           2, 'Sistema de reportes personalizados', 3),
+('Panel',              4, 'Panel de administración general', 7),
+('Usuarios',           3, 'Gestión de usuarios y permisos', 4),
+('Mesa Ayuda',         5, 'Mesa de ayuda y soporte técnico', 10),
+('Autenticación',      5, 'Sistema de autenticación y SSO', 6);
 
 -- ============================================================
 -- FIN

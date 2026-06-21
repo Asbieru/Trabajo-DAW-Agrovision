@@ -25,7 +25,7 @@
         <div class="error-page-body">
             <p class="error-page-desc">
                 {{ descripcion or 'No se proporcionaron credenciales de acceso válidas.' }}
-                Necesitas un token JWT para consumir este recurso.
+                Necesitas iniciar sesión para acceder a este recurso.
             </p>
             <div class="error-page-actions">
                 <a href="{{ url_for('login') }}" class="btn btn-primary">Ir al login</a>

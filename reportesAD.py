@@ -21,7 +21,7 @@ def reporteResumen():
                        (SELECT COUNT(*) FROM sprints s
                         JOIN proyectos p ON s.id_proyecto = p.id_proyecto
                         WHERE s.estado = 'activo')                  AS sprints_activos,
-                       (SELECT COUNT(*) FROM usuarios WHERE rol = 'soporte') AS total_programadores
+                         (SELECT COUNT(*) FROM usuarios u JOIN rol r ON r.id_rol = u.id_rol WHERE r.nombre = 'Soporte') AS total_soporte
                 FROM tickets
             """)
             return cursor.fetchone()

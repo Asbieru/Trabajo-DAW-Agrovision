@@ -493,7 +493,8 @@ def kpiProgramadoresSinCarga():
             cursor.execute("""
                 SELECT u.nombre_completo AS programador
                 FROM usuarios u
-                WHERE u.rol = 'programador'
+                JOIN rol r ON r.id_rol = u.id_rol
+                WHERE r.nombre = 'Programador'
                   AND u.activo = 1
                   AND u.id_usuario NOT IN (
                       SELECT DISTINCT id_asignado FROM actividades

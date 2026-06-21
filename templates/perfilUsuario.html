@@ -75,9 +75,7 @@
                         Cargo
                     </div>
                     <div style="font-weight:600;font-size:0.95rem;">
-                        {% if usuario.rol == 'admin' %}⚙️ Administrador
-                        {% elif usuario.rol == 'programador' %}💻 Programador
-                        {% else %}🎧 Soporte{% endif %}
+                        {{ usuario.rol_nombre }}
                     </div>
                 </div>
 

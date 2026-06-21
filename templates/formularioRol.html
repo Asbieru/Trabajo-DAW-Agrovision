@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if rol else 'Nuevo' }} rol{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ '✏️ Editar' if rol else '👤 Nuevo' }} rol</h1>
+        <p>{{ 'Actualiza los datos del rol' if rol else 'Registra un nuevo rol en el sistema' }}</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('configuracion', tab='roles') }}">← Volver</a>
+</div>
+
+{% if request.args.get('creado') %}
+<div class="calificacion-alerta exito">✅ Rol creado correctamente.</div>
+{% elif request.args.get('editado') %}
+<div class="calificacion-alerta exito">✅ Rol actualizado correctamente.</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">Datos del rol</div>
+    <div class="card-body">
+        <form onsubmit="return guardarRol(event)">
+            <div class="form-group form-section-spacing">
+                <label for="nombre">Nombre del rol *</label>
+                <input type="text" id="nombre" name="nombre"
+                       value="{{ rol.nombre if rol else '' }}"
+                       placeholder="Ej. Administrador" required>
+            </div>
+
+            <div class="form-grid tres form-section-spacing">
+                <div class="form-group">
+                    <label for="descripcion">Descripción</label>
+                    <input type="text" id="descripcion" name="descripcion"
+                           value="{{ rol.descripcion if rol else '' }}"
+                           placeholder="Breve descripción del rol">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">
+                    {{ '💾 Guardar cambios' if rol else '👤 Crear rol' }}
+                </button>
+                <a href="{{ url_for('configuracion', tab='roles') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function guardarRol(event) {
+    event.preventDefault();
+    var id = {{ rol.id_rol if rol else 'null' }};
+    var url = id ? '/api/rol/' + id : '/api/rol';
+    var method = id ? 'PUT' : 'POST';
+    var data = {
+        nombre: document.getElementById('nombre').value.trim(),
+        descripcion: document.getElementById('descripcion').value.trim()
+    };
+    if (!data.nombre) { showAlert('Nombre requerido', 'error'); return false; }
+    fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            window.location.href = '{{ url_for("configuracion") }}?tab=roles' + (id ? '&rol_editado=1' : '&rol_creado=1');
+        } else {
+            showAlert(data.mensaje || 'Error al guardar el rol.', 'error');
+        }
+    })
+    .catch(function() { showAlert('Error de conexión.', 'error'); });
+    return false;
+}
+</script>
+{% endblock %}

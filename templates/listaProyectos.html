@@ -128,12 +128,13 @@
 </div>
 
 <script>
+function obtenerUsuario() {
+    return typeof USUARIO !== 'undefined' ? USUARIO : null;
+}
 (function() {
     try {
-        var raw = localStorage.getItem('usuario');
-        if (!raw) return;
-        var u = JSON.parse(raw);
-        if (u && u.rol === 'admin') {
+        var u = obtenerUsuario();
+        if (u && u.permisos && u.permisos.indexOf('aprobacion_proyectos') !== -1) {
             var btn = document.querySelector('.aprobacion-solo-admin');
             if (btn) btn.style.display = 'inline-flex';
         }

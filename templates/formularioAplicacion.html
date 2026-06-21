@@ -7,7 +7,7 @@
         <h1>{{ '✏️ Editar' if aplicacion else '📦 Nueva' }} aplicación</h1>
         <p>{{ 'Actualiza los datos de la aplicación' if aplicacion else 'Registra una nueva aplicación en el sistema' }}</p>
     </div>
-    <a class="btn btn-outline" href="{{ url_for('listar_aplicaciones') }}">← Volver</a>
+    <a class="btn btn-outline" href="{{ url_for('configuracion') }}">← Volver</a>
 </div>
 
 <div class="card">
@@ -49,7 +49,7 @@
                 <button type="submit" class="btn btn-verde">
                     {{ '💾 Guardar cambios' if aplicacion else '📦 Crear aplicación' }}
                 </button>
-                <a href="{{ url_for('listar_aplicaciones') }}" class="btn btn-outline">Cancelar</a>
+                <a href="{{ url_for('configuracion') }}" class="btn btn-outline">Cancelar</a>
             </div>
         </form>
     </div>
@@ -67,7 +67,7 @@ function guardarAplicacion(event) {
     };
     apiPost(url, data).then(function(r) { return r.json(); }).then(function(data) {
         if (data.ok) {
-            window.location.href = '{{ url_for("listar_aplicaciones") }}' + (id ? '?editada=1' : '?creada=1');
+            window.location.href = '{{ url_for("configuracion") }}' + (id ? '?editada=1' : '?creada=1');
         } else {
             showAlert(data.mensaje || 'Error al guardar la aplicación.', 'error');
         }

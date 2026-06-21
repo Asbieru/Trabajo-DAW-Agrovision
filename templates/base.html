@@ -25,8 +25,7 @@
         <div class="topbar-user">
             <span class="topbar-nombre" id="topbar-nombre">—</span>
             <span class="topbar-rol" id="topbar-rol"></span>
-            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline topbar-logout"
-                onclick="localStorage.removeItem('usuario');localStorage.removeItem('jwt_token')">
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline topbar-logout">
                 🚪 Salir
             </a>
         </div>
@@ -38,66 +37,67 @@
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-section">Principal</div>
             <a href="{{ url_for('index') }}" class="{{ 'activo' if request.endpoint == 'index' else '' }}"
-                data-vis="soporte programador admin">
+                data-permiso="dashboard">
                 <span class="ico">🏠</span> Dashboard
             </a>
 
             <div class="sidebar-section">Soporte</div>
             <a href="{{ url_for('form_ticket') }}" class="{{ 'activo' if request.endpoint == 'form_ticket' else '' }}"
-                data-vis="soporte programador admin">
+                data-permiso="nuevo_ticket">
                 <span class="ico">🎫</span> Nuevo ticket
             </a>
             <a href="{{ url_for('listar_tickets') }}"
                 class="{{ 'activo' if request.endpoint == 'listar_tickets' else '' }}"
-                data-vis="soporte programador admin">
+                data-permiso="ver_tickets">
                 <span class="ico">📨</span> Ver tickets
             </a>
             <a href="{{ url_for('resolver_tickets') }}"
                 class="{{ 'activo' if request.endpoint in ('resolver_tickets', 'form_resolver_ticket') else '' }}"
-                data-vis="programador admin">
+                data-permiso="resolver_tickets">
                 <span class="ico">🔧</span> Resolver tickets
-            </a>
-            <a href="{{ url_for('listar_aplicaciones') }}"
-                class="{{ 'activo' if request.endpoint in ('listar_aplicaciones', 'form_nueva_aplicacion', 'form_editar_aplicacion') else '' }}"
-                data-vis="admin">
-                <span class="ico">📦</span> Aplicaciones
             </a>
 
             <div class="sidebar-section">Proyectos</div>
             <a href="{{ url_for('form_proyecto') }}"
-                class="{{ 'activo' if request.endpoint == 'form_proyecto' else '' }}" data-vis="admin">
+                class="{{ 'activo' if request.endpoint == 'form_proyecto' else '' }}" data-permiso="nuevo_proyecto">
                 <span class="ico">🚀</span> Nuevo proyecto
             </a>
             <a href="{{ url_for('listar_proyectos') }}"
-                class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}" data-vis="programador admin">
+                class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}" data-permiso="ver_proyectos">
                 <span class="ico">📁</span> Ver proyectos
             </a>
             <a href="{{ url_for('aprobacion_proyectos') }}"
-                class="{{ 'activo' if request.endpoint == 'aprobacion_proyectos' else '' }}" data-vis="admin">
+                class="{{ 'activo' if request.endpoint == 'aprobacion_proyectos' else '' }}" data-permiso="aprobacion_proyectos">
                 <span class="ico">✅</span> Aprobación de proyectos
             </a>
 
             <div class="sidebar-section">Actividades</div>
             <a href="{{ url_for('form_actividad') }}"
-                class="{{ 'activo' if request.endpoint == 'form_actividad' else '' }}" data-vis="programador admin">
+                class="{{ 'activo' if request.endpoint == 'form_actividad' else '' }}" data-permiso="nueva_actividad">
                 <span class="ico">📋</span> Nueva actividad
             </a>
 
             <div class="sidebar-section">Métricas</div>
             <a href="{{ url_for('indicadores_soporte') }}"
-                class="{{ 'activo' if request.endpoint == 'indicadores_soporte' else '' }}" data-vis="admin">
+                class="{{ 'activo' if request.endpoint == 'indicadores_soporte' else '' }}" data-permiso="indicadores">
                 <span class="ico">📊</span> Indicadores
             </a>
 
             <div class="sidebar-section">Usuarios</div>
             <a href="{{ url_for('lista_usuarios') }}"
                 class="{{ 'activo' if request.endpoint in ('lista_usuarios','perfil_usuario','historial_usuario') else '' }}"
-                data-vis="admin">
+                data-permiso="lista_usuarios">
                 <span class="ico">👥</span> Lista de Usuarios
             </a>
             <a href="{{ url_for('gestion_reportes') }}"
-                class="{{ 'activo' if request.endpoint == 'gestion_reportes' else '' }}" data-vis="admin">
+                class="{{ 'activo' if request.endpoint == 'gestion_reportes' else '' }}" data-permiso="reportes">
                 <span class="ico">📈</span> Reportes
+            </a>
+
+            <div class="sidebar-section">Configuración</div>
+            <a href="{{ url_for('configuracion') }}"
+                class="{{ 'activo' if request.endpoint == 'configuracion' else '' }}" data-permiso="configuracion">
+                <span class="ico">⚙️</span> Configuración
             </a>
         </nav>
 
@@ -109,124 +109,89 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>
-        function obtenerUsuario() {
-            try {
-                var raw = localStorage.getItem('usuario');
-                if (!raw) return null;
-                return JSON.parse(raw);
-            } catch (e) { return null; }
+        // Variable global para todos los templates
+        var USUARIO = {{ usuario | tojson | safe }};
+
+        function apiPost(url, data) {
+            return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         }
 
-        function getToken() {
-            try { return localStorage.getItem('jwt_token'); } catch (e) { return null; }
+        function crearOverlay() {
+            var e = document.querySelector('.agro-modal-overlay');
+            if (e) e.remove();
+            var o = document.createElement('div');
+            o.className = 'agro-modal-overlay';
+            o.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
+            return o;
         }
-
-        function decodeToken(token) {
-            try {
-                var parts = token.split('.');
-                if (parts.length !== 3) return null;
-                return JSON.parse(atob(parts[1]));
-            } catch (e) { return null; }
+        function crearCaja() {
+            var b = document.createElement('div');
+            b.style.cssText = 'background:#fff;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.18);width:90%;max-width:420px;padding:30px 28px 24px;text-align:center;';
+            return b;
         }
-
-        function tokenExpirado() {
-            var token = getToken();
-            if (!token) return true;
-            var payload = decodeToken(token);
-            if (!payload || !payload.exp) return true;
-            return Date.now() >= payload.exp * 1000;
-        }
-
-        function apiFetch(url, options) {
-            options = options || {};
-            options.headers = options.headers || {};
-            var token = getToken();
-            if (token) {
-                options.headers['Authorization'] = 'JWT ' + token;
-            }
-            return fetch(url, options);
-        }
-
-        function apiPost(url, body) {
-            return apiFetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-        }
-
         function showAlert(mensaje, tipo) {
             tipo = tipo || 'error';
-            var overlay = document.createElement('div');
-            overlay.className = 'agro-modal-overlay';
-            overlay.innerHTML =
-                '<div class="agro-modal-box">' +
-                    '<div class="agro-modal-icon">' + (tipo === 'error' ? '&#9888;' : tipo === 'success' ? '&#10003;' : '&#8505;') + '</div>' +
-                    '<div class="agro-modal-title">' + (tipo === 'error' ? 'Error' : tipo === 'success' ? 'Correcto' : 'Aviso') + '</div>' +
-                    '<div class="agro-modal-msg">' + mensaje + '</div>' +
-                    '<div class="agro-modal-actions">' +
-                        '<button class="agro-modal-cancel" onclick="this.closest(\'.agro-modal-overlay\').remove()">Cerrar</button>' +
-                    '</div>' +
-                '</div>';
+            var overlay = crearOverlay();
+            var box = crearCaja();
+            var icono = tipo === 'error' ? '&#9888;' : tipo === 'success' ? '&#10003;' : '&#8505;';
+            var titulo = tipo === 'error' ? 'Error' : tipo === 'success' ? 'Correcto' : 'Aviso';
+            box.innerHTML =
+                '<div style="font-size:2.8rem;margin-bottom:12px;line-height:1">' + icono + '</div>' +
+                '<div style="font-size:1.1rem;font-weight:700;color:#222;margin-bottom:10px">' + titulo + '</div>' +
+                '<div style="font-size:0.9rem;color:#666;margin-bottom:22px;line-height:1.5">' + mensaje + '</div>' +
+                '<div><button class="btn btn-sm" style="min-width:90px;padding:8px 20px;background:#e0e0e0;border:none;border-radius:6px;cursor:pointer;font-weight:600" onclick="this.closest(\'.agro-modal-overlay\').remove()">Cerrar</button></div>';
+            overlay.appendChild(box);
             document.body.appendChild(overlay);
-            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+            overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
         }
 
         function showConfirm(mensaje, titulo, cbAceptar, cbCancelar) {
-            var overlay = document.createElement('div');
-            overlay.className = 'agro-modal-overlay';
-            overlay.innerHTML =
-                '<div class="agro-modal-box">' +
-                    '<div class="agro-modal-icon">&#9888;</div>' +
-                    '<div class="agro-modal-title">' + (titulo || 'Confirmar') + '</div>' +
-                    '<div class="agro-modal-msg">' + mensaje + '</div>' +
-                    '<div class="agro-modal-actions">' +
-                        '<button class="agro-modal-cancel" id="agro-cancel-btn">Cancelar</button>' +
-                        '<button class="agro-modal-confirm" id="agro-confirm-btn">Aceptar</button>' +
-                    '</div>' +
+            var overlay = crearOverlay();
+            var box = crearCaja();
+            box.innerHTML =
+                '<div style="font-size:2.8rem;margin-bottom:12px;line-height:1">&#9888;</div>' +
+                '<div style="font-size:1.1rem;font-weight:700;color:#222;margin-bottom:10px">' + (titulo || 'Confirmar') + '</div>' +
+                '<div style="font-size:0.9rem;color:#666;margin-bottom:22px;line-height:1.5">' + mensaje + '</div>' +
+                '<div style="display:flex;gap:10px;justify-content:center">' +
+                    '<button id="agro-cancel-btn" class="btn btn-sm" style="min-width:90px;padding:8px 20px;background:#e0e0e0;border:none;border-radius:6px;cursor:pointer;font-weight:600">Cancelar</button>' +
+                    '<button id="agro-confirm-btn" class="btn btn-sm" style="min-width:90px;padding:8px 20px;background:#2d7d46;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">Aceptar</button>' +
                 '</div>';
+            overlay.appendChild(box);
             document.body.appendChild(overlay);
             document.getElementById('agro-confirm-btn').onclick = function () { overlay.remove(); if (cbAceptar) cbAceptar(); };
             document.getElementById('agro-cancel-btn').onclick = function () { overlay.remove(); if (cbCancelar) cbCancelar(); };
-            overlay.addEventListener('click', function (e) { if (e.target === overlay) { overlay.remove(); if (cbCancelar) cbCancelar(); } });
+            overlay.onclick = function(e) { if (e.target === overlay) { overlay.remove(); if (cbCancelar) cbCancelar(); } };
         }
 
         function showToast(mensaje, tipo) {
             tipo = tipo || 'success';
-            var existing = document.querySelector('.agro-toast');
-            if (existing) existing.remove();
-            var toast = document.createElement('div');
-            toast.className = 'agro-toast ' + tipo;
-            toast.innerHTML = '<span>' + mensaje + '</span>';
-            document.body.appendChild(toast);
-            setTimeout(function () { if (toast.parentNode) toast.remove(); }, 3000);
+            var e = document.querySelector('.agro-toast');
+            if (e) e.remove();
+            var t = document.createElement('div');
+            t.className = 'agro-toast';
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99998;padding:14px 24px;border-radius:8px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.15);animation:fadeIn .3s;background:' + (tipo === 'success' ? '#2d7d46' : tipo === 'error' ? '#c0392b' : '#555') + ';color:#fff;';
+            t.textContent = mensaje;
+            document.body.appendChild(t);
+            setTimeout(function () { if (t.parentNode) t.remove(); }, 3000);
         }
 
-        // Leer usuario de localStorage y mostrarlo en el topbar
+        // Mostrar usuario en topbar y filtrar sidebar segun permisos
         (function () {
-            var u = obtenerUsuario();
+            var u = USUARIO;
             if (!u) {
                 window.location.href = '{{ url_for("login") }}';
                 return;
             }
-            if (tokenExpirado()) {
-                localStorage.removeItem('usuario');
-                localStorage.removeItem('jwt_token');
-                window.location.href = '{{ url_for("login") }}';
-                return;
-            }
             document.getElementById('topbar-nombre').textContent = u.nombre_completo || '—';
-            document.getElementById('topbar-rol').textContent = u.rol || '';
+            document.getElementById('topbar-rol').textContent = u.rol_nombre || '';
 
-            // Filtrar sidebar segun el rol
-            var rol = u.rol || '';
-            document.querySelectorAll('#sidebar a[data-vis]').forEach(function (a) {
-                var rolesPermitidos = (a.getAttribute('data-vis') || '').split(' ');
-                if (rolesPermitidos.indexOf(rol) === -1) {
+            var permisos = u.permisos || [];
+            document.querySelectorAll('#sidebar a[data-permiso]').forEach(function (a) {
+                var permisoRequerido = a.getAttribute('data-permiso');
+                if (permisoRequerido && permisos.indexOf(permisoRequerido) === -1) {
                     a.style.display = 'none';
                 }
             });
-            // Ocultar sidebar-section que queden sin enlaces visibles
             document.querySelectorAll('#sidebar .sidebar-section').forEach(function (sec) {
                 var hermanos = sec.parentNode.children;
                 var idx = Array.prototype.indexOf.call(hermanos, sec);

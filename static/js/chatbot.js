@@ -20,21 +20,16 @@ const AV_CHATBOT = (function () {
     // ═══════════════════════════════════════════════════════
     async function initUsuario() {
         try {
-            const raw = localStorage.getItem('usuario');
-            if (!raw) return null;
-            const local = JSON.parse(raw);
-            if (!local || !local.id_usuario) return null;
-
-            const resp = await apiFetch('/api/usuario/me?id_usuario=' + local.id_usuario);
-            if (!resp.ok) return null;
-            const data = await resp.json();
-            if (!data.ok) return null;
-            return data.usuario;
+            if (typeof USUARIO !== 'undefined' && USUARIO && USUARIO.id_usuario) {
+                const resp = await fetch('/api/usuario/me');
+                if (!resp.ok) return USUARIO;
+                const data = await resp.json();
+                if (!data.ok) return USUARIO;
+                return data.usuario;
+            }
+            return null;
         } catch (e) {
-            try {
-                const raw = localStorage.getItem('usuario');
-                return raw ? JSON.parse(raw) : null;
-            } catch { return null; }
+            return typeof USUARIO !== 'undefined' ? USUARIO : null;
         }
     }
 
@@ -42,7 +37,7 @@ const AV_CHATBOT = (function () {
     //  SYSTEM PROMPT — construido UNA vez al iniciar
     // ═══════════════════════════════════════════════════════
     function buildSystemPrompt(u) {
-        const rol    = u.rol;
+        const rol    = u.rol_nombre;
         const nombre = u.nombre_completo;
 
         const base = 'Eres AgroBot, el asistente virtual de AGROVISION, un sistema de gestión empresarial peruano.\n'
@@ -118,7 +113,7 @@ const AV_CHATBOT = (function () {
     ];
 
     const FAQ_POR_ROL = {
-        soporte: [
+        Soporte: [
             {
                 patrones: ['nuevo ticket', 'crear ticket', 'abrir ticket', 'registrar ticket', 'como creo un ticket', 'como abro un ticket', 'quiero crear un ticket', 'quiero abrir un ticket'],
                 respuesta: '🎫 Para crear un ticket:\n\n1. Clic en <strong>"Nuevo ticket"</strong> en el menú lateral\n2. Escribe un <strong>título claro</strong> del problema\n3. Selecciona el <strong>tipo</strong>: Incidencia 🔴, Petición 🔵 o Consulta 🟡\n4. Elige la <strong>aplicación afectada</strong>\n5. Describe el problema con detalle\n6. Clic en <strong>"Enviar ticket"</strong> 📨'
@@ -160,7 +155,7 @@ const AV_CHATBOT = (function () {
                 respuesta: null
             }
         ],
-        programador: [
+        Programador: [
             {
                 patrones: ['resolver ticket', 'resuelvo', 'como resuelvo', 'atender ticket', 'solucionar ticket', 'resolver un ticket', 'como resuelvo un ticket'],
                 respuesta: '🔧 Para resolver un ticket:\n\n1. Ve a <strong>"Resolver tickets"</strong> en el menú lateral\n2. Verás los tickets asignados a ti\n3. Haz clic en <strong>"Resolver"</strong>\n4. Completa la descripción de la solución\n5. Guarda para marcarlo como resuelto\n\nSolo puedes resolver tickets que te hayan asignado.'
@@ -206,7 +201,7 @@ const AV_CHATBOT = (function () {
                 respuesta: null
             }
         ],
-        admin: [
+        Admin: [
             {
                 patrones: ['aprobar proyecto', 'aprobacion proyecto', 'rechazar proyecto', 'como apruebo', 'revisar proyectos', 'aprobar proyectos'],
                 respuesta: '✅ Para aprobar o rechazar proyectos:\n\n1. Ve a <strong>"Aprobación de proyectos"</strong> en el menú\n2. Verás los proyectos con estado <strong>"En revisión"</strong>\n3. Elige <strong>Aprobar</strong> ✅ o <strong>Rechazar</strong> ❌\n4. Al aprobar se generan automáticamente los sprints'
@@ -240,7 +235,7 @@ const AV_CHATBOT = (function () {
                 respuesta: null
             }
         ],
-        agente: [
+        Agente: [
             {
                 patrones: ['mis tickets', 'tickets asignados', 'ver mis tickets', 'donde veo mis tickets', 'como veo mis tickets'],
                 respuesta: '📨 Ve a <strong>"Ver tickets"</strong> en el menú. Solo verás los tickets asignados a ti. Filtra por estado para ver los que están en progreso.'
@@ -264,7 +259,7 @@ const AV_CHATBOT = (function () {
     //  TUTORIALES POR ROL
     // ═══════════════════════════════════════════════════════
     const TUTORIAL_POR_ROL = {
-        soporte: [
+        Soporte: [
             {
                 seccion: '🎯 Tu flujo principal',
                 items: [
@@ -282,7 +277,7 @@ const AV_CHATBOT = (function () {
                 ]
             }
         ],
-        programador: [
+        Programador: [
             {
                 seccion: '🎯 Tu flujo principal',
                 items: [
@@ -300,7 +295,7 @@ const AV_CHATBOT = (function () {
                 ]
             }
         ],
-        admin: [
+        Admin: [
             {
                 seccion: '🎯 Acciones principales',
                 items: [
@@ -318,7 +313,7 @@ const AV_CHATBOT = (function () {
                 ]
             }
         ],
-        agente: [
+        Agente: [
             {
                 seccion: '🎯 Tu flujo principal',
                 items: [
@@ -334,26 +329,26 @@ const AV_CHATBOT = (function () {
     // ═══════════════════════════════════════════════════════
     function respuestaDinamica(tipo) {
         const nombre = usuario.nombre_completo.split(' ')[0];
-        const rol    = usuario.rol;
+        const rol    = usuario.rol_nombre;
 
         if (tipo === 'saludo') {
             const saludos = {
-                admin:       '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>administrador</strong> tienes acceso completo. Puedo ayudarte con proyectos, tickets, indicadores, reportes y usuarios.\n\n¿Qué necesitas hoy?',
-                programador: '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>programador</strong> puedes resolver tickets, ver tus proyectos y registrar actividades.\n\n¿En qué te ayudo?',
-                soporte:     '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>soporte</strong> puedes crear y hacer seguimiento de tus tickets.\n\n¿Qué necesitas hoy?',
-                agente:      '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>agente</strong> puedes ver y resolver los tickets asignados a ti.\n\n¿En qué te ayudo?'
+                Admin:       '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>administrador</strong> tienes acceso completo. Puedo ayudarte con proyectos, tickets, indicadores, reportes y usuarios.\n\n¿Qué necesitas hoy?',
+                Programador: '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>programador</strong> puedes resolver tickets, ver tus proyectos y registrar actividades.\n\n¿En qué te ayudo?',
+                Soporte:     '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>soporte</strong> puedes crear y hacer seguimiento de tus tickets.\n\n¿Qué necesitas hoy?',
+                Agente:      '👋 ¡Hola <strong>' + nombre + '</strong>! Soy AgroBot 🌿\nComo <strong>agente</strong> puedes ver y resolver los tickets asignados a ti.\n\n¿En qué te ayudo?'
             };
-            return saludos[rol] || saludos.soporte;
+            return saludos[rol] || saludos.Soporte;
         }
 
         if (tipo === 'quePuedo') {
             const acciones = {
-                admin:       'Como <strong>administrador</strong> tienes acceso completo:\n\n🎫 Gestionar todos los tickets\n🚀 Crear y aprobar proyectos\n📊 Ver indicadores KPI\n📈 Generar reportes Excel\n👥 Administrar usuarios\n📦 Gestionar aplicaciones\n\n¿Sobre cuál quieres saber más?',
-                programador: 'Como <strong>programador</strong> puedes:\n\n🎫 Crear tickets de soporte\n🔧 Resolver tickets asignados a ti\n📁 Ver proyectos en los que participas\n📋 Registrar actividades por sprint\n📈 Registrar avances de proyecto\n\n¿Quieres que te explique alguno?',
-                soporte:     'Como <strong>soporte</strong> puedes:\n\n🎫 Crear tickets de incidencia, petición o consulta\n📨 Ver el estado de tus tickets\n⭐ Calificar tickets resueltos\n❌ Cancelar tickets propios\n\n¿Quieres que te explique cómo hacer algo?',
-                agente:      'Como <strong>agente</strong> puedes:\n\n📨 Ver los tickets asignados a ti\n🔧 Resolver los tickets asignados\n\n¿Te explico cómo resolver un ticket?'
+                Admin:       'Como <strong>administrador</strong> tienes acceso completo:\n\n🎫 Gestionar todos los tickets\n🚀 Crear y aprobar proyectos\n📊 Ver indicadores KPI\n📈 Generar reportes Excel\n👥 Administrar usuarios\n📦 Gestionar aplicaciones\n\n¿Sobre cuál quieres saber más?',
+                Programador: 'Como <strong>programador</strong> puedes:\n\n🎫 Crear tickets de soporte\n🔧 Resolver tickets asignados a ti\n📁 Ver proyectos en los que participas\n📋 Registrar actividades por sprint\n📈 Registrar avances de proyecto\n\n¿Quieres que te explique alguno?',
+                Soporte:     'Como <strong>soporte</strong> puedes:\n\n🎫 Crear tickets de incidencia, petición o consulta\n📨 Ver el estado de tus tickets\n⭐ Calificar tickets resueltos\n❌ Cancelar tickets propios\n\n¿Quieres que te explique cómo hacer algo?',
+                Agente:      'Como <strong>agente</strong> puedes:\n\n📨 Ver los tickets asignados a ti\n🔧 Resolver los tickets asignados\n\n¿Te explico cómo resolver un ticket?'
             };
-            return acciones[rol] || acciones.soporte;
+            return acciones[rol] || acciones.Soporte;
         }
         return null;
     }
@@ -383,7 +378,7 @@ const AV_CHATBOT = (function () {
                 return { tipo: 'fijo', respuesta: faq.respuesta };
         }
 
-        var rolFAQ = FAQ_POR_ROL[usuario.rol];
+        var rolFAQ = FAQ_POR_ROL[usuario.rol_nombre];
         if (rolFAQ) {
             for (var j = 0; j < rolFAQ.length; j++) {
                 var faqR = rolFAQ[j];
@@ -453,19 +448,19 @@ const AV_CHATBOT = (function () {
     // ═══════════════════════════════════════════════════════
     function getChips(rol) {
         var chips = {
-            soporte:     ['¿Cómo creo un ticket?', '¿Tipos de ticket?', '¿Estados del ticket?'],
-            programador: ['¿Cómo resuelvo un ticket?', '¿Qué es un sprint?', '¿Cómo creo una actividad?'],
-            admin:       ['¿Cómo apruebo proyectos?', '¿Qué indicadores hay?', '¿Cómo genero reportes?'],
-            agente:      ['¿Cómo veo mis tickets?', '¿Cómo resuelvo un ticket?']
+            Soporte:     ['¿Cómo creo un ticket?', '¿Tipos de ticket?', '¿Estados del ticket?'],
+            Programador: ['¿Cómo resuelvo un ticket?', '¿Qué es un sprint?', '¿Cómo creo una actividad?'],
+            Admin:       ['¿Cómo apruebo proyectos?', '¿Qué indicadores hay?', '¿Cómo genero reportes?'],
+            Agente:      ['¿Cómo veo mis tickets?', '¿Cómo resuelvo un ticket?']
         };
-        return chips[rol] || chips.soporte;
+        return chips[rol] || chips.Soporte;
     }
 
     // ═══════════════════════════════════════════════════════
     //  RENDER DEL WIDGET
     // ═══════════════════════════════════════════════════════
     function render(savedMsgs) {
-        var rol      = usuario.rol;
+        var rol      = usuario.rol_nombre;
         var chips    = getChips(rol);
         var tutorial = TUTORIAL_POR_ROL[rol] || [];
 

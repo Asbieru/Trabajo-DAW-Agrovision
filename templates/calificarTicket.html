@@ -67,7 +67,8 @@
             {% set ya_calificado = ticket.calificacion_estrellas is not none %}
             <div id="error-mensaje" class="calificacion-alerta error" style="display:none;"></div>
             <div id="calificar-exito" class="calificacion-alerta exito" style="display:none;"></div>
-            <form onsubmit="return calificarTicket(event, {{ ticket.id_ticket }})">
+
+            <form id="form-calificar" onsubmit="return calificarTicket(event, {{ ticket.id_ticket }})">
                 <div class="calificacion-bloque">
                     <label class="ticket-summary-label calificacion-label">Selecciona una calificación</label>
                     <div class="rating-stars">
@@ -94,11 +95,34 @@
                     <span class="form-hint">Opcional, pero útil para enriquecer los indicadores cualitativos.</span>
                 </div>
 
+                {# ─── Campos extra para "No solucionado" (ocultos por defecto) ─── #}
+                <div id="no-solucionado-fields" style="display:none;">
+                    <hr style="margin:1.5rem 0;border-color:var(--gris-borde);">
+                    <div class="form-group form-section-spacing">
+                        <label for="no-sol-descripcion">Nueva descripción del problema *</label>
+                        <textarea id="no-sol-descripcion" rows="5"
+                                  placeholder="Describe de nuevo el problema o los nuevos detalles a resolver..."></textarea>
+                        <span class="form-hint">Requerido para reabrir el ticket</span>
+                    </div>
+                    <div class="form-group form-section-spacing">
+                        <label for="no-sol-link">Link de imagen (opcional)</label>
+                        <input type="url" id="no-sol-link"
+                               placeholder="https://ejemplo.com/imagen.png"
+                               style="font-size:0.88rem;">
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     {% if ya_calificado %}
                     <button type="button" class="btn btn-outline" disabled>Calificación registrada</button>
                     {% else %}
-                    <button type="submit" class="btn btn-verde">💾 Guardar calificación</button>
+                    <button type="submit" class="btn btn-verde" id="btn-guardar">💾 Guardar calificación</button>
+                    <button type="button" class="btn btn-acento" id="btn-no-solucionado"
+                            onclick="mostrarNoSolucionado()">🔄 No solucionado</button>
+                    <button type="submit" class="btn btn-acento" id="btn-reabrir"
+                            style="display:none;" onclick="return noSolucionado(event, {{ ticket.id_ticket }})">
+                        🔄 Calificar y reabrir ticket
+                    </button>
                     {% endif %}
                     <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">Cancelar</a>
                 </div>
@@ -106,6 +130,7 @@
         </div>
     </div>
 </div>
+
 <script>
 function calificarTicket(event, idTicket) {
     event.preventDefault();
@@ -133,6 +158,60 @@ function calificarTicket(event, idTicket) {
         } else {
             var err = document.getElementById('error-mensaje');
             err.textContent = data.mensaje || 'Error al calificar el ticket';
+            err.style.display = 'block';
+        }
+    }).catch(function(err) {
+        btn.disabled = false;
+        var el = document.getElementById('error-mensaje');
+        el.textContent = 'Error de conexión: ' + err.message;
+        el.style.display = 'block';
+    });
+    return false;
+}
+
+function mostrarNoSolucionado() {
+    document.getElementById('btn-guardar').style.display = 'none';
+    document.getElementById('btn-no-solucionado').style.display = 'none';
+    document.getElementById('btn-reabrir').style.display = 'inline-block';
+    document.getElementById('no-solucionado-fields').style.display = '';
+    document.getElementById('no-solucionado-fields').scrollIntoView({ behavior: 'smooth' });
+}
+
+function noSolucionado(event, idTicket) {
+    event.preventDefault();
+    var estrellas = document.querySelector('input[name="estrellas"]:checked');
+    if (!estrellas) {
+        var err = document.getElementById('error-mensaje');
+        err.textContent = 'Selecciona una calificación';
+        err.style.display = 'block';
+        return false;
+    }
+    var descripcion = document.getElementById('no-sol-descripcion').value.trim();
+    if (!descripcion) {
+        var err = document.getElementById('error-mensaje');
+        err.textContent = 'Describe de nuevo el problema para reabrir el ticket';
+        err.style.display = 'block';
+        return false;
+    }
+    var datos = {
+        estrellas: parseInt(estrellas.value, 10),
+        observacion: document.getElementById('observacion').value,
+        descripcion: descripcion,
+        link_img: document.getElementById('no-sol-link').value.trim() || null
+    };
+    var btn = event.target;
+    btn.disabled = true;
+    apiPost('/api/ticket/' + idTicket + '/no-solucionado', datos).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+            var form = document.querySelector('.card:last-child .card-body');
+            var exito = document.getElementById('calificar-exito');
+            exito.innerHTML = '<strong>✅ Calificación registrada y ticket reabierto.</strong> El equipo retomará el caso.';
+            exito.style.display = 'block';
+            form.querySelector('form').style.display = 'none';
+        } else {
+            var err = document.getElementById('error-mensaje');
+            err.textContent = data.mensaje || 'Error al procesar';
             err.style.display = 'block';
         }
     }).catch(function(err) {

@@ -30,7 +30,6 @@
                     <input type="text" id="nombre_autor_display" value="Cargando..." disabled
                         style="background-color: var(--gris-bg); color: var(--gris-texto); font-weight: 600;">
 
-                    <input type="hidden" id="id_autor" name="id_autor" required>
                 </div>
 
                 <div class="form-group">
@@ -143,8 +142,7 @@
         var data = {
             estado_salud: document.getElementById('estado_salud').value,
             logros_periodo: document.getElementById('logros_periodo').value,
-            pendientes_next: document.getElementById('pendientes_next').value,
-            id_autor: document.getElementById('id_autor').value
+            pendientes_next: document.getElementById('pendientes_next').value
         };
         apiPost('/api/proyecto/' + idProyecto + '/avances/nuevo', data).then(function(r) { return r.json(); }).then(function(data) {
             if (data.ok) {
@@ -158,18 +156,13 @@
         return false;
     }
 
+function obtenerUsuario() {
+    return typeof USUARIO !== 'undefined' ? USUARIO : null;
+}
 document.addEventListener('DOMContentLoaded', function() {
-    var usuarioRaw = localStorage.getItem('usuario');
-    if (usuarioRaw) {
-        try {
-            var usuarioObj = JSON.parse(usuarioRaw);
-            // Pone el nombre en la cajita gris deshabilitada
-            document.getElementById('nombre_autor_display').value = usuarioObj.nombre_completo;
-            // Pone el ID en el input oculto que viaja al backend
-            document.getElementById('id_autor').value = usuarioObj.id_usuario;
-        } catch (e) {
-            document.getElementById('nombre_autor_display').value = "Error al identificar";
-        }
+    var usuarioObj = typeof USUARIO !== 'undefined' ? USUARIO : null;
+    if (usuarioObj) {
+        document.getElementById('nombre_autor_display').value = usuarioObj.nombre_completo;
     } else {
         document.getElementById('nombre_autor_display').value = "Usuario no identificado";
     }

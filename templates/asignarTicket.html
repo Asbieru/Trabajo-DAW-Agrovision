@@ -59,7 +59,7 @@
                     <select id="id_agente" name="id_agente" required>
                         <option value="">— Selecciona un agente —</option>
                         {% for a in agentes %}
-                            <option value="{{ a.id_usuario }}">{{ a.nombre_completo }} ({{ a.rol }})</option>
+                            <option value="{{ a.id_usuario }}">{{ a.nombre_completo }} ({{ a.rol_nombre }})</option>
                         {% endfor %}
                     </select>
                     <span class="form-hint">Solo se muestran usuarios con rol soporte o programador</span>

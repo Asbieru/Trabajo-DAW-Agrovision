@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if permiso else 'Nuevo' }} permiso{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ '✏️ Editar' if permiso else '🔑 Nuevo' }} permiso</h1>
+        <p>{{ 'Actualiza el permiso' if permiso else 'Registra un nuevo permiso en el sistema' }}</p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('configuracion', tab='permisos') }}">← Volver</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Datos del permiso</div>
+    <div class="card-body">
+        <form onsubmit="return guardarPermiso(event)">
+            {% if not permiso %}
+            <div class="form-group form-section-spacing">
+                <label for="id_rol">Rol *</label>
+                <select id="id_rol" name="id_rol" required>
+                    <option value="">— Seleccionar rol —</option>
+                    {% for r in roles %}
+                    <option value="{{ r.id_rol }}">{{ r.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% else %}
+            <input type="hidden" id="id_rol" value="{{ permiso.id_rol }}">
+            {% endif %}
+
+            <div class="form-group form-section-spacing">
+                <label for="permiso-nombre-select">Nombre del permiso</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <select id="permiso-nombre-select" onchange="onPermisoNombreChange()" style="flex:1;min-width:200px;padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;">
+                        <option value="">— Seleccionar existente —</option>
+                        <option value="__otro__">✏️ Otro (escribir nuevo)</option>
+                    </select>
+                </div>
+                <input type="text" id="nombre" name="nombre"
+                       value="{{ permiso.nombre if permiso else '' }}"
+                       placeholder="Escribe el nombre del permiso..."
+                       {% if not permiso %}disabled{% endif %}
+                       style="margin-top:8px;width:100%;padding:9px 12px;border:1.5px solid #dde0e4;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
+                <span class="form-hint">Se guardará en minúsculas y con guiones bajos en lugar de espacios</span>
+            </div>
+
+            <div class="form-group form-section-spacing">
+                <label for="nivel">Nivel mínimo *</label>
+                <input type="number" id="nivel" name="nivel"
+                       value="{{ permiso.nivel if permiso else 1 }}"
+                       min="1" max="10" required>
+                <span class="form-hint">El usuario debe tener este nivel o superior para acceder al permiso</span>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-verde">
+                    {{ '💾 Guardar cambios' if permiso else '🔑 Crear permiso' }}
+                </button>
+                <a href="{{ url_for('configuracion', tab='permisos') }}" class="btn btn-outline">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+var _todosPermisosNombres = [];
+
+function cargarTodosPermisos() {
+    fetch('/api/permisos').then(function(r) { return r.json(); }).then(function(data) {
+        if (!data.ok) return;
+        var unicos = [], seen = {};
+        data.permisos.forEach(function(p) {
+            if (!seen[p.nombre]) { seen[p.nombre] = true; unicos.push(p.nombre); }
+        });
+        unicos.sort();
+        _todosPermisosNombres = unicos;
+        var sel = document.getElementById('permiso-nombre-select');
+        sel.innerHTML = '<option value="">— Seleccionar existente —</option><option value="__otro__">✏️ Otro (escribir nuevo)</option>';
+        unicos.forEach(function(n) {
+            sel.innerHTML += '<option value="' + n.replace(/'/g, "\\'") + '">' + n + '</option>';
+        });
+        {% if permiso %}
+        sel.value = '__otro__';
+        document.getElementById('nombre').disabled = false;
+        {% endif %}
+    });
+}
+
+function onPermisoNombreChange() {
+    var sel = document.getElementById('permiso-nombre-select');
+    var input = document.getElementById('nombre');
+    if (sel.value === '__otro__') {
+        input.disabled = false; input.value = ''; input.focus();
+    } else if (sel.value) {
+        input.disabled = true; input.value = sel.value;
+    } else {
+        input.disabled = true; input.value = '';
+    }
+}
+
+function guardarPermiso(event) {
+    event.preventDefault();
+    var id = {{ permiso.id_rol_permiso if permiso else 'null' }};
+    var url = id ? '/api/permiso/' + id : '/api/permiso';
+    var method = id ? 'PUT' : 'POST';
+    var nombre = document.getElementById('nombre').value.trim().toLowerCase().replace(/\s+/g, '_');
+    if (!nombre) { showAlert('Nombre requerido', 'error'); return false; }
+    var idRol = document.getElementById('id_rol').value;
+    if (!idRol) { showAlert('Seleccione un rol', 'error'); return false; }
+    var data = {
+        nombre: nombre,
+        nivel: parseInt(document.getElementById('nivel').value) || 1,
+        id_rol: parseInt(idRol)
+    };
+    fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            showToast(id ? 'Permiso actualizado' : 'Permiso creado', 'success');
+            setTimeout(function() {
+                window.location.href = '{{ url_for("configuracion") }}?tab=permisos';
+            }, 300);
+        } else {
+            showAlert(data.mensaje || 'Error al guardar el permiso.', 'error');
+        }
+    })
+    .catch(function() { showAlert('Error de conexión.', 'error'); });
+    return false;
+}
+
+cargarTodosPermisos();
+</script>
+{% endblock %}

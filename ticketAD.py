@@ -30,7 +30,7 @@ def asegurarTablas():
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS detalle_ticket (
                     id_detalle INT AUTO_INCREMENT PRIMARY KEY,
-                    id_ticket INT NOT NULL UNIQUE,
+                    id_ticket INT NOT NULL,
                     f_asignacion_agente DATETIME NULL,
                     id_agente INT NULL,
                     f_solucion DATETIME NULL,
@@ -42,13 +42,47 @@ def asegurarTablas():
                     prioridad ENUM('critica','alta','media','baja') DEFAULT 'media',
                     intensidad ENUM('critica','alta','media','baja') DEFAULT 'media',
                     sla_horas SMALLINT DEFAULT 24,
+                    activo TINYINT(1) NOT NULL DEFAULT 1,
                     CONSTRAINT fk_detalle_ticket FOREIGN KEY (id_ticket)
                         REFERENCES tickets(id_ticket) ON DELETE CASCADE,
                     CONSTRAINT fk_detalle_agente FOREIGN KEY (id_agente)
                         REFERENCES usuarios(id_usuario)
                 ) ENGINE=InnoDB
             """)
-            # Migración: si la tabla ya existe sin las columnas nuevas, agregarlas
+            # Migración: remover UNIQUE de id_ticket si existe
+            cursor.execute("""
+                SELECT INDEX_NAME FROM information_schema.STATISTICS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'detalle_ticket'
+                  AND COLUMN_NAME = 'id_ticket'
+                  AND NON_UNIQUE = 0
+                  AND INDEX_NAME != 'PRIMARY'
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+            if row:
+                # Antes de dropear el UNIQUE, crear un index regular para la FK
+                cursor.execute("""
+                    SELECT COUNT(*) AS cnt FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'detalle_ticket'
+                      AND COLUMN_NAME = 'id_ticket'
+                      AND NON_UNIQUE = 1
+                """)
+                has_non_unique = cursor.fetchone()['cnt'] > 0
+                if not has_non_unique:
+                    cursor.execute("ALTER TABLE detalle_ticket ADD INDEX idx_detalle_ticket_id_ticket (id_ticket)")
+                cursor.execute(f"ALTER TABLE detalle_ticket DROP INDEX `{row['INDEX_NAME']}`")
+            # Migración: agregar columna activo si no existe
+            cursor.execute("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'detalle_ticket'
+                  AND COLUMN_NAME = 'activo'
+            """)
+            if cursor.fetchone()['COUNT(*)'] == 0:
+                cursor.execute("ALTER TABLE detalle_ticket ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1")
+            # Migración: si existen columnas nuevas faltantes
             for col in ('prioridad', 'intensidad', 'sla_horas'):
                 cursor.execute("""
                     SELECT COUNT(*) FROM information_schema.COLUMNS
@@ -95,10 +129,10 @@ def obtenerTicket(id_ticket):
                        c.estrellas AS calificacion_estrellas,
                        c.observacion AS calificacion_observacion,
                        c.fecha_calificacion
-                FROM tickets t
+                 FROM tickets t
                 JOIN usuarios u ON t.id_solicitante = u.id_usuario
                 JOIN aplicaciones a ON t.id_aplicacion = a.id_aplicacion
-                LEFT JOIN detalle_ticket d ON d.id_ticket = t.id_ticket
+                 LEFT JOIN detalle_ticket d ON d.id_ticket = t.id_ticket AND d.activo = 1
                 LEFT JOIN usuarios ag ON d.id_agente = ag.id_usuario
                 LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
                 WHERE t.id_ticket = %s
@@ -123,8 +157,8 @@ def insertarTicket(obj):
             id_ticket = cursor.lastrowid
             cursor.execute("""
                 INSERT INTO detalle_ticket
-                    (id_ticket, descripcion, link_img_descripcion)
-                VALUES (%s, %s, %s)
+                    (id_ticket, descripcion, link_img_descripcion, activo)
+                VALUES (%s, %s, %s, 1)
             """, (id_ticket, obj.descripcion, obj.link_img_descripcion))
         conn.commit()
     return id_ticket
@@ -145,12 +179,17 @@ def editarTicket(id_ticket, titulo, tipo, id_aplicacion, descripcion, link_img_d
                     AND estado = 'solicitado'
              """, (titulo, tipo, id_aplicacion, id_ticket))
             cursor.execute("""
-                INSERT INTO detalle_ticket (id_ticket, descripcion, link_img_descripcion)
-                VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    descripcion          = VALUES(descripcion),
-                    link_img_descripcion = VALUES(link_img_descripcion)
-            """, (id_ticket, descripcion, link_img_descripcion))
+                UPDATE detalle_ticket
+                   SET descripcion          = %s,
+                       link_img_descripcion = %s
+                 WHERE id_ticket = %s AND activo = 1
+            """, (descripcion, link_img_descripcion, id_ticket))
+            if cursor.rowcount == 0:
+                cursor.execute("""
+                    INSERT INTO detalle_ticket
+                        (id_ticket, descripcion, link_img_descripcion, activo)
+                    VALUES (%s, %s, %s, 1)
+                """, (id_ticket, descripcion, link_img_descripcion))
         conn.commit()
 
 
@@ -171,21 +210,37 @@ def resolverTicket(id_ticket, id_agente, estado, notas, link_img_resolucion=None
                  WHERE id_ticket = %s
             """, (estado, f_cierre, id_ticket))
 
-            cursor.execute("""
-                INSERT INTO detalle_ticket (id_ticket, id_agente, f_asignacion_agente,
-                                            f_solucion, f_revision,
-                                            notas_resolucion, link_img_resolucion)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    id_agente           = VALUES(id_agente),
-                    f_asignacion_agente = COALESCE(VALUES(f_asignacion_agente), f_asignacion_agente),
-                    f_solucion          = VALUES(f_solucion),
-                    f_revision          = VALUES(f_revision),
-                    notas_resolucion    = VALUES(notas_resolucion),
-                    link_img_resolucion = VALUES(link_img_resolucion)
-            """, (id_ticket, id_agente, ahora,
-                  f_solucion or ahora, f_revision,
-                  notas, link_img_resolucion))
+            # Si notas = 'reasignado', buscamos el detalle activo para marcarlo
+            if notas == 'reasignado':
+                cursor.execute("""
+                    UPDATE detalle_ticket
+                       SET notas_resolucion = 'reasignado',
+                           activo = 0
+                     WHERE id_ticket = %s AND activo = 1
+                """, (id_ticket,))
+            else:
+                cursor.execute("""
+                    UPDATE detalle_ticket
+                       SET id_agente           = %s,
+                           f_asignacion_agente = COALESCE(%s, f_asignacion_agente),
+                           f_solucion          = %s,
+                           f_revision          = %s,
+                           notas_resolucion    = %s,
+                           link_img_resolucion = %s
+                     WHERE id_ticket = %s AND activo = 1
+                """, (id_agente, ahora,
+                      f_solucion or ahora, f_revision,
+                      notas, link_img_resolucion, id_ticket))
+                if cursor.rowcount == 0:
+                    cursor.execute("""
+                        INSERT INTO detalle_ticket
+                            (id_ticket, id_agente, f_asignacion_agente,
+                             f_solucion, f_revision,
+                             notas_resolucion, link_img_resolucion, descripcion, activo)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, '', 1)
+                    """, (id_ticket, id_agente, ahora,
+                          f_solucion or ahora, f_revision,
+                          notas, link_img_resolucion))
         conn.commit()
 
 
@@ -247,7 +302,7 @@ def listarTickets():
                 FROM tickets t
                 JOIN usuarios u ON t.id_solicitante = u.id_usuario
                 JOIN aplicaciones a ON t.id_aplicacion = a.id_aplicacion
-                LEFT JOIN detalle_ticket d ON d.id_ticket = t.id_ticket
+                LEFT JOIN detalle_ticket d ON d.id_ticket = t.id_ticket AND d.activo = 1
                 LEFT JOIN usuarios ag ON d.id_agente = ag.id_usuario
                 LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
                 WHERE t.estado NOT IN ('cancelado')
@@ -363,11 +418,12 @@ def listarPosiblesAgentes():
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT id_usuario, nombre_completo, rol
-                FROM usuarios
-                WHERE rol IN ('soporte','programador')
-                  AND activo = 1
-                ORDER BY nombre_completo
+                SELECT u.id_usuario, u.nombre_completo, r.nombre AS rol_nombre
+                FROM usuarios u
+                JOIN rol r ON r.id_rol = u.id_rol
+                WHERE r.nombre IN ('Soporte','Programador')
+                  AND u.activo = 1
+                ORDER BY u.nombre_completo
             """)
             return cursor.fetchall()
 
@@ -388,14 +444,151 @@ def asignarTicket(id_ticket, id_agente, prioridad, intensidad, sla_horas):
             if cursor.rowcount == 0:
                 raise ValueError("El ticket no está en estado 'solicitado' o no existe.")
             cursor.execute("""
-                INSERT INTO detalle_ticket (id_ticket, id_agente, f_asignacion_agente,
-                                            prioridad, intensidad, sla_horas)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    id_agente           = VALUES(id_agente),
-                    f_asignacion_agente = VALUES(f_asignacion_agente),
-                    prioridad           = VALUES(prioridad),
-                    intensidad          = VALUES(intensidad),
-                    sla_horas           = VALUES(sla_horas)
-            """, (id_ticket, id_agente, ahora, prioridad, intensidad, sla_horas))
+                UPDATE detalle_ticket
+                   SET id_agente = %s,
+                       f_asignacion_agente = %s,
+                       prioridad = %s,
+                       intensidad = %s,
+                       sla_horas = %s
+                 WHERE id_ticket = %s AND activo = 1
+            """, (id_agente, ahora, prioridad, intensidad, sla_horas, id_ticket))
+            if cursor.rowcount == 0:
+                cursor.execute("""
+                    INSERT INTO detalle_ticket
+                        (id_ticket, id_agente, f_asignacion_agente,
+                         prioridad, intensidad, sla_horas, descripcion, activo)
+                    VALUES (%s, %s, %s, %s, %s, %s, '', 1)
+                """, (id_ticket, id_agente, ahora, prioridad, intensidad, sla_horas))
         conn.commit()
+
+
+def reasignarTicket(id_ticket, id_nuevo_agente, descripcion_reasignacion, link_img=None):
+    """Reasigna un ticket a otro agente. Marca el detalle activo como 'reasignado' y crea uno nuevo."""
+    from datetime import datetime
+    ahora = datetime.now()
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            # 1. Obtener datos del detalle activo actual (prioridad, intensidad, sla)
+            cursor.execute("""
+                SELECT prioridad, intensidad, sla_horas, id_agente
+                FROM detalle_ticket
+                WHERE id_ticket = %s AND activo = 1
+            """, (id_ticket,))
+            actual = cursor.fetchone()
+
+            # 2. Marcar el detalle activo como reasignado
+            cursor.execute("""
+                UPDATE detalle_ticket
+                   SET notas_resolucion = 'reasignado',
+                       activo = 0
+                 WHERE id_ticket = %s AND activo = 1
+            """, (id_ticket,))
+
+            # 3. Insertar nuevo detalle con el nuevo agente
+            prioridad = actual['prioridad'] if actual else 'media'
+            intensidad = actual['intensidad'] if actual else 'media'
+            sla_horas = actual['sla_horas'] if actual else 24
+
+            cursor.execute("""
+                INSERT INTO detalle_ticket
+                    (id_ticket, id_agente, f_asignacion_agente,
+                     prioridad, intensidad, sla_horas,
+                     descripcion, link_img_descripcion, activo)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)
+            """, (id_ticket, id_nuevo_agente, ahora,
+                  prioridad, intensidad, sla_horas,
+                  descripcion_reasignacion, link_img))
+        conn.commit()
+
+
+def reabrirTicket(id_ticket, descripcion, link_img=None):
+    """Reabre un ticket marcándolo como 'en_progreso'. Crea un nuevo detalle con el mismo agente y SLA."""
+    from datetime import datetime
+    ahora = datetime.now()
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            # 1. Obtener datos del detalle activo actual
+            cursor.execute("""
+                SELECT prioridad, intensidad, sla_horas, id_agente
+                FROM detalle_ticket
+                WHERE id_ticket = %s AND activo = 1
+            """, (id_ticket,))
+            actual = cursor.fetchone()
+
+            # 2. Marcar detalle activo como reabierto
+            cursor.execute("""
+                UPDATE detalle_ticket
+                   SET notas_resolucion = 'reabierto',
+                       activo = 0
+                 WHERE id_ticket = %s AND activo = 1
+            """, (id_ticket,))
+
+            # 3. Insertar nuevo detalle con el mismo agente y SLA
+            prioridad = actual['prioridad'] if actual else 'media'
+            intensidad = actual['intensidad'] if actual else 'media'
+            sla_horas = actual['sla_horas'] if actual else 24
+            id_agente = actual['id_agente'] if actual else None
+
+            cursor.execute("""
+                INSERT INTO detalle_ticket
+                    (id_ticket, id_agente, f_asignacion_agente,
+                     prioridad, intensidad, sla_horas,
+                     descripcion, link_img_descripcion, activo)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)
+            """, (id_ticket, id_agente, ahora,
+                  prioridad, intensidad, sla_horas,
+                  descripcion, link_img))
+
+            # 4. Volver ticket a en_progreso, limpiar f_cierre
+            cursor.execute("""
+                UPDATE tickets
+                   SET estado = 'en_progreso',
+                       f_cierre = NULL
+                 WHERE id_ticket = %s
+            """, (id_ticket,))
+        conn.commit()
+
+
+def obtenerDetallesTicket(id_ticket):
+    """Retorna todos los registros de detalle_ticket para un ticket (historial completo)."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT d.*, u.nombre_completo AS nombre_agente
+                FROM detalle_ticket d
+                LEFT JOIN usuarios u ON d.id_agente = u.id_usuario
+                WHERE d.id_ticket = %s
+                ORDER BY d.f_asignacion_agente ASC, d.id_detalle ASC
+            """, (id_ticket,))
+            return cursor.fetchall()
+
+
+def obtenerCalificacionTicket(id_ticket):
+    """Retorna la calificación de un ticket si existe."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM calificaciones_ticket
+                WHERE id_ticket = %s
+                LIMIT 1
+            """, (id_ticket,))
+            return cursor.fetchone()
+
+
+def listarUsuariosNivelMenor(nivel):
+    """Retorna usuarios activos con nivel menor al dado."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT u.id_usuario, u.nombre_completo, r.nombre AS rol_nombre, u.nivel
+                FROM usuarios u
+                JOIN rol r ON r.id_rol = u.id_rol
+                WHERE u.activo = 1 AND u.nivel < %s
+                ORDER BY u.nombre_completo
+            """, (nivel,))
+            return cursor.fetchall()

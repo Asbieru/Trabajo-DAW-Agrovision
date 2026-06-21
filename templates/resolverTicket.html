@@ -111,22 +111,11 @@
     <a class="btn btn-outline" href="{{ url_for('listar_tickets') }}">← Volver a tickets</a>
 </div>
 
-<!-- RESUMEN DEL TICKET -->
-<div class="card ticket-summary-card">
-    <div class="card-header">📋 Detalle del ticket</div>
+{# ─── INFORMACIÓN GENERAL (solo tabla tickets) ─── #}
+<div class="card">
+    <div class="card-header">📋 Información general</div>
     <div class="card-body">
-        <div class="form-grid ticket-summary-grid">
-            <div>
-                <div class="ticket-summary-label">Título</div>
-                <div class="ticket-summary-value">{{ ticket.titulo }}</div>
-            </div>
-            <div>
-                <div class="ticket-summary-label">Solicitante</div>
-                <div>{{ ticket.nombre_solicitante }}</div>
-            </div>
-        </div>
-
-        <div class="form-grid cuatro ticket-summary-grid">
+        <div class="form-grid cuatro">
             <div>
                 <div class="ticket-summary-label">Tipo</div>
                 {% if ticket.tipo == 'incidencia' %}
@@ -138,12 +127,62 @@
                 {% endif %}
             </div>
             <div>
+                <div class="ticket-summary-label">Estado</div>
+                {% if ticket.estado == 'solicitado' %}
+                    <span class="badge badge-rojo">Solicitado</span>
+                {% elif ticket.estado == 'en_progreso' %}
+                    <span class="badge badge-acento">En progreso</span>
+                {% elif ticket.estado == 'resuelto' %}
+                    <span class="badge badge-verde">Resuelto</span>
+                {% elif ticket.estado == 'cancelado' %}
+                    <span class="badge badge-gris">Cancelado</span>
+                {% else %}
+                    <span class="badge badge-gris">Cerrado</span>
+                {% endif %}
+            </div>
+            <div>
+                <div class="ticket-summary-label">Solicitante</div>
+                <div>{{ ticket.nombre_solicitante }}</div>
+            </div>
+            <div>
+                <div class="ticket-summary-label">Aplicación</div>
+                <div>{{ ticket.nombre_aplicacion }}</div>
+            </div>
+        </div>
+        <hr style="margin:1.5rem 0;border-color:var(--gris-borde);">
+        <div class="form-grid dos">
+            <div>
+                <div class="ticket-summary-label">Fecha de registro</div>
+                <div>{{ ticket.f_registro.strftime('%d/%m/%Y %H:%M') if ticket.f_registro else '—' }}</div>
+            </div>
+            <div>
+                <div class="ticket-summary-label">Fecha de cierre</div>
+                <div>{{ ticket.f_cierre.strftime('%d/%m/%Y %H:%M') if ticket.f_cierre else '—' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ─── DETALLES DEL TICKET ─── #}
+{% for d in detalles %}
+<div class="card" style="margin-top:1.25rem;">
+    <div class="card-header">
+        📋 Detalle #{{ loop.index }}
+        {% if d.activo %}<span class="badge badge-verde" style="float:right;">Activo</span>{% else %}<span class="badge badge-gris" style="float:right;">Histórico</span>{% endif %}
+    </div>
+    <div class="card-body">
+        <div class="form-grid tres">
+            <div>
+                <div class="ticket-summary-label">Agente asignado</div>
+                <div>{{ d.nombre_agente or '—' }}</div>
+            </div>
+            <div>
                 <div class="ticket-summary-label">Prioridad</div>
-                {% if ticket.prioridad == 'critica' %}
+                {% if d.prioridad == 'critica' %}
                     <span class="badge badge-rojo">🚨 Crítica</span>
-                {% elif ticket.prioridad == 'alta' %}
+                {% elif d.prioridad == 'alta' %}
                     <span class="badge badge-rojo">Alta</span>
-                {% elif ticket.prioridad == 'media' %}
+                {% elif d.prioridad == 'media' %}
                     <span class="badge badge-acento">Media</span>
                 {% else %}
                     <span class="badge badge-verde">Baja</span>
@@ -151,45 +190,102 @@
             </div>
             <div>
                 <div class="ticket-summary-label">Intensidad</div>
-                {% if ticket.intensidad == 'critica' %}
+                {% if d.intensidad == 'critica' %}
                     <span class="badge badge-rojo">🔴 Crítica</span>
-                {% elif ticket.intensidad == 'alta' %}
+                {% elif d.intensidad == 'alta' %}
                     <span class="badge badge-rojo">🟠 Alta</span>
-                {% elif ticket.intensidad == 'media' %}
+                {% elif d.intensidad == 'media' %}
                     <span class="badge badge-acento">🟡 Media</span>
                 {% else %}
                     <span class="badge badge-verde">🟢 Baja</span>
                 {% endif %}
             </div>
+        </div>
+
+        <div class="form-grid tres" style="margin-top:0.75rem;font-size:0.85rem;">
             <div>
-                <div class="ticket-summary-label">Estado actual</div>
-                {% if ticket.estado == 'solicitado' %}
-                    <span class="badge badge-rojo">Solicitado</span>
-                {% elif ticket.estado == 'en_progreso' %}
-                    <span class="badge badge-acento">En progreso</span>
-                {% elif ticket.estado == 'resuelto' %}
-                    <span class="badge badge-verde">Resuelto</span>
-                {% else %}
-                    <span class="badge badge-gris">Cerrado</span>
-                {% endif %}
+                <span class="ticket-summary-label">SLA esperado</span>
+                <div>{{ d.sla_horas }} horas</div>
+            </div>
+            <div>
+                <span class="ticket-summary-label">Asignación</span>
+                <div>{{ d.f_asignacion_agente.strftime('%d/%m/%Y %H:%M') if d.f_asignacion_agente else '—' }}</div>
+            </div>
+            <div>
+                <span class="ticket-summary-label">Solución</span>
+                <div>{{ d.f_solucion.strftime('%d/%m/%Y %H:%M') if d.f_solucion else '—' }}</div>
             </div>
         </div>
 
-        <div class="ticket-description-container">
-            <div class="ticket-description-label">Descripción del problema</div>
-            <div class="ticket-description-text">{{ ticket.descripcion }}</div>
+        {% if d.descripcion %}
+        <hr style="margin:1rem 0;border-color:var(--gris-borde);">
+        <div>
+            <span class="ticket-summary-label">Descripción</span>
+            <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.5;">{{ d.descripcion }}</div>
         </div>
+        {% endif %}
+
+        {% if d.link_img_descripcion %}
+        <div style="margin-top:0.75rem;text-align:center;">
+            <img src="{{ d.link_img_descripcion }}" alt="Imagen descriptiva"
+                 style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.1);"
+                 onerror="this.style.display='none'">
+        </div>
+        {% endif %}
+
+        {% if d.notas_resolucion and d.notas_resolucion != 'reasignado' and d.notas_resolucion != 'reabierto' %}
+        <hr style="margin:1rem 0;border-color:var(--gris-borde);">
+        <div>
+            <span class="ticket-summary-label">Notas de resolución</span>
+            <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.5;">{{ d.notas_resolucion }}</div>
+        </div>
+        {% if d.link_img_resolucion %}
+        <div style="margin-top:0.75rem;text-align:center;">
+            <img src="{{ d.link_img_resolucion }}" alt="Imagen de resolución"
+                 style="max-width:100%;max-height:300px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.1);"
+                 onerror="this.style.display='none'">
+        </div>
+        {% endif %}
+        {% elif d.notas_resolucion == 'reasignado' %}
+        <hr style="margin:1rem 0;border-color:var(--gris-borde);">
+        <div>
+            <span class="ticket-summary-label" style="color:var(--acento);">🔄 Reasignado a {{ d.nombre_agente or 'otro agente' }}</span>
+        </div>
+        {% elif d.notas_resolucion == 'reabierto' %}
+        <hr style="margin:1rem 0;border-color:var(--gris-borde);">
+        <div>
+            <span class="ticket-summary-label" style="color:var(--acento);">🔄 Reabierto</span>
+        </div>
+        {% endif %}
+
+        {% if d.activo and calificacion %}
+        <hr style="margin:1rem 0;border-color:var(--gris-borde);">
+        <div>
+            <span class="ticket-summary-label">⭐ Calificación del solicitante</span>
+            <div style="margin-top:0.25rem;">
+                <strong>{{ calificacion.estrellas }}/5</strong>
+                {% if calificacion.observacion %}
+                <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.5;margin-top:0.5rem;">{{ calificacion.observacion }}</div>
+                {% endif %}
+                {% if calificacion.fecha_calificacion %}
+                <div style="font-size:0.8rem;color:var(--gris-texto);margin-top:0.25rem;">
+                    {{ calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+{% endfor %}
 
 <!-- FORMULARIO DE RESOLUCIÓN -->
-<div class="card">
+<div class="card" style="margin-top:1.25rem;">
     <div class="card-header">✅ Registrar resolución</div>
     <div class="card-body">
         <div id="error-mensaje" class="calificacion-alerta error" style="display:none;"></div>
         <form onsubmit="return resolverTicket(event, {{ ticket.id_ticket }})">
 
-            <input type="hidden" id="id_agente" name="id_agente" value="">
             <input type="hidden" name="estado" value="resuelto">
 
             <!-- Notas de resolución -->
@@ -197,13 +293,12 @@
                 <label for="notas_resolucion">Notas de resolución *</label>
                 <textarea id="notas_resolucion" name="notas_resolucion" rows="5"
                           placeholder="Describe qué se hizo para resolver el problema: pasos ejecutados, causa raíz, solución aplicada, pruebas realizadas..."
-                          required>{{ ticket.notas_resolucion or '' }}</textarea>
+                          required></textarea>
             </div>
 
             <div class="form-group form-section-spacing">
                 <label for="link_img_resolucion">Link de imagen de resolución</label>
                 <input type="url" id="link_img_resolucion" name="link_img_resolucion"
-                       value="{{ ticket.link_img_resolucion or '' }}"
                        placeholder="https://ejemplo.com/imagen-resolucion.png (opcional)"
                        style="font-size:0.88rem;">
                 <span class="form-hint">Opcional. URL de una captura o imagen que evidencie la resolución</span>
@@ -212,19 +307,66 @@
             <!-- ACCIONES -->
             <div class="form-actions">
                 <button type="submit" class="btn btn-verde">💾 Guardar resolución</button>
+                {% if nivel_usuario > 1 and agentes_disponibles %}
+                <button type="button" class="btn btn-acento" onclick="mostrarFormReasignar()">🔄 Reasignar</button>
+                {% endif %}
                 <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">Cancelar</a>
             </div>
 
         </form>
     </div>
 </div>
+
+<!-- FORMULARIO DE REASIGNACIÓN (oculto) -->
+{% if nivel_usuario > 1 and agentes_disponibles %}
+<div id="form-reasignar-wrap" style="display:none;">
+    <div class="card" style="margin-top:20px;">
+        <div class="card-header">🔄 Reasignar ticket</div>
+        <div class="card-body">
+            <div id="error-reasignar" class="calificacion-alerta error" style="display:none;"></div>
+            <form onsubmit="return reasignarTicket(event, {{ ticket.id_ticket }})">
+                <div class="form-group form-section-spacing">
+                    <label for="reasignar-descripcion">Descripción de la reasignación *</label>
+                    <textarea id="reasignar-descripcion" rows="4"
+                              placeholder="Explica por qué se reasigna este ticket..."
+                              required></textarea>
+                </div>
+
+                <div class="form-group form-section-spacing">
+                    <label for="reasignar-link">Link de imagen</label>
+                    <input type="url" id="reasignar-link"
+                           placeholder="https://ejemplo.com/imagen.png (opcional)"
+                           style="font-size:0.88rem;">
+                </div>
+
+                <div class="form-group form-section-spacing">
+                    <label for="reasignar-agente">Nuevo agente *</label>
+                    <select id="reasignar-agente" required>
+                        <option value="">— Selecciona un agente —</option>
+                        {% for a in agentes_disponibles %}
+                        <option value="{{ a.id_usuario }}">{{ a.nombre_completo }} ({{ a.rol_nombre }})</option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-hint">Solo se muestran usuarios con nivel menor al tuyo</span>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-acento">🔄 Confirmar reasignación</button>
+                    <button type="button" class="btn btn-outline" onclick="ocultarFormReasignar()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endif %}
 
+{# El script de resolución solo se incluye en Vista B (ticket concreto) #}
+{% if ticket is defined %}
 <script>
 function resolverTicket(event, idTicket) {
     event.preventDefault();
     var datos = {
-        id_agente: document.getElementById('id_agente').value,
         notas_resolucion: document.getElementById('notas_resolucion').value,
         link_img_resolucion: document.getElementById('link_img_resolucion').value
     };
@@ -248,16 +390,52 @@ function resolverTicket(event, idTicket) {
     return false;
 }
 
+{% if nivel_usuario > 1 and agentes_disponibles %}
+function mostrarFormReasignar() {
+    document.getElementById('form-reasignar-wrap').style.display = '';
+    document.getElementById('form-reasignar-wrap').scrollIntoView({ behavior: 'smooth' });
+}
+
+function ocultarFormReasignar() {
+    document.getElementById('form-reasignar-wrap').style.display = 'none';
+    document.getElementById('error-reasignar').style.display = 'none';
+}
+
+function reasignarTicket(event, idTicket) {
+    event.preventDefault();
+    var descripcion = document.getElementById('reasignar-descripcion').value.trim();
+    if (!descripcion) { showAlert('Descripción requerida', 'error'); return false; }
+    var idAgente = document.getElementById('reasignar-agente').value;
+    if (!idAgente) { showAlert('Seleccione un agente', 'error'); return false; }
+    var datos = {
+        id_agente: parseInt(idAgente),
+        descripcion: descripcion,
+        link_img: document.getElementById('reasignar-link').value.trim() || null
+    };
+    var btn = event.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    apiPost('/api/ticket/' + idTicket + '/reasignar', datos).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+            showToast('Ticket reasignado correctamente', 'success');
+            setTimeout(function() { window.location.href = '{{ url_for("listar_tickets") }}'; }, 300);
+        } else {
+            showAlert(data.mensaje || 'Error al reasignar', 'error');
+        }
+    }).catch(function(err) {
+        btn.disabled = false;
+        showAlert('Error de conexión: ' + err.message, 'error');
+    });
+    return false;
+}
+{% endif %}
+
 (function() {
     try {
-        var raw = localStorage.getItem('usuario');
-        if (!raw) return;
-        var u = JSON.parse(raw);
-        if (u.id_usuario != null) {
-            document.getElementById('id_agente').value = u.id_usuario;
-        }
+        if (!USUARIO) return;
     } catch(e) {}
 })();
 </script>
+{% endif %}
 
 {% endblock %}
