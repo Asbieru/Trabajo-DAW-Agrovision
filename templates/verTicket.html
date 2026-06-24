@@ -186,11 +186,16 @@
 
 {# ─── ACCIONES ─── #}
 <div class="form-actions" style="margin-top:1.5rem;">
-    {% if ticket.estado == 'solicitado' %}
+    {% if ticket.estado == 'solicitado' and usuario and usuario.id_usuario == ticket.id_solicitante %}
         <a href="{{ url_for('form_editar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline">✏️ Editar</a>
-    {% elif ticket.estado == 'en_progreso' and usuario and usuario.id_usuario == ticket.id_agente %}
+    {% endif %}
+    {% if ticket.estado == 'solicitado' and usuario and usuario.nivel|default(0) > 1 %}
+        <a href="{{ url_for('form_asignar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-acento">📌 Asignar</a>
+    {% endif %}
+    {% if ticket.estado == 'en_progreso' and usuario and usuario.id_usuario == ticket.id_agente %}
         <a href="{{ url_for('form_resolver_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-verde">🔧 Resolver</a>
-    {% elif ticket.estado == 'resuelto' and not calificacion and usuario and usuario.id_usuario == ticket.id_solicitante %}
+    {% endif %}
+    {% if ticket.estado == 'resuelto' and not calificacion and usuario and usuario.id_usuario == ticket.id_solicitante %}
         <a href="{{ url_for('form_calificar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline">⭐ Calificar</a>
     {% endif %}
     <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">← Volver</a>
