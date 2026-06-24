@@ -382,6 +382,8 @@ def form_editar_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket or ticket['estado'] != 'solicitado':
         return redirect(url_for('listar_tickets'))
+    if ticket['id_solicitante'] != session['usuario']['id_usuario']:
+        return redirect(url_for('listar_tickets'))
     aplicaciones = listarAplicaciones()
     return render_template('editarTicket.html', ticket=ticket, aplicaciones=aplicaciones)
 
@@ -391,6 +393,8 @@ def form_editar_ticket(id_ticket):
 def guardar_edicion_ticket(id_ticket):
     ticket = obtenerTicket(id_ticket)
     if not ticket or ticket['estado'] != 'solicitado':
+        return redirect(url_for('listar_tickets'))
+    if ticket['id_solicitante'] != session['usuario']['id_usuario']:
         return redirect(url_for('listar_tickets'))
 
     titulo                = request.form.get('titulo', '').strip()

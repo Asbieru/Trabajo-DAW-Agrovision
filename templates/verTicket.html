@@ -27,7 +27,7 @@
             </div>
             <div>
                 <div class="ticket-summary-label">Estado</div>
-                {% if ticket.estado == 'solicitado' %}
+    {% if ticket.estado == 'solicitado' and usuario and usuario.id_usuario == ticket.id_solicitante %}
                     <span class="badge badge-rojo">Solicitado</span>
                 {% elif ticket.estado == 'en_progreso' %}
                     <span class="badge badge-acento">En progreso</span>
