@@ -5,6 +5,7 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 
 from flask import Flask, render_template, request, redirect, url_for, abort, jsonify, make_response, session
 from functools import wraps
+import jwt
 import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -76,6 +77,55 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
+
+
+JWT_SECRET = 'agrovision-clave-secreta-2024'
+JWT_ALGORITHM = 'HS256'
+
+
+def jwt_required(f=None):
+    """Verifica el token JWT del header Authorization: Bearer <token>.
+    Usar como @jwt_required o @jwt_required()."""
+    if f is not None:
+        # Usado como @jwt_required (sin paréntesis)
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            auth = request.headers.get('Authorization', '')
+            if auth.startswith('Bearer '):
+                token = auth[7:]
+                try:
+                    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+                    if not session.get('usuario'):
+                        session['usuario'] = payload['usuario']
+                        session.permanent = True
+                    return f(*args, **kwargs)
+                except jwt.ExpiredSignatureError:
+                    return jsonify({'ok': False, 'mensaje': 'Token expirado.'}), 401
+                except jwt.InvalidTokenError:
+                    return jsonify({'ok': False, 'mensaje': 'Token inválido.'}), 401
+            return f(*args, **kwargs)
+        return decorated
+
+    # Usado como @jwt_required() (con paréntesis)
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            auth = request.headers.get('Authorization', '')
+            if auth.startswith('Bearer '):
+                token = auth[7:]
+                try:
+                    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+                    if not session.get('usuario'):
+                        session['usuario'] = payload['usuario']
+                        session.permanent = True
+                    return f(*args, **kwargs)
+                except jwt.ExpiredSignatureError:
+                    return jsonify({'ok': False, 'mensaje': 'Token expirado.'}), 401
+                except jwt.InvalidTokenError:
+                    return jsonify({'ok': False, 'mensaje': 'Token inválido.'}), 401
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
 
 
 @app.context_processor
@@ -542,6 +592,7 @@ def listar_proyectos():
 
 @app.route('/api/proyecto/<int:id_proyecto>/eliminar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_eliminar_proyecto(id_proyecto):
     if tieneActividadesPendientes(id_proyecto):
         return jsonify({'ok': False, 'mensaje': 'No se puede eliminar: el proyecto tiene actividades pendientes.'})
@@ -553,6 +604,7 @@ def api_eliminar_proyecto(id_proyecto):
 
 @app.route('/api/reporte/proyecto/<int:id_proyecto>/actividades')
 @login_required
+@jwt_required()
 def api_reporte_actividades(id_proyecto):
     actividades = reporteActividadesPorProyecto(id_proyecto)
     resumen     = resumenActividadesReporte(id_proyecto)
@@ -1285,12 +1337,14 @@ def api_login():
     if ok:
         session['usuario'] = datos
         session.permanent = True
-        return jsonify({'ok': True, 'usuario': datos})
+        token = jwt.encode({'usuario': datos}, JWT_SECRET, algorithm=JWT_ALGORITHM)
+        return jsonify({'ok': True, 'usuario': datos, 'token': token})
     return jsonify({'ok': False, 'mensaje': mensaje})
 
 
 @app.route('/api/usuario/me')
 @login_required
+@jwt_required()
 def api_usuario_me():
     usuario_session = session.get('usuario')
     id_usuario = usuario_session.get('id_usuario') if usuario_session else None
@@ -1318,6 +1372,7 @@ def api_usuario_me():
 
 @app.route('/api/indicadores')
 @login_required
+@jwt_required()
 def api_indicadores():
     return jsonify({
         'por_app':       kpiPorAplicacion(),
@@ -1328,6 +1383,7 @@ def api_indicadores():
 
 @app.route('/api/tickets')
 @login_required
+@jwt_required()
 def api_tickets():
     estado = request.args.get('estado', '') or None
     texto  = request.args.get('texto',  '') or None
@@ -1349,6 +1405,7 @@ def api_tickets():
 
 @app.route('/api/actividad/<int:id_actividad>/estado', methods=['POST'])
 @login_required
+@jwt_required()
 def api_estado_actividad(id_actividad):
     data         = request.get_json()
     nuevo_estado = data.get('estado') if data else None
@@ -1360,6 +1417,7 @@ def api_estado_actividad(id_actividad):
 
 @app.route('/api/actividad/<int:id_actividad>/desbloquear', methods=['POST'])
 @login_required
+@jwt_required()
 def api_desbloquear_actividad(id_actividad):
     estado_retorno = desbloquearActividad(id_actividad)
     return jsonify({'ok': True, 'estado': estado_retorno})
@@ -1367,6 +1425,7 @@ def api_desbloquear_actividad(id_actividad):
 
 @app.route('/api/actividad/<int:id_actividad>/eliminar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_eliminar_actividad(id_actividad):
     ok = eliminarActividad(id_actividad)
     if ok:
@@ -1375,6 +1434,7 @@ def api_eliminar_actividad(id_actividad):
 
 @app.route('/api/proyecto/<int:id_proyecto>/porcentaje')
 @login_required
+@jwt_required()
 def api_porcentaje_proyecto(id_proyecto):
     resumen     = resumenActividadesPorProyecto()
     fila_actual = next((r for r in resumen
@@ -1396,6 +1456,7 @@ def api_porcentaje_proyecto(id_proyecto):
 
 @app.route('/api/proyecto/<int:id_proyecto>/avances-grafico')
 @login_required
+@jwt_required()
 def api_avances_grafico(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     avances = listarAvances(id_proyecto)
@@ -1440,6 +1501,7 @@ def api_avances_grafico(id_proyecto):
 
 @app.route('/api/avance/<int:id_avance>/eliminar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_eliminar_avance(id_avance):
     try:
         eliminarAvance(id_avance)
@@ -1455,6 +1517,7 @@ def api_eliminar_avance(id_avance):
 
 @app.route('/api/ticket/guardar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_guardar_ticket():
     data = request.get_json()
     if not data:
@@ -1483,6 +1546,7 @@ def api_guardar_ticket():
 
 @app.route('/api/ticket/<int:id_ticket>/resolver', methods=['POST'])
 @login_required
+@jwt_required()
 def api_resolver_ticket(id_ticket):
     data = request.get_json()
     if not data:
@@ -1496,6 +1560,7 @@ def api_resolver_ticket(id_ticket):
 
 @app.route('/api/ticket/<int:id_ticket>/reasignar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_reasignar_ticket(id_ticket):
     data = request.get_json()
     if not data:
@@ -1521,6 +1586,7 @@ def api_reasignar_ticket(id_ticket):
 
 @app.route('/api/ticket/<int:id_ticket>/calificar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_calificar_ticket(id_ticket):
     data = request.get_json()
     if not data:
@@ -1540,6 +1606,7 @@ def api_calificar_ticket(id_ticket):
 
 @app.route('/api/ticket/<int:id_ticket>/no-solucionado', methods=['POST'])
 @login_required
+@jwt_required()
 def api_no_solucionado_ticket(id_ticket):
     """Califica y reabre el ticket (nuevo detalle con mismo agente, estado=en_progreso)."""
     data = request.get_json()
@@ -1565,6 +1632,7 @@ def api_no_solucionado_ticket(id_ticket):
 
 @app.route('/api/ticket/<int:id_ticket>/editar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_editar_ticket(id_ticket):
     data = request.get_json()
     if not data:
@@ -1585,6 +1653,7 @@ def api_editar_ticket(id_ticket):
 
 @app.route('/api/ticket/<int:id_ticket>/cancelar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_cancelar_ticket(id_ticket):
     cancelarTicket(id_ticket)
     return jsonify({'ok': True})
@@ -1592,6 +1661,7 @@ def api_cancelar_ticket(id_ticket):
 
 @app.route('/api/ticket/<int:id_ticket>/asignar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_asignar_ticket(id_ticket):
     data = request.get_json()
     if not data:
@@ -1626,6 +1696,7 @@ def api_asignar_ticket(id_ticket):
 
 @app.route('/api/aplicacion/nueva', methods=['POST'])
 @login_required
+@jwt_required()
 def api_nueva_aplicacion():
     data = request.get_json()
     if not data:
@@ -1642,6 +1713,7 @@ def api_nueva_aplicacion():
 
 @app.route('/api/aplicacion/<int:id_aplicacion>/editar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_editar_aplicacion(id_aplicacion):
     data = request.get_json()
     if not data:
@@ -1661,6 +1733,7 @@ def api_editar_aplicacion(id_aplicacion):
 
 @app.route('/api/aplicacion/<int:id_aplicacion>/eliminar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_eliminar_aplicacion(id_aplicacion):
     eliminarAplicacion(id_aplicacion)
     return jsonify({'ok': True})
@@ -1668,6 +1741,7 @@ def api_eliminar_aplicacion(id_aplicacion):
 
 @app.route('/api/aplicacion/<int:id_aplicacion>/toggle-estado', methods=['POST'])
 @login_required
+@jwt_required()
 def api_toggle_estado_aplicacion(id_aplicacion):
     toggleEstadoAplicacion(id_aplicacion)
     return jsonify({'ok': True})
@@ -1679,6 +1753,7 @@ def api_toggle_estado_aplicacion(id_aplicacion):
 
 @app.route('/api/proyecto/guardar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_guardar_proyecto():
     data = request.get_json()
     if not data:
@@ -1710,6 +1785,7 @@ def api_guardar_proyecto():
 
 @app.route('/api/proyecto/<int:id_proyecto>/editar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_editar_proyecto(id_proyecto):
     data = request.get_json()
     if not data:
@@ -1735,6 +1811,7 @@ def api_editar_proyecto(id_proyecto):
 
 @app.route('/api/proyecto/<int:id_proyecto>/avances/nuevo', methods=['POST'])
 @login_required
+@jwt_required()
 def api_nuevo_avance(id_proyecto):
     data = request.get_json()
     if not data:
@@ -1768,6 +1845,7 @@ def api_nuevo_avance(id_proyecto):
 
 @app.route('/api/proyecto/<int:id_proyecto>/avances/eliminar/<int:id_avance>', methods=['POST'])
 @login_required
+@jwt_required()
 def api_eliminar_avance_ruta(id_proyecto, id_avance):
     try:
         eliminarAvance(id_avance)
@@ -1783,6 +1861,7 @@ def api_eliminar_avance_ruta(id_proyecto, id_avance):
 
 @app.route('/api/actividad/guardar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_guardar_actividad():
     data = request.get_json()
     if not data:
@@ -1808,6 +1887,7 @@ def api_guardar_actividad():
 
 @app.route('/api/actividad/<int:id_actividad>/editar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_editar_actividad(id_actividad):
     data = request.get_json()
     if not data:
@@ -1851,6 +1931,7 @@ def aprobacion_proyectos():
 
 @app.route('/api/proyecto/<int:id_proyecto>/aprobar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_aprobar_proyecto(id_proyecto):
     try:
         from datetime import date
@@ -1875,6 +1956,7 @@ def api_aprobar_proyecto(id_proyecto):
 
 @app.route('/api/proyecto/<int:id_proyecto>/sprints')
 @login_required
+@jwt_required()
 def api_sprints_por_proyecto(id_proyecto):
     """Devuelve los sprints de un proyecto en JSON para el combo dinámico."""
     try:
@@ -1897,6 +1979,7 @@ def api_sprints_por_proyecto(id_proyecto):
 
 @app.route('/api/proyecto/<int:id_proyecto>/rechazar', methods=['POST'])
 @login_required
+@jwt_required()
 def api_rechazar_proyecto(id_proyecto):
     try:
         rechazarProyecto(id_proyecto)
@@ -1908,6 +1991,7 @@ def api_rechazar_proyecto(id_proyecto):
 
 @app.route('/api/usuario/nuevo', methods=['POST'])
 @login_required
+@jwt_required()
 def api_nuevo_usuario():
     data = request.get_json()
     if not data:
@@ -1973,12 +2057,14 @@ def form_editar_rol(id_rol):
 
 @app.route('/api/roles')
 @login_required
+@jwt_required()
 def api_listar_roles():
     return jsonify({'ok': True, 'roles': listarRoles()})
 
 
 @app.route('/api/rol', methods=['POST'])
 @login_required
+@jwt_required()
 def api_crear_rol():
     data = request.get_json()
     if not data:
@@ -1993,6 +2079,7 @@ def api_crear_rol():
 
 @app.route('/api/rol/<int:id_rol>', methods=['PUT'])
 @login_required
+@jwt_required()
 def api_actualizar_rol(id_rol):
     data = request.get_json()
     if not data:
@@ -2007,6 +2094,7 @@ def api_actualizar_rol(id_rol):
 
 @app.route('/api/rol/<int:id_rol>', methods=['DELETE'])
 @login_required
+@jwt_required()
 def api_eliminar_rol(id_rol):
     ok = eliminarRol(id_rol)
     if ok:
@@ -2040,12 +2128,14 @@ def form_editar_permiso(id_rol_permiso):
 
 @app.route('/api/rol/<int:id_rol>/permisos')
 @login_required
+@jwt_required()
 def api_permisos_por_rol(id_rol):
     return jsonify({'ok': True, 'permisos': listarPermisos(id_rol)})
 
 
 @app.route('/api/permisos')
 @login_required
+@jwt_required()
 def api_listar_permisos():
     id_rol = request.args.get('id_rol', type=int)
     return jsonify({'ok': True, 'permisos': listarPermisos(id_rol)})
@@ -2053,6 +2143,7 @@ def api_listar_permisos():
 
 @app.route('/api/permiso', methods=['POST'])
 @login_required
+@jwt_required()
 def api_crear_permiso():
     data = request.get_json()
     if not data:
@@ -2068,6 +2159,7 @@ def api_crear_permiso():
 
 @app.route('/api/permiso/<int:id_rol_permiso>', methods=['PUT'])
 @login_required
+@jwt_required()
 def api_actualizar_permiso(id_rol_permiso):
     data = request.get_json()
     if not data:
@@ -2083,6 +2175,7 @@ def api_actualizar_permiso(id_rol_permiso):
 
 @app.route('/api/permiso/<int:id_rol_permiso>', methods=['DELETE'])
 @login_required
+@jwt_required()
 def api_eliminar_permiso(id_rol_permiso):
     eliminarPermiso(id_rol_permiso)
     return jsonify({'ok': True})
