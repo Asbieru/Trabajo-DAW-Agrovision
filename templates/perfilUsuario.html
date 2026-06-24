@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Perfil · {{ usuario.nombre_completo }}{% endblock %}
+{% block title %}Perfil · {{ perfil.nombre_completo }}{% endblock %}
 
 {% block content %}
 
@@ -19,9 +19,9 @@
 
             <!-- Foto o avatar -->
             <div style="flex-shrink:0;">
-                {% if usuario.foto_url %}
-                <img src="{{ usuario.foto_url }}"
-                     alt="Foto de {{ usuario.nombre_completo }}"
+                {% if perfil.foto_url %}
+                <img src="{{ perfil.foto_url }}"
+                     alt="Foto de {{ perfil.nombre_completo }}"
                      style="width:110px;height:110px;border-radius:14px;
                             object-fit:cover;border:3px solid var(--gris-borde);
                             box-shadow:var(--sombra);">
@@ -31,7 +31,7 @@
                             display:flex;align-items:center;justify-content:center;
                             font-weight:800;font-size:2.2rem;
                             border:3px solid var(--gris-borde);box-shadow:var(--sombra);">
-                    {{ usuario.nombre_completo[0]|upper }}{{ (usuario.apellido[0]|upper) if usuario.apellido else '' }}
+                    {{ perfil.nombre_completo[0]|upper }}{{ (perfil.apellido[0]|upper) if perfil.apellido else '' }}
                 </div>
                 {% endif %}
             </div>
@@ -45,7 +45,7 @@
                         Nombre
                     </div>
                     <div style="font-weight:600;font-size:0.95rem;">
-                        {{ usuario.nombre_completo or '—' }}
+                        {{ perfil.nombre_completo or '—' }}
                     </div>
                 </div>
 
@@ -55,7 +55,7 @@
                         Apellido
                     </div>
                     <div style="font-weight:600;font-size:0.95rem;">
-                        {{ usuario.apellido or '—' }}
+                        {{ perfil.apellido or '—' }}
                     </div>
                 </div>
 
@@ -65,7 +65,7 @@
                         Edad
                     </div>
                     <div style="font-weight:600;font-size:0.95rem;">
-                        {{ usuario.edad ~ ' años' if usuario.edad else '—' }}
+                        {{ perfil.edad ~ ' años' if perfil.edad else '—' }}
                     </div>
                 </div>
 
@@ -75,7 +75,7 @@
                         Cargo
                     </div>
                     <div style="font-weight:600;font-size:0.95rem;">
-                        {{ usuario.rol_nombre }}
+                        {{ perfil.rol_nombre }}
                     </div>
                 </div>
 
@@ -85,7 +85,7 @@
                         Correo
                     </div>
                     <div style="font-weight:600;font-size:0.95rem;word-break:break-all;">
-                        {{ usuario.correo or '—' }}
+                        {{ perfil.correo or '—' }}
                     </div>
                 </div>
 
@@ -95,7 +95,7 @@
                         DNI
                     </div>
                     <div style="font-weight:600;font-size:0.95rem;">
-                        {{ usuario.dni or '—' }}
+                        {{ perfil.dni or '—' }}
                     </div>
                 </div>
 
@@ -105,7 +105,7 @@
                         Dirección
                     </div>
                     <div style="font-weight:600;font-size:0.95rem;">
-                        {{ usuario.direccion or '—' }}
+                        {{ perfil.direccion or '—' }}
                     </div>
                 </div>
 
@@ -164,7 +164,7 @@
             {% if stats.tickets_por_tipo %}
             <canvas id="grafico-perfil-tickets" style="max-height:220px;"></canvas>
             {% else %}
-            <div class="sin-datos">Sin tickets registrados para este usuario.</div>
+            <div class="sin-datos">Sin tickets registrados para este perfil.</div>
             {% endif %}
         </div>
     </div>
@@ -185,7 +185,7 @@
 
 <!-- Botón historial -->
 <div style="margin-top:8px;">
-    <a href="{{ url_for('historial_usuario', id_usuario=usuario.id_usuario) }}"
+    <a href="{{ url_for('historial_usuario', id_usuario=perfil.id_usuario) }}"
        class="btn btn-verde">
         📋 Ver Historial de Participación
     </a>

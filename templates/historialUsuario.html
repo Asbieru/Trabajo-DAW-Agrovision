@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Historial · {{ usuario.nombre_completo }}{% endblock %}
+{% block title %}Historial · {{ perfil.nombre_completo }}{% endblock %}
 
 {% block content %}
 
 <!-- ENCABEZADO -->
 <div class="page-header">
     <div>
-        <h1>📋 Historia de participación de: {{ usuario.nombre_completo }}{% if usuario.apellido %} {{ usuario.apellido
+        <h1>📋 Historia de participación de: {{ perfil.nombre_completo }}{% if perfil.apellido %} {{ perfil.apellido
             }}{% endif %}</h1>
         <p>Tickets y proyectos en los que el usuario ha participado</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="{{ url_for('perfil_usuario', id_usuario=usuario.id_usuario) }}" class="btn btn-outline btn-sm">👤 Ver
+        <a href="{{ url_for('perfil_usuario', id_usuario=perfil.id_usuario) }}" class="btn btn-outline btn-sm">👤 Ver
             Perfil</a>
         <a href="{{ url_for('lista_usuarios') }}" class="btn btn-outline btn-sm">← Volver</a>
     </div>
@@ -40,7 +40,7 @@
 </div>
 <!-- RESUMEN ESTADÍSTICO -->
 <h2 style="font-size:1.05rem;font-weight:700;margin-bottom:14px;color:var(--negro);">
-    📊 Resumen de {{ usuario.nombre_completo }}
+    📊 Resumen de {{ perfil.nombre_completo }}
 </h2>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:8px;">

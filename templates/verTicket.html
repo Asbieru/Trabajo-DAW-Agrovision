@@ -188,27 +188,12 @@
 <div class="form-actions" style="margin-top:1.5rem;">
     {% if ticket.estado == 'solicitado' %}
         <a href="{{ url_for('form_editar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline">✏️ Editar</a>
-    {% elif ticket.estado == 'en_progreso' %}
-        <a href="{{ url_for('form_resolver_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-verde btn-resolver" data-id-agente="{{ ticket.id_agente or '' }}">🔧 Resolver</a>
-    {% elif ticket.estado == 'resuelto' and not calificacion %}
-        <a href="{{ url_for('form_calificar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline btn-calificar" data-id-solicitante="{{ ticket.id_solicitante }}">⭐ Calificar</a>
+    {% elif ticket.estado == 'en_progreso' and usuario and usuario.id_usuario == ticket.id_agente %}
+        <a href="{{ url_for('form_resolver_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-verde">🔧 Resolver</a>
+    {% elif ticket.estado == 'resuelto' and not calificacion and usuario and usuario.id_usuario == ticket.id_solicitante %}
+        <a href="{{ url_for('form_calificar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline">⭐ Calificar</a>
     {% endif %}
     <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">← Volver</a>
 </div>
 
-<script>
-(function() {
-    try {
-        var u = typeof USUARIO !== 'undefined' ? USUARIO : null;
-        if (!u) return;
-        var uid = String(u.id_usuario).trim();
-        document.querySelectorAll('.btn-calificar').forEach(function(el) {
-            var sid = el.getAttribute('data-id-solicitante');
-            if (!sid || String(sid).trim() !== uid) {
-                el.style.display = 'none';
-            }
-        });
-    } catch(e) {}
-})();
-</script>
 {% endblock %}

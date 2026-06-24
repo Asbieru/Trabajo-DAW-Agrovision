@@ -310,6 +310,8 @@ def form_resolver_ticket(id_ticket):
     ticket   = obtenerTicket(id_ticket)
     if not ticket or ticket['estado'] != 'en_progreso':
         return redirect(url_for('listar_tickets'))
+    if ticket.get('id_agente') != session['usuario']['id_usuario']:
+        return redirect(url_for('listar_tickets'))
     nivel_usuario = session['usuario'].get('nivel', 1)
     agentes_disponibles = listarUsuariosNivelMenor(nivel_usuario) if nivel_usuario > 1 else []
     detalles = obtenerDetallesTicket(id_ticket)
@@ -323,6 +325,11 @@ def form_resolver_ticket(id_ticket):
 @app.route('/ticket/<int:id_ticket>/resolver', methods=['POST'])
 @login_required
 def guardar_resolucion(id_ticket):
+    ticket = obtenerTicket(id_ticket)
+    if not ticket or ticket['estado'] != 'en_progreso':
+        return redirect(url_for('listar_tickets'))
+    if ticket.get('id_agente') != session['usuario']['id_usuario']:
+        return redirect(url_for('listar_tickets'))
     id_agente            = session['usuario']['id_usuario']
     notas                = request.form.get('notas_resolucion', '').strip()
     link_img_resolucion  = request.form.get('link_img_resolucion', '').strip() or None
@@ -338,6 +345,8 @@ def form_calificar_ticket(id_ticket):
         abort(404)
     if ticket['estado'] != 'resuelto':
         abort(400)
+    if ticket['id_solicitante'] != session['usuario']['id_usuario']:
+        return redirect(url_for('listar_tickets'))
     return render_template('calificarTicket.html',
                            ticket=ticket,
                            mensaje=None,
@@ -352,6 +361,8 @@ def guardar_calificacion_ticket(id_ticket):
         abort(404)
     if ticket['estado'] != 'resuelto':
         abort(400)
+    if ticket['id_solicitante'] != session['usuario']['id_usuario']:
+        return redirect(url_for('listar_tickets'))
     estrellas_raw = request.form.get('estrellas', '').strip()
     observacion = request.form.get('observacion', '').strip()
     try:
@@ -1286,17 +1297,16 @@ def lista_usuarios():
 @app.route('/usuario/<int:id_usuario>/perfil')
 @login_required
 def perfil_usuario(id_usuario):
-    usuario = obtenerPerfilUsuario(id_usuario)
-    if not usuario:
+    perfil = obtenerPerfilUsuario(id_usuario)
+    if not perfil:
         abort(404)
     stats = estadisticasUsuario(id_usuario)
 
-    # Listas Python puras — el template las serializa con el filtro tojson de Jinja2
     tickets_json   = [dict(t) for t in stats['tickets_por_tipo']]
     proyectos_json = [dict(p) for p in stats['proyectos_por_estado']]
 
     return render_template('perfilUsuario.html',
-                           usuario=usuario,
+                           perfil=perfil,
                            stats=stats,
                            tickets_json=tickets_json,
                            proyectos_json=proyectos_json)
@@ -1305,13 +1315,13 @@ def perfil_usuario(id_usuario):
 @app.route('/usuario/<int:id_usuario>/historial')
 @login_required
 def historial_usuario(id_usuario):
-    usuario = obtenerPerfilUsuario(id_usuario)
-    if not usuario:
+    perfil = obtenerPerfilUsuario(id_usuario)
+    if not perfil:
         abort(404)
     items   = historialParticipacionUsuario(id_usuario)
     resumen = resumenHistorialUsuario(id_usuario)
     return render_template('historialUsuario.html',
-                           usuario=usuario,
+                           perfil=perfil,
                            items=items,
                            resumen=resumen)
 
