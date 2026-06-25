@@ -162,19 +162,19 @@
         </div>
         {% endif %}
 
-        {# ─── Calificación asociada a este ticket (solo en el detalle activo) ─── #}
-        {% if d.activo and calificacion %}
+        {# ─── Calificación de este detalle ─── #}
+        {% if d.calificacion_estrellas %}
         <hr style="margin:1rem 0;border-color:var(--gris-borde);">
         <div>
             <span class="ticket-summary-label">⭐ Calificación del solicitante</span>
             <div style="margin-top:0.25rem;">
-                <strong>{{ calificacion.estrellas }}/5</strong>
-                {% if calificacion.observacion %}
-                <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.5;margin-top:0.5rem;">{{ calificacion.observacion }}</div>
+                <strong>{{ d.calificacion_estrellas }}/5</strong>
+                {% if d.calificacion_observacion %}
+                <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.5;margin-top:0.5rem;">{{ d.calificacion_observacion }}</div>
                 {% endif %}
-                {% if calificacion.fecha_calificacion %}
+                {% if d.calificacion_fecha %}
                 <div style="font-size:0.8rem;color:var(--gris-texto);margin-top:0.25rem;">
-                    {{ calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M') }}
+                    {{ d.calificacion_fecha.strftime('%d/%m/%Y %H:%M') }}
                 </div>
                 {% endif %}
             </div>
@@ -184,6 +184,7 @@
 </div>
 {% endfor %}
 
+{% set ya_calificado = detalles | selectattr('activo') | selectattr('calificacion_estrellas') | list | length > 0 %}
 {# ─── ACCIONES ─── #}
 <div class="form-actions" style="margin-top:1.5rem;">
     {% if ticket.estado == 'solicitado' and usuario and usuario.id_usuario == ticket.id_solicitante %}
@@ -195,7 +196,7 @@
     {% if ticket.estado == 'en_progreso' and usuario and usuario.id_usuario == ticket.id_agente %}
         <a href="{{ url_for('form_resolver_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-verde">🔧 Resolver</a>
     {% endif %}
-    {% if ticket.estado == 'resuelto' and not calificacion and usuario and usuario.id_usuario == ticket.id_solicitante %}
+    {% if ticket.estado == 'resuelto' and not ya_calificado and usuario and usuario.id_usuario == ticket.id_solicitante %}
         <a href="{{ url_for('form_calificar_ticket', id_ticket=ticket.id_ticket) }}" class="btn btn-outline">⭐ Calificar</a>
     {% endif %}
     <a href="{{ url_for('listar_tickets') }}" class="btn btn-outline">← Volver</a>

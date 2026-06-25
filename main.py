@@ -299,9 +299,8 @@ def ver_ticket(id_ticket):
     if not ticket:
         abort(404)
     detalles = obtenerDetallesTicket(id_ticket)
-    calificacion = obtenerCalificacionTicket(id_ticket)
     return render_template('verTicket.html', ticket=ticket,
-                           detalles=detalles, calificacion=calificacion)
+                           detalles=detalles)
 
 
 @app.route('/ticket/<int:id_ticket>/resolver')
@@ -315,11 +314,10 @@ def form_resolver_ticket(id_ticket):
     nivel_usuario = session['usuario'].get('nivel', 1)
     agentes_disponibles = listarUsuariosNivelMenor(nivel_usuario) if nivel_usuario > 1 else []
     detalles = obtenerDetallesTicket(id_ticket)
-    calificacion = obtenerCalificacionTicket(id_ticket)
     return render_template('resolverTicket.html', ticket=ticket,
                            nivel_usuario=nivel_usuario,
                            agentes_disponibles=agentes_disponibles,
-                           detalles=detalles, calificacion=calificacion)
+                           detalles=detalles)
 
 
 @app.route('/ticket/<int:id_ticket>/resolver', methods=['POST'])
@@ -347,8 +345,11 @@ def form_calificar_ticket(id_ticket):
         abort(400)
     if ticket['id_solicitante'] != session['usuario']['id_usuario']:
         return redirect(url_for('listar_tickets'))
+    detalles = obtenerDetallesTicket(id_ticket)
+    calificacion_actual = next((d for d in detalles if d.get('activo') and d.get('calificacion_estrellas')), None)
     return render_template('calificarTicket.html',
                            ticket=ticket,
+                           calificacion_actual=calificacion_actual,
                            mensaje=None,
                            tipo=None)
 
@@ -363,6 +364,9 @@ def guardar_calificacion_ticket(id_ticket):
         abort(400)
     if ticket['id_solicitante'] != session['usuario']['id_usuario']:
         return redirect(url_for('listar_tickets'))
+    detalles = obtenerDetallesTicket(id_ticket)
+    if any(d.get('activo') and d.get('calificacion_estrellas') for d in detalles):
+        return redirect(url_for('listar_tickets'))
     estrellas_raw = request.form.get('estrellas', '').strip()
     observacion = request.form.get('observacion', '').strip()
     try:
@@ -371,11 +375,10 @@ def guardar_calificacion_ticket(id_ticket):
         estrellas = None
     if estrellas not in (1, 2, 3, 4, 5):
         return redirect(url_for('form_calificar_ticket', id_ticket=id_ticket))
-    guardarCalificacionTicket(id_ticket, estrellas, observacion)
+    guardarCalificacionTicket(ticket['id_detalle'], estrellas, observacion)
     return redirect(url_for('listar_tickets'))
 
 
-# ── EDITAR TICKET (solicitado o en_progreso) ──────────────────────────────────
 @app.route('/ticket/<int:id_ticket>/editar', methods=['GET'])
 @login_required
 def form_editar_ticket(id_ticket):
@@ -1610,11 +1613,14 @@ def api_calificar_ticket(id_ticket):
         return jsonify({'ok': False, 'mensaje': 'Ticket no encontrado'}), 404
     if ticket['estado'] != 'resuelto':
         return jsonify({'ok': False, 'mensaje': 'Solo se puede calificar tickets resueltos'}), 400
+    detalles = obtenerDetallesTicket(id_ticket)
+    if any(d.get('activo') and d.get('calificacion_estrellas') for d in detalles):
+        return jsonify({'ok': False, 'mensaje': 'El ticket ya fue calificado'}), 400
     estrellas  = data.get('estrellas')
     observacion = (data.get('observacion') or '').strip()
     if estrellas not in (1, 2, 3, 4, 5):
         return jsonify({'ok': False, 'mensaje': 'Calificación debe ser entre 1 y 5'}), 400
-    guardarCalificacionTicket(id_ticket, estrellas, observacion)
+    guardarCalificacionTicket(ticket['id_detalle'], estrellas, observacion)
     return jsonify({'ok': True})
 
 
@@ -1639,7 +1645,7 @@ def api_no_solucionado_ticket(id_ticket):
     if not descripcion:
         return jsonify({'ok': False, 'mensaje': 'Descripción requerida para reabrir el ticket'}), 400
     link_img = (data.get('link_img') or '').strip() or None
-    guardarCalificacionTicket(id_ticket, estrellas, observacion)
+    guardarCalificacionTicket(ticket['id_detalle'], estrellas, observacion)
     reabrirTicket(id_ticket, descripcion, link_img)
     return jsonify({'ok': True})
 

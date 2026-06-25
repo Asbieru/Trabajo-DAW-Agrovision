@@ -33,7 +33,7 @@
             <div class="form-grid tres ticket-summary-grid">
                 <div>
                     <div class="ticket-summary-label">Aplicación</div>
-                    <div>{{ ticket.aplicacion }}</div>
+                    <div>{{ ticket.nombre_aplicacion }}</div>
                 </div>
                 <div>
                     <div class="ticket-summary-label">Estado final</div>
@@ -50,11 +50,12 @@
                 <div class="ticket-description-text">{{ ticket.notas_resolucion or 'Sin notas de resolución.' }}</div>
             </div>
 
-            {% if ticket.calificacion_estrellas %}
+{% set ca = calificacion_actual %}
+            {% if ca %}
             <div class="calificacion-actual">
-                Calificación actual: <strong>{{ ticket.calificacion_estrellas }}/5</strong>
-                {% if ticket.fecha_calificacion %}
-                <span>· {{ ticket.fecha_calificacion.strftime('%d/%m/%Y %H:%M') }}</span>
+                Calificación actual: <strong>{{ ca.calificacion_estrellas }}/5</strong>
+                {% if ca.calificacion_fecha %}
+                <span>· {{ ca.calificacion_fecha.strftime('%d/%m/%Y %H:%M') }}</span>
                 {% endif %}
             </div>
             {% endif %}
@@ -64,7 +65,8 @@
     <div class="card">
         <div class="card-header">🗣 Tu experiencia con la atención</div>
         <div class="card-body">
-            {% set ya_calificado = ticket.calificacion_estrellas is not none %}
+            {% set ya_calificado = calificacion_actual is not none %}
+            {% set ca = calificacion_actual %}
             <div id="error-mensaje" class="calificacion-alerta error" style="display:none;"></div>
             <div id="calificar-exito" class="calificacion-alerta exito" style="display:none;"></div>
 
@@ -72,7 +74,7 @@
                 <div class="calificacion-bloque">
                     <label class="ticket-summary-label calificacion-label">Selecciona una calificación</label>
                     <div class="rating-stars">
-                        {% set estrellas_actuales = ticket.calificacion_estrellas or 0 %}
+                        {% set estrellas_actuales = ca.calificacion_estrellas if ca else 0 %}
                         {% for valor in [5, 4, 3, 2, 1] %}
                         <input type="radio"
                                id="estrella-{{ valor }}"
@@ -91,7 +93,7 @@
                     <label for="observacion">Observación</label>
                     <textarea id="observacion" name="observacion" rows="5"
                               placeholder="Cuéntanos qué salió bien, qué faltó o qué debería mejorar el equipo de soporte..."
-                              {% if ya_calificado %}readonly{% endif %}>{{ ticket.calificacion_observacion or '' }}</textarea>
+                              {% if ya_calificado %}readonly{% endif %}>{{ ca.calificacion_observacion or '' }}</textarea>
                     <span class="form-hint">Opcional, pero útil para enriquecer los indicadores cualitativos.</span>
                 </div>
 

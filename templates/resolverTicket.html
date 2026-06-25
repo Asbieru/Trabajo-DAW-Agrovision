@@ -258,18 +258,18 @@
         </div>
         {% endif %}
 
-        {% if d.activo and calificacion %}
+        {% if d.calificacion_estrellas %}
         <hr style="margin:1rem 0;border-color:var(--gris-borde);">
         <div>
             <span class="ticket-summary-label">⭐ Calificación del solicitante</span>
             <div style="margin-top:0.25rem;">
-                <strong>{{ calificacion.estrellas }}/5</strong>
-                {% if calificacion.observacion %}
-                <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.5;margin-top:0.5rem;">{{ calificacion.observacion }}</div>
+                <strong>{{ d.calificacion_estrellas }}/5</strong>
+                {% if d.calificacion_observacion %}
+                <div class="ticket-description-text" style="white-space:pre-wrap;line-height:1.5;margin-top:0.5rem;">{{ d.calificacion_observacion }}</div>
                 {% endif %}
-                {% if calificacion.fecha_calificacion %}
+                {% if d.calificacion_fecha %}
                 <div style="font-size:0.8rem;color:var(--gris-texto);margin-top:0.25rem;">
-                    {{ calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M') }}
+                    {{ d.calificacion_fecha.strftime('%d/%m/%Y %H:%M') }}
                 </div>
                 {% endif %}
             </div>

@@ -9,12 +9,12 @@ def asegurarTablaCalificacionesTicket():
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS calificaciones_ticket (
                     id_calificacion INT AUTO_INCREMENT PRIMARY KEY,
-                    id_ticket INT NOT NULL UNIQUE,
+                    id_detalle INT NOT NULL UNIQUE,
                     estrellas TINYINT NOT NULL,
                     observacion TEXT NULL,
                     fecha_calificacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT fk_calif_ticket
-                        FOREIGN KEY (id_ticket) REFERENCES tickets(id_ticket)
+                    CONSTRAINT fk_calif_detalle
+                        FOREIGN KEY (id_detalle) REFERENCES detalle_ticket(id_detalle)
                         ON DELETE CASCADE
                 ) ENGINE=InnoDB
             """)
@@ -125,17 +125,13 @@ def obtenerTicket(id_ticket):
                        d.notas_resolucion, d.link_img_resolucion,
                        u.nombre_completo AS nombre_solicitante,
                        ag.nombre_completo AS nombre_agente,
-                       a.id_aplicacion, a.nombre AS nombre_aplicacion,
-                       c.estrellas AS calificacion_estrellas,
-                       c.observacion AS calificacion_observacion,
-                       c.fecha_calificacion
-                 FROM tickets t
-                JOIN usuarios u ON t.id_solicitante = u.id_usuario
-                JOIN aplicaciones a ON t.id_aplicacion = a.id_aplicacion
-                 LEFT JOIN detalle_ticket d ON d.id_ticket = t.id_ticket AND d.activo = 1
-                LEFT JOIN usuarios ag ON d.id_agente = ag.id_usuario
-                LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
-                WHERE t.id_ticket = %s
+                       a.id_aplicacion, a.nombre AS nombre_aplicacion
+                  FROM tickets t
+                 JOIN usuarios u ON t.id_solicitante = u.id_usuario
+                 JOIN aplicaciones a ON t.id_aplicacion = a.id_aplicacion
+                  LEFT JOIN detalle_ticket d ON d.id_ticket = t.id_ticket AND d.activo = 1
+                 LEFT JOIN usuarios ag ON d.id_agente = ag.id_usuario
+                 WHERE t.id_ticket = %s
             """, (id_ticket,))
             return cursor.fetchone()
 
@@ -259,20 +255,20 @@ def cancelarTicket(id_ticket):
         conn.commit()
 
 
-def guardarCalificacionTicket(id_ticket, estrellas, observacion):
-    """Guarda o actualiza la calificación del solicitante."""
+def guardarCalificacionTicket(id_detalle, estrellas, observacion):
+    """Guarda la calificación del solicitante para un detalle específico."""
     asegurarTablaCalificacionesTicket()
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO calificaciones_ticket (id_ticket, estrellas, observacion)
+                INSERT INTO calificaciones_ticket (id_detalle, estrellas, observacion)
                 VALUES (%s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     estrellas = VALUES(estrellas),
                     observacion = VALUES(observacion),
                     fecha_calificacion = CURRENT_TIMESTAMP
-            """, (id_ticket, estrellas, observacion))
+            """, (id_detalle, estrellas, observacion))
         conn.commit()
 
 
@@ -296,15 +292,21 @@ def listarTickets():
                        a.nombre AS nombre_aplicacion,
                        u.nombre_completo AS nombre_solicitante,
                        ag.nombre_completo AS nombre_agente,
-                       c.estrellas AS calificacion_estrellas,
-                       c.observacion AS calificacion_observacion,
-                       c.fecha_calificacion
+                        c.calificacion_promedio,
+                        c.activo_calificado
                 FROM tickets t
                 JOIN usuarios u ON t.id_solicitante = u.id_usuario
                 JOIN aplicaciones a ON t.id_aplicacion = a.id_aplicacion
                 LEFT JOIN detalle_ticket d ON d.id_ticket = t.id_ticket AND d.activo = 1
                 LEFT JOIN usuarios ag ON d.id_agente = ag.id_usuario
-                LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
+                LEFT JOIN (
+                    SELECT d.id_ticket,
+                           ROUND(AVG(c.estrellas), 1) AS calificacion_promedio,
+                           MAX(d.activo = 1) AS activo_calificado
+                    FROM calificaciones_ticket c
+                    JOIN detalle_ticket d ON d.id_detalle = c.id_detalle
+                    GROUP BY d.id_ticket
+                ) c ON c.id_ticket = t.id_ticket
                 WHERE t.estado NOT IN ('cancelado')
                 ORDER BY
                     FIELD(IFNULL(d.prioridad, 'media'),'critica','alta','media','baja'),
@@ -517,11 +519,10 @@ def reabrirTicket(id_ticket, descripcion, link_img=None):
             """, (id_ticket,))
             actual = cursor.fetchone()
 
-            # 2. Marcar detalle activo como reabierto
+            # 2. Marcar detalle activo como inactivo (sin sobrescribir notas_resolucion)
             cursor.execute("""
                 UPDATE detalle_ticket
-                   SET notas_resolucion = 'reabierto',
-                       activo = 0
+                   SET activo = 0
                  WHERE id_ticket = %s AND activo = 1
             """, (id_ticket,))
 
@@ -552,30 +553,36 @@ def reabrirTicket(id_ticket, descripcion, link_img=None):
 
 
 def obtenerDetallesTicket(id_ticket):
-    """Retorna todos los registros de detalle_ticket para un ticket (historial completo)."""
+    """Retorna todos los registros de detalle_ticket para un ticket, con su calificación si existe."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT d.*, u.nombre_completo AS nombre_agente
+                SELECT d.*, u.nombre_completo AS nombre_agente,
+                       c.id_calificacion, c.estrellas AS calificacion_estrellas,
+                       c.observacion AS calificacion_observacion,
+                       c.fecha_calificacion AS calificacion_fecha
                 FROM detalle_ticket d
                 LEFT JOIN usuarios u ON d.id_agente = u.id_usuario
+                LEFT JOIN calificaciones_ticket c ON c.id_detalle = d.id_detalle
                 WHERE d.id_ticket = %s
                 ORDER BY d.f_asignacion_agente ASC, d.id_detalle ASC
             """, (id_ticket,))
             return cursor.fetchall()
 
 
-def obtenerCalificacionTicket(id_ticket):
-    """Retorna la calificación de un ticket si existe."""
+def obtenerCalificacionTicket(id_detalle):
+    """Retorna la calificación de un detalle si existe."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM calificaciones_ticket
-                WHERE id_ticket = %s
+                SELECT c.*, d.id_ticket
+                FROM calificaciones_ticket c
+                JOIN detalle_ticket d ON d.id_detalle = c.id_detalle
+                WHERE c.id_detalle = %s
                 LIMIT 1
-            """, (id_ticket,))
+            """, (id_detalle,))
             return cursor.fetchone()
 
 

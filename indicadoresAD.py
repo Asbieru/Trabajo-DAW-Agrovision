@@ -152,11 +152,19 @@ def kpiSatisfaccion():
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT COUNT(*) AS total_atendidos,
-                       SUM(c.id_calificacion IS NOT NULL) AS total_calificados,
-                       ROUND(AVG(c.estrellas), 1) AS promedio_estrellas,
-                       SUM(c.estrellas >= 4) AS valoraciones_positivas
+                       COALESCE(SUM(c.tiene_calif), 0) AS total_calificados,
+                       ROUND(AVG(c.promedio_estrellas), 1) AS promedio_estrellas,
+                       COALESCE(SUM(c.valoraciones_positivas), 0) AS valoraciones_positivas
                 FROM tickets t
-                LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
+                LEFT JOIN (
+                    SELECT d.id_ticket,
+                           COUNT(*) > 0 AS tiene_calif,
+                           AVG(c.estrellas) AS promedio_estrellas,
+                           SUM(c.estrellas >= 4) AS valoraciones_positivas
+                    FROM calificaciones_ticket c
+                    JOIN detalle_ticket d ON d.id_detalle = c.id_detalle
+                    GROUP BY d.id_ticket
+                ) c ON c.id_ticket = t.id_ticket
                 WHERE t.estado IN ('resuelto', 'cerrado')
             """)
             row = dict(cursor.fetchone())
@@ -179,10 +187,10 @@ def comentariosCalificacionesRecientes(limit=6):
                        u.nombre_completo AS solicitante,
                        a.nombre_completo AS agente
                 FROM calificaciones_ticket c
-                JOIN tickets t ON t.id_ticket = c.id_ticket
+                JOIN detalle_ticket d ON d.id_detalle = c.id_detalle
+                JOIN tickets t ON t.id_ticket = d.id_ticket
                 JOIN usuarios u ON u.id_usuario = t.id_solicitante
-                LEFT JOIN detalle_ticket dt ON dt.id_ticket = t.id_ticket
-                LEFT JOIN usuarios a ON a.id_usuario = dt.id_agente
+                LEFT JOIN usuarios a ON a.id_usuario = d.id_agente
                 ORDER BY c.fecha_calificacion DESC, c.id_calificacion DESC
                 LIMIT %s
             """, (limit,))

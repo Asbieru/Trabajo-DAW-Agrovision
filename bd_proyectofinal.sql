@@ -107,17 +107,17 @@ CREATE TABLE IF NOT EXISTS detalle_ticket (
 ) ENGINE=InnoDB;
 
 -- ============================================================
--- CALIFICACIONES
+-- CALIFICACIONES (1 por detalle_ticket)
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS calificaciones_ticket (
     id_calificacion INT AUTO_INCREMENT PRIMARY KEY,
-    id_ticket INT NOT NULL UNIQUE,
+    id_detalle INT NOT NULL UNIQUE,
     estrellas TINYINT NOT NULL,
     observacion TEXT,
     fecha_calificacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_calif_ticket FOREIGN KEY (id_ticket)
-    REFERENCES tickets(id_ticket) ON DELETE CASCADE
+    CONSTRAINT fk_calif_detalle FOREIGN KEY (id_detalle)
+    REFERENCES detalle_ticket(id_detalle) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ============================================================

@@ -100,14 +100,23 @@
                                 {% endif %}
                             </td>
                             <td class="col-calificacion" data-label="Calificación">
-                                {% if t.calificacion_estrellas %}
-                                    <span class="badge badge-acento estrella-badge">⭐ {{ t.calificacion_estrellas }}/5</span>
+                                {% if t.activo_calificado %}
+                                    <span class="badge badge-acento estrella-badge">⭐ {{ t.calificacion_promedio }}/5</span>
                                 {% elif t.estado == 'resuelto' %}
+                                    {% if t.calificacion_promedio %}
+                                        <span class="badge badge-gris" style="opacity:.7;">⭐ {{ t.calificacion_promedio }}/5</span>
+                                    {% endif %}
+                                    {% if usuario and usuario.id_usuario == t.id_solicitante %}
                                     <a href="{{ url_for('form_calificar_ticket', id_ticket=t.id_ticket) }}"
                                     class="btn btn-sm btn-outline btn-calificar"
                                     data-id-solicitante="{{ t.id_solicitante }}">⭐ Calificar</a>
+                                    {% endif %}
                                 {% else %}
-                                    <span style="color:var(--gris-texto);">—</span>
+                                    {% if t.calificacion_promedio %}
+                                        <span class="badge badge-gris" style="opacity:.5;">⭐ {{ t.calificacion_promedio }}/5</span>
+                                    {% else %}
+                                        <span style="color:var(--gris-texto);">—</span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td data-label="Solicitante">{{ t.nombre_solicitante }}</td>

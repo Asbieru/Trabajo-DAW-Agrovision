@@ -140,9 +140,9 @@ def reporteTicketsFiltrados(fecha_inicio=None, fecha_fin=None,
                 FROM tickets t
                 JOIN aplicaciones a   ON a.id_aplicacion = t.id_aplicacion
                 JOIN usuarios uSol    ON uSol.id_usuario  = t.id_solicitante
-                LEFT JOIN detalle_ticket dt ON dt.id_ticket   = t.id_ticket
+                LEFT JOIN detalle_ticket dt ON dt.id_ticket = t.id_ticket AND dt.activo = 1
                 LEFT JOIN usuarios uAge     ON uAge.id_usuario = dt.id_agente
-                LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
+                LEFT JOIN calificaciones_ticket c ON c.id_detalle = dt.id_detalle
             """
             condiciones, params = [], []
 
@@ -369,9 +369,9 @@ def reporteAgentesMetricas():
                            THEN TIMESTAMPDIFF(HOUR, dt.f_asignacion_agente, dt.f_solucion) END), 1) AS promedio_horas,
                        ROUND(AVG(c.estrellas), 1) AS satisfaccion
                 FROM tickets t
-                JOIN detalle_ticket dt ON dt.id_ticket = t.id_ticket
+                JOIN detalle_ticket dt ON dt.id_ticket = t.id_ticket AND dt.activo = 1
                 JOIN usuarios u ON dt.id_agente = u.id_usuario
-                LEFT JOIN calificaciones_ticket c ON c.id_ticket = t.id_ticket
+                LEFT JOIN calificaciones_ticket c ON c.id_detalle = dt.id_detalle
                 WHERE dt.id_agente IS NOT NULL
                 GROUP BY dt.id_agente, u.nombre_completo
                 ORDER BY total_atendidos DESC
