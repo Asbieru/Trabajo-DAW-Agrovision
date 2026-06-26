@@ -1,4 +1,3 @@
-
 const AV_CHATBOT = (function () {
 
     // ── 🔑 KEYS CARGADAS DESDE keys.js ──
@@ -55,7 +54,45 @@ const AV_CHATBOT = (function () {
             agente:      '\nROL AGENTE — solo tickets asignados: Puede: Ver tickets asignados, resolver tickets asignados. NO puede: Proyectos, actividades, aplicaciones, indicadores, reportes, usuarios.'
         };
 
-        return base + (contextos[rol] || contextos.soporte);
+        // Datos reales de la BD inyectados en el contexto
+        var contextoReal = '';
+        if (u._contexto && u._contexto.resumen) {
+            var r = u._contexto.resumen;
+            contextoReal = '\n\nDATOS REALES DEL USUARIO AHORA MISMO (consulta en vivo de la BD):'
+                + '\n- Tickets abiertos o en progreso: ' + r.tickets_abiertos
+                + '\n- Tickets resueltos: ' + r.tickets_resueltos
+                + '\n- Tickets asignados para resolver: ' + r.tickets_asignados
+                + '\n- Proyectos activos en los que participa: ' + r.proyectos_activos
+                + '\n- Actividades pendientes asignadas: ' + r.actividades_pendientes;
+
+            if (u._contexto.tickets_abiertos && u._contexto.tickets_abiertos.length > 0) {
+                contextoReal += '\nDetalle tickets abiertos: '
+                    + u._contexto.tickets_abiertos.map(function(t) {
+                        return 'SD-' + t.id + ' [' + t.prioridad + '] ' + t.titulo;
+                    }).join(' | ');
+            }
+            if (u._contexto.tickets_asignados && u._contexto.tickets_asignados.length > 0) {
+                contextoReal += '\nDetalle tickets asignados: '
+                    + u._contexto.tickets_asignados.map(function(t) {
+                        return 'SD-' + t.id + ' [' + t.prioridad + '] ' + t.titulo;
+                    }).join(' | ');
+            }
+            if (u._contexto.proyectos && u._contexto.proyectos.length > 0) {
+                contextoReal += '\nProyectos: '
+                    + u._contexto.proyectos.map(function(p) {
+                        return p.nombre + ' [' + p.estado + '] ' + p.completadas + '/' + p.total_acts + ' acts';
+                    }).join(' | ');
+            }
+            if (u._contexto.actividades_pendientes && u._contexto.actividades_pendientes.length > 0) {
+                contextoReal += '\nActividades pendientes: '
+                    + u._contexto.actividades_pendientes.map(function(a) {
+                        return a.titulo + ' [' + a.estado + ', ' + a.prioridad + ']';
+                    }).join(' | ');
+            }
+            contextoReal += '\nIMPORTANTE: Usa estos datos reales cuando el usuario pregunte sobre sus tickets, proyectos o actividades. No inventes números.';
+        }
+
+        return base + (contextos[rol] || contextos.soporte) + contextoReal;
     }
 
     // ═══════════════════════════════════════════════════════
@@ -354,6 +391,78 @@ const AV_CHATBOT = (function () {
     }
 
     // ═══════════════════════════════════════════════════════
+    //  MOTOR DE BÚSQUEDA EN BD — responde con datos reales sin usar IA
+    // ═══════════════════════════════════════════════════════
+    function buscarEnBD(texto) {
+        if (!usuario || !usuario._contexto) return null;
+        var t = normalizar(texto);
+        var r = usuario._contexto.resumen;
+        var ctx = usuario._contexto;
+
+        // Preguntas sobre tickets abiertos / pendientes — solo cuando piden DATOS/CANTIDADES
+        if (['cuantos tickets tengo', 'cuantos tickets', 'tickets abiertos', 'tickets pendientes',
+             'tengo tickets abiertos', 'tickets en progreso', 'cuantos tengo abiertos'].some(function(p) { return t.includes(p); })) {
+            if (r.tickets_abiertos === 0) {
+                return '✅ No tienes tickets abiertos en este momento. Todo al día.';
+            }
+            var lista = ctx.tickets_abiertos.map(function(tk) {
+                return '<br>• <strong>SD-' + tk.id + '</strong> [' + tk.prioridad + '] ' + tk.titulo;
+            }).join('');
+            return '🎫 Tienes <strong>' + r.tickets_abiertos + ' ticket(s) abierto(s)</strong>:' + lista;
+        }
+
+        // Preguntas sobre tickets asignados (agente)
+        if (['tickets asignados', 'resolver tickets', 'tengo que resolver', 'asignados a mi',
+             'tickets para resolver'].some(function(p) { return t.includes(p); })) {
+            if (r.tickets_asignados === 0) {
+                return '✅ No tienes tickets asignados para resolver en este momento.';
+            }
+            var lista2 = ctx.tickets_asignados.map(function(tk) {
+                return '<br>• <strong>SD-' + tk.id + '</strong> [' + tk.prioridad + '] ' + tk.titulo;
+            }).join('');
+            return '🔧 Tienes <strong>' + r.tickets_asignados + ' ticket(s) asignado(s)</strong> para resolver:' + lista2;
+        }
+
+        // Preguntas sobre proyectos — solo cuando piden DATOS/CANTIDADES
+        if (['cuantos proyectos tengo', 'cuantos proyectos', 'proyectos activos tengo',
+             'en que proyectos estoy', 'proyectos tengo'].some(function(p) { return t.includes(p); })) {
+            if (r.proyectos_activos === 0) {
+                return '📁 No estás asignado a ningún proyecto activo actualmente.';
+            }
+            var lista3 = ctx.proyectos.map(function(p) {
+                return '<br>• <strong>' + p.nombre + '</strong> [' + p.estado + '] — '
+                    + p.completadas + '/' + p.total_acts + ' actividades';
+            }).join('');
+            return '🚀 Participas en <strong>' + r.proyectos_activos + ' proyecto(s) activo(s)</strong>:' + lista3;
+        }
+
+        // Preguntas sobre actividades pendientes
+        if (['mis actividades', 'actividades pendientes', 'cuantas actividades', 'actividades asignadas',
+             'que actividades tengo', 'tareas pendientes'].some(function(p) { return t.includes(p); })) {
+            if (r.actividades_pendientes === 0) {
+                return '✅ No tienes actividades pendientes asignadas.';
+            }
+            var lista4 = ctx.actividades_pendientes.map(function(a) {
+                return '<br>• <strong>' + a.titulo + '</strong> [' + a.estado + ', ' + a.prioridad + ']';
+            }).join('');
+            return '📋 Tienes <strong>' + r.actividades_pendientes + ' actividad(es) pendiente(s)</strong>:' + lista4;
+        }
+
+        // Resumen general
+        if (['resumen', 'como estoy', 'estado general', 'mi situacion', 'que tengo pendiente',
+             'que tengo', 'mi estado'].some(function(p) { return t.includes(p); })) {
+            return '📊 Tu resumen actual:'
+                + '<br>🎫 Tickets abiertos: <strong>' + r.tickets_abiertos + '</strong>'
+                + '<br>🔧 Tickets asignados para resolver: <strong>' + r.tickets_asignados + '</strong>'
+                + '<br>✅ Tickets resueltos: <strong>' + r.tickets_resueltos + '</strong>'
+                + '<br>🚀 Proyectos activos: <strong>' + r.proyectos_activos + '</strong>'
+                + '<br>📋 Actividades pendientes: <strong>' + r.actividades_pendientes + '</strong>';
+        }
+
+        return null; // no es una pregunta de datos → pasa al FAQ o IA
+    }
+
+    // ═══════════════════════════════════════════════════════
     //  MOTOR DE BÚSQUEDA EN FAQ
     // ═══════════════════════════════════════════════════════
     function normalizar(texto) {
@@ -634,9 +743,18 @@ const AV_CHATBOT = (function () {
         var tabs = document.querySelectorAll('.av-tab');
         if (tabs[0] && !tabs[0].classList.contains('activo')) setTab('chat', tabs[0]);
 
-        var faqResult = buscarEnFAQ(texto);
+        var faqResult   = buscarEnFAQ(texto);
+        var bdResult    = buscarEnBD(texto);
 
-        if (faqResult) {
+        if (bdResult) {
+            // Respuesta con datos reales de BD — sin llamar a la IA
+            addTyping();
+            await new Promise(function (r) { setTimeout(r, 350); });
+            removeTyping();
+            addMsg('bot', bdResult, true);
+
+        } else if (faqResult) {
+            // Respuesta del FAQ hardcodeado — sin llamar a la IA
             addTyping();
             await new Promise(function (r) { setTimeout(r, 400); });
             removeTyping();
@@ -650,7 +768,9 @@ const AV_CHATBOT = (function () {
                 convHistory.push({ role: 'assistant', content: resp.replace(/<br>/g, '\n').replace(/<strong>/g, '').replace(/<\/strong>/g, '') });
                 saveHistory(_mensajesDisplay);
             }
+
         } else {
+            // Solo aquí se llama a GROQ — preguntas abiertas que no tienen respuesta local
             addTyping();
             try {
                 var respuesta = await llamarGroq(texto);
@@ -679,7 +799,18 @@ const AV_CHATBOT = (function () {
     // ═══════════════════════════════════════════════════════
     async function init() {
         usuario = await initUsuario();
-        if (!usuario) return; // no renderizar si no hay usuario
+        if (!usuario) return;
+
+        // Cargar datos reales de la BD sin consumir llamadas a IA
+        try {
+            var ctxResp = await fetch('/api/chatbot/contexto');
+            if (ctxResp.ok) {
+                var ctxData = await ctxResp.json();
+                if (ctxData.ok) {
+                    usuario._contexto = ctxData;
+                }
+            }
+        } catch (e) { /* si falla, el chatbot sigue funcionando */ }
 
         systemPrompt = buildSystemPrompt(usuario);
 
