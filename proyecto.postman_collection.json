@@ -80,7 +80,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"correo\": \"admin@agrovision.com\",\n  \"password\": \"Admin123!\"\n}",
+          "raw": "{\n  \"correo\": \"renzo@agrovision.pe\",\n  \"password\": \"1\"\n}",
           "options": {
             "raw": {
               "language": "json"
