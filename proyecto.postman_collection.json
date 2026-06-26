@@ -1,0 +1,1611 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "AgroVision API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "45092570"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "jwt_token",
+      "value": ""
+    },
+    {
+      "key": "id_ticket",
+      "value": "1"
+    },
+    {
+      "key": "id_proyecto",
+      "value": "1"
+    },
+    {
+      "key": "id_actividad",
+      "value": "1"
+    },
+    {
+      "key": "id_aplicacion",
+      "value": "1"
+    },
+    {
+      "key": "id_rol",
+      "value": "1"
+    },
+    {
+      "key": "id_rol_permiso",
+      "value": "1"
+    },
+    {
+      "key": "id_usuario",
+      "value": "1"
+    },
+    {
+      "key": "id_avance",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "https://agrovisiondaw.pythonanywhere.com/api/login",
+          "protocol": "https",
+          "host": [
+            "agrovisiondaw",
+            "pythonanywhere",
+            "com"
+          ],
+          "path": [
+            "api",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"admin@agrovision.com\",\n  \"password\": \"Admin123!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.token) {",
+              "    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "Listar tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/tickets",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": ""
+                },
+                {
+                  "key": "texto",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Guardar ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/guardar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "guardar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Error al iniciar sesion\",\n  \"tipo\": \"incidencia\",\n  \"id_aplicacion\": \"1\",\n  \"descripcion\": \"No puedo iniciar sesion en el modulo de ventas.\",\n  \"link_img_descripcion\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resolver ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/{{id_ticket}}/resolver",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "{{id_ticket}}",
+                "resolver"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notas_resolucion\": \"Se reinicio el servicio de autenticacion.\",\n  \"link_img_resolucion\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reasignar ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/{{id_ticket}}/reasignar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "{{id_ticket}}",
+                "reasignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_agente\": \"2\",\n  \"descripcion\": \"Se reasigna por falta de conocimiento tecnico.\",\n  \"link_img\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Calificar ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/{{id_ticket}}/calificar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "{{id_ticket}}",
+                "calificar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estrellas\": 5,\n  \"observacion\": \"Muy buena atencion, resolvieron rapido.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "No solucionado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/{{id_ticket}}/no-solucionado",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "{{id_ticket}}",
+                "no-solucionado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estrellas\": 2,\n  \"observacion\": \"El problema volvio a aparecer.\",\n  \"descripcion\": \"Sigue sin funcionar el modulo de ventas.\",\n  \"link_img\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Editar ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/{{id_ticket}}/editar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "{{id_ticket}}",
+                "editar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Error al iniciar sesion (corregido)\",\n  \"tipo\": \"incidencia\",\n  \"id_aplicacion\": \"1\",\n  \"descripcion\": \"Descripcion actualizada del problema.\",\n  \"link_img_descripcion\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancelar ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/{{id_ticket}}/cancelar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "{{id_ticket}}",
+                "cancelar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/{{id_ticket}}/asignar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "{{id_ticket}}",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_agente\": \"2\",\n  \"prioridad\": \"alta\",\n  \"intensidad\": \"media\",\n  \"sla_horas\": null,\n  \"id_aplicacion\": \"1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Aplicaciones",
+      "item": [
+        {
+          "name": "Listar aplicaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/aplicaciones",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "aplicaciones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Nueva aplicacion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/aplicacion/nueva",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "aplicacion",
+                "nueva"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Modulo de Ventas\",\n  \"peso\": 3,\n  \"descripcion\": \"Sistema de gestion de ventas online.\",\n  \"participantes_promedio\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Editar aplicacion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/aplicacion/{{id_aplicacion}}/editar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "aplicacion",
+                "{{id_aplicacion}}",
+                "editar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Modulo de Ventas v2\",\n  \"peso\": 4,\n  \"descripcion\": \"Sistema actualizado.\",\n  \"participantes_promedio\": 6\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar aplicacion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/aplicacion/{{id_aplicacion}}/eliminar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "aplicacion",
+                "{{id_aplicacion}}",
+                "eliminar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle estado aplicacion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/aplicacion/{{id_aplicacion}}/toggle-estado",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "aplicacion",
+                "{{id_aplicacion}}",
+                "toggle-estado"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Proyectos",
+      "item": [
+        {
+          "name": "Guardar proyecto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/guardar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "guardar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sistema de Facturacion\",\n  \"responsables\": [\n    1,\n    2\n  ],\n  \"fecha_fin_plan\": \"2026-12-31\",\n  \"descripcion\": \"Proyecto para implementar facturacion electronica.\",\n  \"problematica\": \"Proceso manual propenso a errores.\",\n  \"justificacion\": \"Reducir errores y tiempos.\",\n  \"beneficios\": \"Ahorro del 40 por ciento en tiempo de procesamiento.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Editar proyecto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/editar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "editar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sistema de Facturacion v2\",\n  \"responsables\": [\n    1,\n    2,\n    3\n  ],\n  \"estado\": \"en_desarrollo\",\n  \"fecha_fin_plan\": \"2027-03-31\",\n  \"descripcion\": \"Descripcion actualizada del proyecto.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar proyecto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/eliminar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "eliminar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Porcentaje proyecto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/porcentaje",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "porcentaje"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Avances grafico",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/avances-grafico",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "avances-grafico"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Nuevo avance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/avances/nuevo",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "avances",
+                "nuevo"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado_salud\": \"bien\",\n  \"logros_periodo\": \"Modulo de ventas completado.\",\n  \"pendientes_next\": \"Iniciar modulo de reportes.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar avance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/avances/eliminar/{{id_avance}}",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "avances",
+                "eliminar",
+                "{{id_avance}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Aprobar proyecto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/aprobar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "aprobar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rechazar proyecto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/rechazar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "rechazar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Sprints proyecto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}/sprints",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}",
+                "sprints"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reporte actividades",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/reporte/proyecto/{{id_proyecto}}/actividades",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "reporte",
+                "proyecto",
+                "{{id_proyecto}}",
+                "actividades"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Actividades",
+      "item": [
+        {
+          "name": "Listar actividades",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/actividades",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "actividades"
+              ],
+              "query": [
+                {
+                  "key": "id_proyecto",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Guardar actividad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/actividad/guardar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "actividad",
+                "guardar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_proyecto\": \"1\",\n  \"id_sprint\": \"1\",\n  \"id_asignado\": \"2\",\n  \"titulo\": \"Desarrollar modulo de login\",\n  \"prioridad\": \"alta\",\n  \"estado\": \"por_hacer\",\n  \"story_points\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Editar actividad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/actividad/{{id_actividad}}/editar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "actividad",
+                "{{id_actividad}}",
+                "editar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_proyecto\": \"1\",\n  \"id_sprint\": \"1\",\n  \"id_asignado\": \"3\",\n  \"titulo\": \"Desarrollar modulo de login v2\",\n  \"prioridad\": \"critica\",\n  \"estado\": \"en_progreso\",\n  \"story_points\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cambiar estado actividad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/actividad/{{id_actividad}}/estado",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "actividad",
+                "{{id_actividad}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"completado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Desbloquear actividad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/actividad/{{id_actividad}}/desbloquear",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "actividad",
+                "{{id_actividad}}",
+                "desbloquear"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar actividad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/actividad/{{id_actividad}}/eliminar",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "actividad",
+                "{{id_actividad}}",
+                "eliminar"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Nuevo usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/nuevo",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "nuevo"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre_completo\": \"Juan Perez\",\n  \"correo\": \"juan@agrovision.com\",\n  \"password\": \"MiPassword123!\",\n  \"id_rol\": \"1\",\n  \"nivel\": 1,\n  \"apellido\": \"Perez Gomez\",\n  \"edad\": 30,\n  \"dni\": \"12345678\",\n  \"direccion\": \"Av. Siempre Viva 123\",\n  \"foto_url\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Usuario actual (me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/me",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "Listar roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/roles",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "roles"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear rol",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "rol"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Supervisor\",\n  \"descripcion\": \"Rol con permisos de supervision.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar rol",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol/{{id_rol}}",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "rol",
+                "{{id_rol}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Supervisor Senior\",\n  \"descripcion\": \"Rol con permisos avanzados.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar rol",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol/{{id_rol}}",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "rol",
+                "{{id_rol}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Permisos por rol",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol/{{id_rol}}/permisos",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "rol",
+                "{{id_rol}}",
+                "permisos"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Permisos",
+      "item": [
+        {
+          "name": "Listar permisos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/permisos",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "permisos"
+              ],
+              "query": [
+                {
+                  "key": "id_rol",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear permiso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/permiso",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "permiso"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Gestionar usuarios\",\n  \"id_rol\": \"1\",\n  \"nivel\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar permiso",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/permiso/{{id_rol_permiso}}",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "permiso",
+                "{{id_rol_permiso}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Gestionar usuarios avanzado\",\n  \"id_rol\": \"1\",\n  \"nivel\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar permiso",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/permiso/{{id_rol_permiso}}",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "permiso",
+                "{{id_rol_permiso}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Indicadores",
+      "item": [
+        {
+          "name": "Indicadores dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/indicadores",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "indicadores"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chatbot",
+      "item": [
+        {
+          "name": "Contexto chatbot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/chatbot/contexto",
+              "protocol": "https",
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "chatbot",
+                "contexto"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
