@@ -321,6 +321,78 @@ def listarAvances(id_proyecto):
             return cursor.fetchall()
 
 
+def listarAvancesAll():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT a.*, u.nombre_completo AS nombre_autor
+                FROM avances_proyecto a
+                JOIN usuarios u ON u.id_usuario = a.id_autor
+                ORDER BY a.created_at DESC
+            """)
+            return cursor.fetchall()
+
+
+def obtenerAvance(id_avance):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT a.*, u.nombre_completo AS nombre_autor
+                FROM avances_proyecto a
+                JOIN usuarios u ON u.id_usuario = a.id_autor
+                WHERE a.id_avance = %s
+            """, (id_avance,))
+            return cursor.fetchone()
+
+
+def listarAsignados():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT a.id_proyecto, a.id_usuario, u.nombre_completo, p.nombre AS nombre_proyecto
+                FROM asignado a
+                JOIN usuarios u ON u.id_usuario = a.id_usuario
+                JOIN proyectos p ON p.id_proyecto = a.id_proyecto
+                ORDER BY a.id_proyecto, a.id_usuario
+            """)
+            return cursor.fetchall()
+
+
+def obtenerAsignado(id_proyecto, id_usuario):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT a.id_proyecto, a.id_usuario, u.nombre_completo, p.nombre AS nombre_proyecto
+                FROM asignado a
+                JOIN usuarios u ON u.id_usuario = a.id_usuario
+                JOIN proyectos p ON p.id_proyecto = a.id_proyecto
+                WHERE a.id_proyecto = %s AND a.id_usuario = %s
+            """, (id_proyecto, id_usuario))
+            return cursor.fetchone()
+
+
+def insertarAsignado(id_proyecto, id_usuario):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("INSERT INTO asignado (id_proyecto, id_usuario) VALUES (%s, %s)",
+                           (id_proyecto, id_usuario))
+            conn.commit()
+
+
+def eliminarAsignado(id_proyecto, id_usuario):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM asignado WHERE id_proyecto = %s AND id_usuario = %s",
+                           (id_proyecto, id_usuario))
+            conn.commit()
+
+
 def insertarAvance(id_proyecto, id_autor, fecha_reporte, porcentaje_avance,
                    estado_salud, logros_periodo, pendientes_next):
     """Guarda un nuevo reporte de avance en la bitacora."""

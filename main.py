@@ -14,7 +14,8 @@ from openpyxl.utils import get_column_letter
 from usuarioAD import (autenticarUsuario, buscarUsuarioPorCorreo, obtenerUsuarios,
                        listarUsuariosCompleto, obtenerPerfilUsuario,
                        estadisticasUsuario, historialParticipacionUsuario,
-                       resumenHistorialUsuario, insertarUsuario)
+                       resumenHistorialUsuario, insertarUsuario,
+                       listarUsuarios, actualizarUsuario, eliminarUsuario)
 from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       resolverTicket, guardarCalificacionTicket,
                       editarTicket, cancelarTicket, listarAplicaciones,
@@ -26,18 +27,23 @@ from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       obtenerDetallesTicket,
                       obtenerCalificacionTicket,
                       insertarAplicacion, editarAplicacion, eliminarAplicacion,
-                      toggleEstadoAplicacion)
+                      toggleEstadoAplicacion,
+                      listarCalificaciones, listarDetallesTicketAll, obtenerDetalleTicket)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
                          actualizarEstadoActividad, eliminarActividad,
                          desbloquearActividad,
                          listarTodosSprints, listarAsignadosPorProyecto,
-                         resumenActividadesPorProyecto, proximoCodigo)
+                         resumenActividadesPorProyecto, proximoCodigo,
+                         obtenerSprint, insertarSprint, actualizarSprint, eliminarSprint,
+                         obtenerActividad)
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
                         listarAvances, insertarAvance, eliminarAvance,
                         eliminarProyecto, tieneActividadesPendientes,
                         listarProyectosEnRevision, aprobarProyecto, rechazarProyecto,
-                        generarSprintsProyecto, listarSprintsPorProyecto)
+                        generarSprintsProyecto, listarSprintsPorProyecto,
+                        listarAvancesAll, obtenerAvance,
+                        listarAsignados, obtenerAsignado, insertarAsignado, eliminarAsignado)
 from indicadoresAD import (resumenKPI, kpiPorAplicacion, kpiPorPrioridad,
                             kpiPorAgente, kpiPorMes, kpiSprintsActivos,
                             kpiSatisfaccion, comentariosCalificacionesRecientes,
@@ -83,16 +89,23 @@ JWT_SECRET = 'agrovision-clave-secreta-2024'
 JWT_ALGORITHM = 'HS256'
 
 
+def _extraer_jwt(req):
+    auth = req.headers.get('Authorization', '')
+    for prefix in ('JWT ', 'Bearer '):
+        if auth.startswith(prefix):
+            return auth[len(prefix):]
+    return None
+
+
 def jwt_required(f=None):
-    """Verifica el token JWT del header Authorization: Bearer <token>.
+    """Verifica el token JWT del header Authorization: JWT <token>.
     Usar como @jwt_required o @jwt_required()."""
     if f is not None:
         # Usado como @jwt_required (sin paréntesis)
         @wraps(f)
         def decorated(*args, **kwargs):
-            auth = request.headers.get('Authorization', '')
-            if auth.startswith('Bearer '):
-                token = auth[7:]
+            token = _extraer_jwt(request)
+            if token:
                 try:
                     payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
                     if not session.get('usuario'):
@@ -103,16 +116,15 @@ def jwt_required(f=None):
                     return jsonify({'ok': False, 'mensaje': 'Token expirado.'}), 401
                 except jwt.InvalidTokenError:
                     return jsonify({'ok': False, 'mensaje': 'Token inválido.'}), 401
-            return f(*args, **kwargs)
+            return jsonify({'ok': False, 'mensaje': 'Token no proporcionado.'}), 401
         return decorated
 
     # Usado como @jwt_required() (con paréntesis)
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            auth = request.headers.get('Authorization', '')
-            if auth.startswith('Bearer '):
-                token = auth[7:]
+            token = _extraer_jwt(request)
+            if token:
                 try:
                     payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
                     if not session.get('usuario'):
@@ -123,7 +135,7 @@ def jwt_required(f=None):
                     return jsonify({'ok': False, 'mensaje': 'Token expirado.'}), 401
                 except jwt.InvalidTokenError:
                     return jsonify({'ok': False, 'mensaje': 'Token inválido.'}), 401
-            return f(*args, **kwargs)
+            return jsonify({'ok': False, 'mensaje': 'Token no proporcionado.'}), 401
         return decorated
     return decorator
 
@@ -1131,6 +1143,16 @@ def api_estado_actividad(id_actividad):
     return jsonify({'ok': True, 'estado': nuevo_estado})
 
 
+@app.route('/api/actividad/<int:id_actividad>')
+@jwt_required()
+@login_required
+def api_obtener_actividad(id_actividad):
+    act = obtenerActividad(id_actividad)
+    if not act:
+        return jsonify({'ok': False, 'mensaje': 'Actividad no encontrada'}), 404
+    return jsonify({'ok': True, 'actividad': act})
+
+
 @app.route('/api/actividad/<int:id_actividad>/desbloquear', methods=['POST'])
 @jwt_required()
 @login_required
@@ -1155,6 +1177,92 @@ def api_eliminar_actividad(id_actividad):
 def api_listar_actividades():
     id_proyecto = request.args.get('id_proyecto', type=int) or None
     return jsonify({'ok': True, 'actividades': listarActividades(id_proyecto)})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API SPRINTS CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/sprints')
+@jwt_required()
+@login_required
+def api_listar_sprints():
+    return jsonify({'ok': True, 'sprints': listarTodosSprints()})
+
+
+@app.route('/api/sprint/<int:id_sprint>')
+@jwt_required()
+@login_required
+def api_obtener_sprint(id_sprint):
+    sprint = obtenerSprint(id_sprint)
+    if not sprint:
+        return jsonify({'ok': False, 'mensaje': 'Sprint no encontrado'}), 404
+    return jsonify({'ok': True, 'sprint': sprint})
+
+
+@app.route('/api/sprint/guardar', methods=['POST'])
+@jwt_required()
+@login_required
+def api_guardar_sprint():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    from datetime import date
+    id_creado = insertarSprint(
+        nombre=data['nombre'], id_proyecto=data['id_proyecto'],
+        objetivo=data.get('objetivo'), estado=data.get('estado', 'planificado'),
+        capacidad_pts=data.get('capacidad_pts', 0),
+        fecha_inicio=data.get('fecha_inicio', str(date.today())),
+        fecha_fin=data['fecha_fin'],
+    )
+    return jsonify({'ok': True, 'id_sprint': id_creado})
+
+
+@app.route('/api/sprint/<int:id_sprint>', methods=['PUT'])
+@jwt_required()
+@login_required
+def api_actualizar_sprint(id_sprint):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    from datetime import date
+    actualizarSprint(
+        id_sprint=id_sprint, nombre=data.get('nombre'),
+        objetivo=data.get('objetivo'), estado=data.get('estado'),
+        capacidad_pts=data.get('capacidad_pts'),
+        fecha_inicio=data.get('fecha_inicio', str(date.today())),
+        fecha_fin=data.get('fecha_fin'),
+    )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/sprint/<int:id_sprint>', methods=['DELETE'])
+@jwt_required()
+@login_required
+def api_eliminar_sprint(id_sprint):
+    eliminarSprint(id_sprint)
+    return jsonify({'ok': True})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API PROYECTOS CRUD (list & detail)
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/proyectos')
+@jwt_required()
+@login_required
+def api_listar_proyectos():
+    return jsonify({'ok': True, 'proyectos': listarProyectos()})
+
+
+@app.route('/api/proyecto/<int:id_proyecto>')
+@jwt_required()
+@login_required
+def api_obtener_proyecto(id_proyecto):
+    proy = obtenerProyecto(id_proyecto)
+    if not proy:
+        return jsonify({'ok': False, 'mensaje': 'Proyecto no encontrado'}), 404
+    return jsonify({'ok': True, 'proyecto': proy})
 
 
 @app.route('/api/proyecto/<int:id_proyecto>/porcentaje')
@@ -1234,6 +1342,97 @@ def api_eliminar_avance(id_avance):
     except Exception as e:
         print(f"Error de integridad al eliminar avance: {e}")
         return jsonify({'ok': False, 'mensaje': 'No se puede eliminar por restricciones de integridad en la base de datos.'})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API AVANCES CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/avances')
+@jwt_required()
+@login_required
+def api_listar_avances():
+    return jsonify({'ok': True, 'avances': listarAvancesAll()})
+
+
+@app.route('/api/avance/<int:id_avance>')
+@jwt_required()
+@login_required
+def api_obtener_avance(id_avance):
+    avance = obtenerAvance(id_avance)
+    if not avance:
+        return jsonify({'ok': False, 'mensaje': 'Avance no encontrado'}), 404
+    return jsonify({'ok': True, 'avance': avance})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API CALIFICACIONES CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/calificaciones')
+@jwt_required()
+@login_required
+def api_listar_calificaciones():
+    return jsonify({'ok': True, 'calificaciones': listarCalificaciones()})
+
+
+@app.route('/api/calificacion/<int:id_detalle>')
+@jwt_required()
+@login_required
+def api_obtener_calificacion(id_detalle):
+    calif = obtenerCalificacionTicket(id_detalle)
+    if not calif:
+        return jsonify({'ok': False, 'mensaje': 'Calificación no encontrada'}), 404
+    return jsonify({'ok': True, 'calificacion': calif})
+
+
+@app.route('/api/calificacion/guardar', methods=['POST'])
+@jwt_required()
+@login_required
+def api_guardar_calificacion():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    id_detalle = data.get('id_detalle')
+    estrellas = data.get('estrellas')
+    if not id_detalle or not estrellas:
+        return jsonify({'ok': False, 'mensaje': 'id_detalle y estrellas requeridos'}), 400
+    guardarCalificacionTicket(id_detalle, estrellas, data.get('observacion'))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/calificacion/<int:id_detalle>', methods=['DELETE'])
+@jwt_required()
+@login_required
+def api_eliminar_calificacion(id_detalle):
+    conn = __import__('conexion', fromlist=['obtenerconexion']).obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM calificaciones_ticket WHERE id_detalle = %s", (id_detalle,))
+            conn.commit()
+    return jsonify({'ok': True})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API DETALLE_TICKET CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/detalles-ticket')
+@jwt_required()
+@login_required
+def api_listar_detalles_ticket():
+    id_ticket = request.args.get('id_ticket', type=int)
+    return jsonify({'ok': True, 'detalles': listarDetallesTicketAll(id_ticket)})
+
+
+@app.route('/api/detalle-ticket/<int:id_detalle>')
+@jwt_required()
+@login_required
+def api_obtener_detalle_ticket(id_detalle):
+    det = obtenerDetalleTicket(id_detalle)
+    if not det:
+        return jsonify({'ok': False, 'mensaje': 'Detalle no encontrado'}), 404
+    return jsonify({'ok': True, 'detalle': det})
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1418,6 +1617,16 @@ def api_asignar_ticket(id_ticket):
         return jsonify({'ok': False, 'mensaje': 'Error al asignar ticket.'}), 500
 
 
+@app.route('/api/ticket/<int:id_ticket>')
+@jwt_required()
+@login_required
+def api_obtener_ticket(id_ticket):
+    t = obtenerTicket(id_ticket)
+    if not t:
+        return jsonify({'ok': False, 'mensaje': 'Ticket no encontrado'}), 404
+    return jsonify({'ok': True, 'ticket': t})
+
+
 # ──────────────────────────────────────────────────────────────
 #  API APLICACIONES CRUD
 # ──────────────────────────────────────────────────────────────
@@ -1480,6 +1689,16 @@ def api_toggle_estado_aplicacion(id_aplicacion):
 @login_required
 def api_listar_aplicaciones():
     return jsonify({'ok': True, 'aplicaciones': listarAplicaciones()})
+
+
+@app.route('/api/aplicacion/<int:id_aplicacion>')
+@jwt_required()
+@login_required
+def api_obtener_aplicacion(id_aplicacion):
+    app_ = obtenerAplicacion(id_aplicacion)
+    if not app_:
+        return jsonify({'ok': False, 'mensaje': 'Aplicación no encontrada'}), 404
+    return jsonify({'ok': True, 'aplicacion': app_})
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1755,6 +1974,53 @@ def api_nuevo_usuario():
 
 
 # ──────────────────────────────────────────────────────────────
+#  API USUARIOS CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/usuarios')
+@jwt_required()
+@login_required
+def api_listar_usuarios():
+    return jsonify({'ok': True, 'usuarios': listarUsuarios()})
+
+
+@app.route('/api/usuario/<int:id_usuario>')
+@jwt_required()
+@login_required
+def api_obtener_usuario(id_usuario):
+    u = obtenerPerfilUsuario(id_usuario)
+    if not u or not u.get('activo'):
+        return jsonify({'ok': False, 'mensaje': 'Usuario no encontrado'}), 404
+    return jsonify({'ok': True, 'usuario': u})
+
+
+@app.route('/api/usuario/<int:id_usuario>', methods=['PUT'])
+@jwt_required()
+@login_required
+def api_actualizar_usuario(id_usuario):
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    actualizarUsuario(
+        id_usuario=id_usuario,
+        nombre_completo=data.get('nombre_completo'),
+        apellido=data.get('apellido'), edad=data.get('edad'),
+        dni=data.get('dni'), direccion=data.get('direccion'),
+        correo=data.get('correo'), nivel=data.get('nivel'),
+        id_rol=data.get('id_rol'), foto_url=data.get('foto_url'),
+    )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/usuario/<int:id_usuario>', methods=['DELETE'])
+@jwt_required()
+@login_required
+def api_eliminar_usuario(id_usuario):
+    eliminarUsuario(id_usuario)
+    return jsonify({'ok': True})
+
+
+# ──────────────────────────────────────────────────────────────
 #  CONFIGURACIÓN
 # ──────────────────────────────────────────────────────────────
 
@@ -1795,6 +2061,16 @@ def form_editar_rol(id_rol):
 @login_required
 def api_listar_roles():
     return jsonify({'ok': True, 'roles': listarRoles()})
+
+
+@app.route('/api/rol/<int:id_rol>')
+@jwt_required()
+@login_required
+def api_obtener_rol(id_rol):
+    r = obtenerRol(id_rol)
+    if not r:
+        return jsonify({'ok': False, 'mensaje': 'Rol no encontrado'}), 404
+    return jsonify({'ok': True, 'rol': r})
 
 
 @app.route('/api/rol', methods=['POST'])
@@ -1914,6 +2190,61 @@ def api_actualizar_permiso(id_rol_permiso):
 def api_eliminar_permiso(id_rol_permiso):
     eliminarPermiso(id_rol_permiso)
     return jsonify({'ok': True})
+
+
+@app.route('/api/permiso/<int:id_rol_permiso>')
+@jwt_required()
+@login_required
+def api_obtener_permiso(id_rol_permiso):
+    p = obtenerPermiso(id_rol_permiso)
+    if not p:
+        return jsonify({'ok': False, 'mensaje': 'Permiso no encontrado'}), 404
+    return jsonify({'ok': True, 'permiso': p})
+
+
+# ──────────────────────────────────────────────────────────────
+#  API ASIGNADOS CRUD
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/api/asignados')
+@jwt_required()
+@login_required
+def api_listar_asignados():
+    return jsonify({'ok': True, 'asignados': listarAsignados()})
+
+
+@app.route('/api/asignado/proyecto/<int:id_proyecto>/usuario/<int:id_usuario>')
+@jwt_required()
+@login_required
+def api_obtener_asignado(id_proyecto, id_usuario):
+    a = obtenerAsignado(id_proyecto, id_usuario)
+    if not a:
+        return jsonify({'ok': False, 'mensaje': 'Asignación no encontrada'}), 404
+    return jsonify({'ok': True, 'asignado': a})
+
+
+@app.route('/api/asignado/guardar', methods=['POST'])
+@jwt_required()
+@login_required
+def api_guardar_asignado():
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'mensaje': 'JSON requerido'}), 400
+    id_proyecto = data.get('id_proyecto')
+    id_usuario = data.get('id_usuario')
+    if not id_proyecto or not id_usuario:
+        return jsonify({'ok': False, 'mensaje': 'id_proyecto e id_usuario requeridos'}), 400
+    insertarAsignado(id_proyecto, id_usuario)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/asignado/proyecto/<int:id_proyecto>/usuario/<int:id_usuario>', methods=['DELETE'])
+@jwt_required()
+@login_required
+def api_eliminar_asignado(id_proyecto, id_usuario):
+    eliminarAsignado(id_proyecto, id_usuario)
+    return jsonify({'ok': True})
+
 
 @app.route('/api/chatbot/contexto')
 @jwt_required()

@@ -395,3 +395,59 @@ def resumenHistorialUsuario(id_usuario):
         'proyectos_total': proyectos_total,
         'total'          : len(items),
     }
+
+
+def listarUsuarios():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT u.*, r.nombre AS rol_nombre
+                FROM usuarios u
+                LEFT JOIN rol r ON r.id_rol = u.id_rol
+                ORDER BY u.nombre_completo
+            """)
+            return cursor.fetchall()
+
+
+def actualizarUsuario(id_usuario, nombre_completo=None, apellido=None, edad=None,
+                       dni=None, direccion=None, correo=None, nivel=None,
+                       id_rol=None, foto_url=None):
+    conn = obtenerconexion()
+    campos = []
+    valores = []
+    if nombre_completo is not None:
+        campos.append("nombre_completo=%s"); valores.append(nombre_completo)
+    if apellido is not None:
+        campos.append("apellido=%s"); valores.append(apellido)
+    if edad is not None:
+        campos.append("edad=%s"); valores.append(edad)
+    if dni is not None:
+        campos.append("dni=%s"); valores.append(dni)
+    if direccion is not None:
+        campos.append("direccion=%s"); valores.append(direccion)
+    if correo is not None:
+        campos.append("correo=%s"); valores.append(correo)
+    if nivel is not None:
+        campos.append("nivel=%s"); valores.append(nivel)
+    if id_rol is not None:
+        campos.append("id_rol=%s"); valores.append(id_rol)
+    if foto_url is not None:
+        campos.append("foto_url=%s"); valores.append(foto_url)
+    if not campos:
+        return
+    sql = "UPDATE usuarios SET " + ", ".join(campos) + " WHERE id_usuario = %s"
+    valores.append(id_usuario)
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, valores)
+            conn.commit()
+
+
+def eliminarUsuario(id_usuario):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE usuarios SET activo = 0 WHERE id_usuario = %s", (id_usuario,))
+            conn.commit()

@@ -251,3 +251,47 @@ def actualizarActividad(id_actividad, id_proyecto, id_sprint, id_asignado,
 def proximoCodigo():
     """Devuelve el proximo codigo que se generaria (para mostrar en formulario)."""
     return _generarCodigo()
+
+
+def obtenerSprint(id_sprint):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT s.*, p.nombre AS nombre_proyecto
+                FROM sprints s
+                JOIN proyectos p ON p.id_proyecto = s.id_proyecto
+                WHERE s.id_sprint = %s
+            """, (id_sprint,))
+            return cursor.fetchone()
+
+
+def insertarSprint(nombre, id_proyecto, objetivo, estado, capacidad_pts, fecha_inicio, fecha_fin):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO sprints (id_proyecto, nombre, objetivo, estado, capacidad_pts, fecha_inicio, fecha_fin)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (id_proyecto, nombre, objetivo, estado, capacidad_pts, fecha_inicio, fecha_fin))
+            conn.commit()
+            return cursor.lastrowid
+
+
+def actualizarSprint(id_sprint, nombre, objetivo, estado, capacidad_pts, fecha_inicio, fecha_fin):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE sprints SET nombre=%s, objetivo=%s, estado=%s, capacidad_pts=%s,
+                fecha_inicio=%s, fecha_fin=%s WHERE id_sprint=%s
+            """, (nombre, objetivo, estado, capacidad_pts, fecha_inicio, fecha_fin, id_sprint))
+            conn.commit()
+
+
+def eliminarSprint(id_sprint):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM sprints WHERE id_sprint = %s", (id_sprint,))
+            conn.commit()

@@ -599,3 +599,51 @@ def listarUsuariosNivelMenor(nivel):
                 ORDER BY u.nombre_completo
             """, (nivel,))
             return cursor.fetchall()
+
+
+def listarCalificaciones():
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT c.*, d.id_ticket, d.descripcion
+                FROM calificaciones_ticket c
+                JOIN detalle_ticket d ON d.id_detalle = c.id_detalle
+                ORDER BY c.fecha_calificacion DESC
+            """)
+            return cursor.fetchall()
+
+
+def listarDetallesTicketAll(id_ticket=None):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            if id_ticket:
+                cursor.execute("""
+                    SELECT d.*, u.nombre_completo AS nombre_agente
+                    FROM detalle_ticket d
+                    LEFT JOIN usuarios u ON u.id_usuario = d.id_agente
+                    WHERE d.id_ticket = %s
+                    ORDER BY d.id_detalle
+                """, (id_ticket,))
+            else:
+                cursor.execute("""
+                    SELECT d.*, u.nombre_completo AS nombre_agente
+                    FROM detalle_ticket d
+                    LEFT JOIN usuarios u ON u.id_usuario = d.id_agente
+                    ORDER BY d.id_ticket, d.id_detalle
+                """)
+            return cursor.fetchall()
+
+
+def obtenerDetalleTicket(id_detalle):
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT d.*, u.nombre_completo AS nombre_agente
+                FROM detalle_ticket d
+                LEFT JOIN usuarios u ON u.id_usuario = d.id_agente
+                WHERE d.id_detalle = %s
+            """, (id_detalle,))
+            return cursor.fetchone()
