@@ -5,21 +5,20 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "45092570"
   },
-  "auth": {
-    "type": "apikey",
-    "apikey": [
-      {
-        "key": "key",
-        "value": "Authorization",
-        "type": "string"
-      },
-      {
-        "key": "value",
-        "value": "JWT {{jwt_token}}",
-        "type": "string"
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "var token = pm.collectionVariables.get('jwt_token');",
+          "if (token) {",
+          "    pm.request.headers.upsert({ key: 'Authorization', value: 'JWT ' + token });",
+          "}"
+        ],
+        "type": "text/javascript"
       }
-    ]
-  },
+    }
+  ],
   "variable": [
     {
       "key": "jwt_token",
