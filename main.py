@@ -104,13 +104,14 @@ def jwt_required(f=None):
         # Usado como @jwt_required (sin paréntesis)
         @wraps(f)
         def decorated(*args, **kwargs):
+            if session.get('usuario'):          # ← AÑADIDO
+                return f(*args, **kwargs)       # ← AÑADIDO
             token = _extraer_jwt(request)
             if token:
                 try:
                     payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-                    if not session.get('usuario'):
-                        session['usuario'] = payload['usuario']
-                        session.permanent = True
+                    session['usuario'] = payload['usuario']
+                    session.permanent = True
                     return f(*args, **kwargs)
                 except jwt.ExpiredSignatureError:
                     return jsonify({'ok': False, 'mensaje': 'Token expirado.'}), 401
@@ -118,18 +119,18 @@ def jwt_required(f=None):
                     return jsonify({'ok': False, 'mensaje': 'Token inválido.'}), 401
             return jsonify({'ok': False, 'mensaje': 'Token no proporcionado.'}), 401
         return decorated
-
     # Usado como @jwt_required() (con paréntesis)
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
+            if session.get('usuario'):          # ← AÑADIDO
+                return f(*args, **kwargs)       # ← AÑADIDO
             token = _extraer_jwt(request)
             if token:
                 try:
                     payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-                    if not session.get('usuario'):
-                        session['usuario'] = payload['usuario']
-                        session.permanent = True
+                    session['usuario'] = payload['usuario']
+                    session.permanent = True
                     return f(*args, **kwargs)
                 except jwt.ExpiredSignatureError:
                     return jsonify({'ok': False, 'mensaje': 'Token expirado.'}), 401
@@ -1294,7 +1295,7 @@ def api_avances_grafico(id_proyecto):
     proyecto = obtenerProyecto(id_proyecto)
     avances = listarAvances(id_proyecto)
     avances_cronologicos = list(reversed(avances))
-    
+
     fechas = []
     porcentajes_reales = []
     porcentajes_estimados = []
@@ -1309,7 +1310,7 @@ def api_avances_grafico(id_proyecto):
             fecha_rep = av['fecha_reporte']
             fechas.append(fecha_rep.strftime('%d/%m'))
             porcentajes_reales.append(float(av['porcentaje_avance']))
-            
+
             # Cálculo del Avance Estimado (Lineal / Roadmap)
             if duracion_total > 0:
                 dias_transcurridos = (fecha_rep - inicio).days
@@ -1318,7 +1319,7 @@ def api_avances_grafico(id_proyecto):
                 esperado = max(0, min(100, esperado))
             else:
                 esperado = 100
-                
+
             porcentajes_estimados.append(round(esperado, 1))
     else:
         # Fallback de seguridad si el proyecto no tiene fechas
