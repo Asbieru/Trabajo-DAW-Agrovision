@@ -5,23 +5,9 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "45092570"
   },
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "exec": [
-          "var token = pm.collectionVariables.get('jwt_token');",
-          "if (token) {",
-          "    pm.request.headers.upsert({ key: 'Authorization', value: 'JWT ' + token });",
-          "}"
-        ],
-        "type": "text/javascript"
-      }
-    }
-  ],
   "variable": [
     {
-      "key": "jwt_token",
+      "key": "jwt_tocken",
       "value": ""
     },
     {
@@ -72,8 +58,8 @@
         "method": "POST",
         "header": [
           {
-            "key": "Content-Type",
-            "value": "application/json",
+            "key": "Authorization",
+            "value": "JWT {{jwt_tocken}}",
             "type": "text"
           }
         ],
@@ -111,13 +97,35 @@
             "exec": [
               "var jsonData = pm.response.json();",
               "if (jsonData.token) {",
-              "    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
+              "    pm.collectionVariables.set(\"jwt_tocken\", jsonData.token);",
               "}"
             ],
             "type": "text/javascript"
           }
         }
       ]
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "https://agrovisiondaw.pythonanywhere.com/api/logout",
+          "protocol": "https",
+          "host": [
+            "agrovisiondaw",
+            "pythonanywhere",
+            "com"
+          ],
+          "path": [
+            "api",
+            "logout"
+          ]
+        },
+        "description": "El logout toma la autenticacion desde las cookies de sesion (no requiere header Authorization). Asegurate de tener habilitado 'Automatically follow redirects' y el envio de cookies en Postman (Settings > General > Send cookies with request, o el cookie jar del dominio)."
+      },
+      "response": []
     },
     {
       "name": "Tickets",
@@ -128,8 +136,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -165,8 +173,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -202,8 +210,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -240,8 +248,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -278,8 +286,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -316,8 +324,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -354,8 +362,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -392,8 +400,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -421,16 +429,24 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/ticket/{{id_ticket}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","ticket","{{id_ticket}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ticket",
+                "{{id_ticket}}"
+              ]
             }
           },
           "response": []
@@ -441,8 +457,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -484,8 +500,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -511,16 +527,24 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/aplicacion/{{id_aplicacion}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","aplicacion","{{id_aplicacion}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "aplicacion",
+                "{{id_aplicacion}}"
+              ]
             }
           },
           "response": []
@@ -531,8 +555,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -568,8 +592,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -606,8 +630,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -635,8 +659,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -669,16 +693,23 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyectos",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","proyectos"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyectos"
+              ]
             }
           },
           "response": []
@@ -689,16 +720,24 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/proyecto/{{id_proyecto}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","proyecto","{{id_proyecto}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "proyecto",
+                "{{id_proyecto}}"
+              ]
             }
           },
           "response": []
@@ -709,8 +748,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -746,8 +785,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -784,8 +823,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -813,8 +852,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -842,8 +881,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -871,8 +910,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -910,8 +949,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -941,8 +980,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -970,8 +1009,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -999,8 +1038,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1028,8 +1067,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1063,8 +1102,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1096,16 +1135,24 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/actividad/{{id_actividad}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","actividad","{{id_actividad}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "actividad",
+                "{{id_actividad}}"
+              ]
             }
           },
           "response": []
@@ -1116,8 +1163,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1153,8 +1200,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1191,8 +1238,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1229,8 +1276,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1258,8 +1305,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1292,16 +1339,23 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuarios",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","usuarios"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
             }
           },
           "response": []
@@ -1312,16 +1366,24 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/{{id_usuario}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","usuario","{{id_usuario}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "{{id_usuario}}"
+              ]
             }
           },
           "response": []
@@ -1332,16 +1394,24 @@
             "method": "PUT",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/{{id_usuario}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","usuario","{{id_usuario}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "{{id_usuario}}"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -1361,16 +1431,24 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/{{id_usuario}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","usuario","{{id_usuario}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "{{id_usuario}}"
+              ]
             }
           },
           "response": []
@@ -1381,8 +1459,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1418,8 +1496,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1451,8 +1529,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1478,16 +1556,24 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol/{{id_rol}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","rol","{{id_rol}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "rol",
+                "{{id_rol}}"
+              ]
             }
           },
           "response": []
@@ -1498,8 +1584,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1534,8 +1620,8 @@
             "method": "PUT",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1571,8 +1657,8 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1599,8 +1685,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1633,8 +1719,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1666,16 +1752,24 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/permiso/{{id_rol_permiso}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","permiso","{{id_rol_permiso}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "permiso",
+                "{{id_rol_permiso}}"
+              ]
             }
           },
           "response": []
@@ -1686,8 +1780,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1722,8 +1816,8 @@
             "method": "PUT",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1759,8 +1853,8 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1792,8 +1886,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1824,8 +1918,8 @@
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
                 "type": "text"
               }
             ],
@@ -1855,12 +1949,25 @@
           "name": "Listar asignados",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/asignados",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","asignados"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "asignados"
+              ]
             }
           },
           "response": []
@@ -1869,12 +1976,29 @@
           "name": "Obtener asignado",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/asignado/proyecto/{{id_proyecto}}/usuario/{{id_usuario}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","asignado","proyecto","{{id_proyecto}}","usuario","{{id_usuario}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "asignado",
+                "proyecto",
+                "{{id_proyecto}}",
+                "usuario",
+                "{{id_usuario}}"
+              ]
             }
           },
           "response": []
@@ -1883,17 +2007,35 @@
           "name": "Guardar asignado",
           "request": {
             "method": "POST",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/asignado/guardar",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","asignado","guardar"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "asignado",
+                "guardar"
+              ]
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"id_proyecto\": \"1\",\n  \"id_usuario\": \"2\"\n}",
-              "options": {"raw":{"language":"json"}}
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": []
@@ -1902,12 +2044,29 @@
           "name": "Eliminar asignado",
           "request": {
             "method": "DELETE",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/asignado/proyecto/{{id_proyecto}}/usuario/{{id_usuario}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","asignado","proyecto","{{id_proyecto}}","usuario","{{id_usuario}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "asignado",
+                "proyecto",
+                "{{id_proyecto}}",
+                "usuario",
+                "{{id_usuario}}"
+              ]
             }
           },
           "response": []
@@ -1921,12 +2080,25 @@
           "name": "Listar avances",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/avances",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","avances"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "avances"
+              ]
             }
           },
           "response": []
@@ -1935,12 +2107,26 @@
           "name": "Obtener avance",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/avance/{{id_avance}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","avance","{{id_avance}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "avance",
+                "{{id_avance}}"
+              ]
             }
           },
           "response": []
@@ -1954,12 +2140,25 @@
           "name": "Listar calificaciones",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/calificaciones",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","calificaciones"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "calificaciones"
+              ]
             }
           },
           "response": []
@@ -1968,12 +2167,26 @@
           "name": "Obtener calificacion",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/calificacion/{{id_detalle}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","calificacion","{{id_detalle}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "calificacion",
+                "{{id_detalle}}"
+              ]
             }
           },
           "response": []
@@ -1982,17 +2195,35 @@
           "name": "Guardar calificacion",
           "request": {
             "method": "POST",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/calificacion/guardar",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","calificacion","guardar"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "calificacion",
+                "guardar"
+              ]
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"id_detalle\": \"1\",\n  \"estrellas\": 4,\n  \"observacion\": \"Buena atencion\"\n}",
-              "options": {"raw":{"language":"json"}}
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": []
@@ -2001,12 +2232,26 @@
           "name": "Eliminar calificacion",
           "request": {
             "method": "DELETE",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/calificacion/{{id_detalle}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","calificacion","{{id_detalle}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "calificacion",
+                "{{id_detalle}}"
+              ]
             }
           },
           "response": []
@@ -2020,13 +2265,31 @@
           "name": "Listar detalles",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/detalles-ticket?id_ticket={{id_ticket}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","detalles-ticket"],
-              "query": [{"key":"id_ticket","value":"{{id_ticket}}"}]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "detalles-ticket"
+              ],
+              "query": [
+                {
+                  "key": "id_ticket",
+                  "value": "{{id_ticket}}"
+                }
+              ]
             }
           },
           "response": []
@@ -2035,12 +2298,26 @@
           "name": "Obtener detalle",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/detalle-ticket/{{id_detalle}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","detalle-ticket","{{id_detalle}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "detalle-ticket",
+                "{{id_detalle}}"
+              ]
             }
           },
           "response": []
@@ -2054,12 +2331,25 @@
           "name": "Listar sprints",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprints",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","sprints"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "sprints"
+              ]
             }
           },
           "response": []
@@ -2068,12 +2358,26 @@
           "name": "Obtener sprint",
           "request": {
             "method": "GET",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprint/{{id_sprint}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","sprint","{{id_sprint}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "sprint",
+                "{{id_sprint}}"
+              ]
             }
           },
           "response": []
@@ -2082,17 +2386,35 @@
           "name": "Guardar sprint",
           "request": {
             "method": "POST",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprint/guardar",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","sprint","guardar"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "sprint",
+                "guardar"
+              ]
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nombre\": \"Sprint 1\",\n  \"id_proyecto\": \"1\",\n  \"objetivo\": \"Completar modulo de ventas\",\n  \"estado\": \"planificado\",\n  \"capacidad_pts\": 20,\n  \"fecha_inicio\": \"2026-07-01\",\n  \"fecha_fin\": \"2026-07-14\"\n}",
-              "options": {"raw":{"language":"json"}}
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": []
@@ -2101,17 +2423,35 @@
           "name": "Actualizar sprint",
           "request": {
             "method": "PUT",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprint/{{id_sprint}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","sprint","{{id_sprint}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "sprint",
+                "{{id_sprint}}"
+              ]
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nombre\": \"Sprint 1 v2\",\n  \"objetivo\": \"Objetivo actualizado\",\n  \"estado\": \"activo\",\n  \"capacidad_pts\": 25,\n  \"fecha_inicio\": \"2026-07-01\",\n  \"fecha_fin\": \"2026-07-14\"\n}",
-              "options": {"raw":{"language":"json"}}
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": []
@@ -2120,12 +2460,26 @@
           "name": "Eliminar sprint",
           "request": {
             "method": "DELETE",
-            "header": [{"key":"Content-Type","value":"application/json","type":"text"}],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "JWT {{jwt_tocken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprint/{{id_sprint}}",
               "protocol": "https",
-              "host": ["agrovisiondaw","pythonanywhere","com"],
-              "path": ["api","sprint","{{id_sprint}}"]
+              "host": [
+                "agrovisiondaw",
+                "pythonanywhere",
+                "com"
+              ],
+              "path": [
+                "api",
+                "sprint",
+                "{{id_sprint}}"
+              ]
             }
           },
           "response": []

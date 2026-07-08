@@ -242,6 +242,15 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    """Cierra la sesión vía API: limpia la sesión del servidor y borra la cookie."""
+    session.clear()
+    resp = jsonify({'ok': True, 'mensaje': 'Sesión cerrada correctamente.'})
+    resp.delete_cookie(app.config.get('SESSION_COOKIE_NAME', 'session'))
+    return resp
+
+
 # ──────────────────────────────────────────────────────────────
 #  DASHBOARD
 # ──────────────────────────────────────────────────────────────
