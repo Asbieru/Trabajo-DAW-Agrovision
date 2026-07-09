@@ -40,7 +40,12 @@
                 data-permiso="dashboard">
                 <span class="ico">🏠</span> Dashboard
             </a>
-
+            <div class="sidebar-section">Usuarios</div>
+            <a href="{{ url_for('lista_usuarios') }}"
+                class="{{ 'activo' if request.endpoint in ('lista_usuarios','perfil_usuario','historial_usuario') else '' }}"
+                data-permiso="lista_usuarios">
+                <span class="ico">👥</span> Lista de Usuarios
+            </a>
             <div class="sidebar-section">Soporte</div>
             <a href="{{ url_for('form_ticket') }}" class="{{ 'activo' if request.endpoint == 'form_ticket' else '' }}"
                 data-permiso="nuevo_ticket">
@@ -62,16 +67,14 @@
                 class="{{ 'activo' if request.endpoint == 'form_proyecto' else '' }}" data-permiso="nuevo_proyecto">
                 <span class="ico">🚀</span> Nuevo proyecto
             </a>
-            <a href="{{ url_for('listar_proyectos') }}"
-                class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}" data-permiso="ver_proyectos">
-                <span class="ico">📁</span> Ver proyectos
-            </a>
             <a href="{{ url_for('aprobacion_proyectos') }}"
                 class="{{ 'activo' if request.endpoint == 'aprobacion_proyectos' else '' }}" data-permiso="aprobacion_proyectos">
                 <span class="ico">✅</span> Aprobación de proyectos
             </a>
-
-            <div class="sidebar-section">Actividades</div>
+            <a href="{{ url_for('listar_proyectos') }}"
+                class="{{ 'activo' if request.endpoint == 'listar_proyectos' else '' }}" data-permiso="ver_proyectos">
+                <span class="ico">📁</span> Ver proyectos
+            </a>
             <a href="{{ url_for('form_actividad') }}"
                 class="{{ 'activo' if request.endpoint == 'form_actividad' else '' }}" data-permiso="nueva_actividad">
                 <span class="ico">📋</span> Nueva actividad
@@ -81,13 +84,6 @@
             <a href="{{ url_for('indicadores_soporte') }}"
                 class="{{ 'activo' if request.endpoint == 'indicadores_soporte' else '' }}" data-permiso="indicadores">
                 <span class="ico">📊</span> Indicadores
-            </a>
-
-            <div class="sidebar-section">Usuarios</div>
-            <a href="{{ url_for('lista_usuarios') }}"
-                class="{{ 'activo' if request.endpoint in ('lista_usuarios','perfil_usuario','historial_usuario') else '' }}"
-                data-permiso="lista_usuarios">
-                <span class="ico">👥</span> Lista de Usuarios
             </a>
             <a href="{{ url_for('gestion_reportes') }}"
                 class="{{ 'activo' if request.endpoint == 'gestion_reportes' else '' }}" data-permiso="reportes">

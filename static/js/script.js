@@ -1,5 +1,5 @@
 /* ============================================================
-   script.js  –  AgroVisión · Script unificado
+   script.js  –  AGROVISION · Script unificado
    ============================================================
    Organización por página:
      1. GLOBAL        → base.html              (todas las páginas)
@@ -15,7 +15,20 @@
      9. HISTORIAL DE USUARIO → historialUsuario.html
    ============================================================ */
 
-
+var selectProyecto = document.querySelector('select[name="id_proyecto"]');
+if (selectProyecto) {
+    selectProyecto.addEventListener('change', function() {
+        const idProyecto = this.value;
+        const campoCodigo = document.querySelector('#campo-codigo');
+        if (!idProyecto) {
+            campoCodigo.value = '— Selecciona un proyecto —';
+            return;
+        }
+        fetch(`/api/actividad/proximo-codigo/${idProyecto}`)
+            .then(res => res.json())
+            .then(data => { campoCodigo.value = data.codigo; });
+    });
+}
 /* ============================================================
    1. GLOBAL – base.html
    ============================================================ */
@@ -172,7 +185,7 @@ document.addEventListener('click', function (e) {
         new Chart(canvasVel, {
             type: 'bar',
             data: {
-                labels: velocity.map(function(s){ return s.sprint; }),
+                labels: velocity.map(function(s){ return s.proyecto.split(' ')[0] + ' - ' + s.sprint; }),
                 datasets: [
                     {
                         label: 'Capacidad',
@@ -514,7 +527,7 @@ function exportarTabla() {
     var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
 
     var y = _pdfHeader(doc,
-        (esProyectos ? 'Proyectos' : 'Tickets') + ' · AgroVisión',
+        (esProyectos ? 'Proyectos' : 'Tickets') + ' · AGROVISION',
         'Tabla filtrada · Generado el: ' + fecha
     );
 
@@ -638,7 +651,7 @@ function exportarResumen() {
     var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
 
     var y = _pdfHeader(doc,
-        'Resumen de Reportes · AgroVisión',
+        'Resumen de Reportes · AGROVISION',
         'Sección: ' + (esProyectos ? 'Proyectos' : 'Tickets') + ' · Generado el: ' + fecha
     );
 
@@ -1547,12 +1560,12 @@ function mostrarSeccionInd(seccion) {
     if (btn && tit && sub) {
         if (seccion === 'proyectos') {
             tit.innerHTML = 'Indicadores<br><span>de Proyectos</span>';
-            sub.textContent = 'KPIs · Gestión de Proyectos · AgroVisión';
+            sub.textContent = 'KPIs · Gestión de Proyectos · AGROVISION';
             btn.textContent = 'Ver proyectos';
             btn.href = btn.getAttribute('data-url-proyectos');
         } else {
             tit.innerHTML = 'Indicadores<br><span>de Soporte</span>';
-            sub.textContent = 'KPIs · Área de Sistemas · AgroVisión';
+            sub.textContent = 'KPIs · Área de Sistemas · AGROVISION';
             btn.textContent = 'Ver tickets';
             btn.href = btn.getAttribute('data-url-tickets');
         }
@@ -2310,7 +2323,7 @@ function filtrarTicketsAPI() {
 }
 
 // ── ORDENAR TABLA ───────────────────────────────────────────────────────────
-var _sortState = { key: 'f_registro', dir: 'desc' };
+var _sortState = { key: 'id_ticket', dir: 'desc' };
 var _sortPriority = { critica: 5, alta: 4, media: 3, baja: 2 };
 var _sortEstado   = { solicitado: 1, en_progreso: 2, resuelto: 3, cerrado: 4, cancelado: 5 };
 
@@ -2326,12 +2339,17 @@ function ordenarTabla() {
     var header = document.querySelector('th.sortable[data-sort-key="' + key + '"]');
     if (header) type = header.getAttribute('data-sort-type');
 
-    rows.sort(function(a, b) {
-        var va = (a.getAttribute('data-sort-' + key) || a.querySelector('[data-label]') && a.querySelector('[data-label]').textContent.trim() || '').toLowerCase();
-        var vb = (b.getAttribute('data-sort-' + key) || b.querySelector('[data-label]') && b.querySelector('[data-label]').textContent.trim() || '').toLowerCase();
+    // Forzar tipo según key conocida
+    if (!type && key === 'id_ticket') type = 'number';
+    if (!type && key === 'calificacion_estrellas') type = 'number';
+    if (!type && key === 'f_registro') type = 'date';
+    if (!type && key === 'prioridad') type = 'priority';
 
-        // fallback: buscar texto interno de la celda por índice
-        if (!va && !vb) {
+    rows.sort(function(a, b) {
+        var va = (a.getAttribute('data-sort-' + key) || '').toLowerCase();
+        var vb = (b.getAttribute('data-sort-' + key) || '').toLowerCase();
+
+        if (!va && !vb && header) {
             var idx = Array.prototype.indexOf.call(header.parentNode.children, header);
             if (idx >= 0) {
                 va = (a.children[idx] && a.children[idx].textContent.trim() || '').toLowerCase();
@@ -2342,10 +2360,7 @@ function ordenarTabla() {
         if (type === 'number') return dir * (parseFloat(va) - parseFloat(vb));
         if (type === 'priority') return dir * ((_sortPriority[va] || 0) - (_sortPriority[vb] || 0));
         if (type === 'date') return dir * (new Date(va) - new Date(vb));
-
-        // Sort estado by custom order
         if (key === 'estado') return dir * ((_sortEstado[va] || 9) - (_sortEstado[vb] || 9));
-
         return dir * va.localeCompare(vb);
     });
 
@@ -2380,3 +2395,15 @@ document.addEventListener('DOMContentLoaded', function() {
     filtrarBotonesAccion();
     filtrarBotonesCalificar();
 });
+
+function apiFetch(url, options) {
+    return fetch(url, options);
+}
+
+function apiPost(url, data) {
+    return fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+}

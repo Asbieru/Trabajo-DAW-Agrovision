@@ -13,26 +13,26 @@ class Actividad:
         self.story_points = story_points if story_points else 0
 
 
-def _generarCodigo():
-    """Genera automaticamente el siguiente codigo ACT-XXX."""
+def _generarCodigo(id_proyecto):
+    """Genera automáticamente el siguiente código ACT-P{id_proyecto}-XXX, por proyecto."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT codigo FROM actividades
-                WHERE codigo LIKE 'ACT-%'
-                ORDER BY id_actividad DESC
-                LIMIT 1
-            """)
-            fila = cursor.fetchone()
-    if fila:
+                WHERE codigo LIKE %s
+            """, (f'ACT-P{id_proyecto}-%',))
+            filas = cursor.fetchall()
+
+    max_num = 0
+    for fila in filas:
         try:
-            num = int(fila['codigo'].split('-')[1]) + 1
+            num = int(fila['codigo'].split('-')[-1])
+            max_num = max(max_num, num)
         except (IndexError, ValueError):
-            num = 1
-    else:
-        num = 1
-    return f'ACT-{num:03d}'
+            continue
+
+    return f'ACT-P{id_proyecto}-{max_num + 1:03d}'
 
 
 def listarActividades(id_proyecto=None):
@@ -63,16 +63,16 @@ def listarActividades(id_proyecto=None):
 
 
 def insertarActividad(obj):
-    """Inserta una nueva actividad con codigo auto-generado."""
-    codigo = _generarCodigo()
+    """Inserta una nueva actividad con código auto-generado por proyecto."""
+    codigo = _generarCodigo(obj.id_proyecto)
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO actividades
-                    (id_proyecto, id_sprint, id_asignado,
-                     codigo, titulo, prioridad, estado, story_points)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                (id_proyecto, id_sprint, id_asignado,
+                 codigo, titulo, prioridad, estado, story_points, estado2)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)
             """, (
                 obj.id_proyecto, obj.id_sprint, obj.id_asignado,
                 codigo, obj.titulo,
@@ -80,6 +80,10 @@ def insertarActividad(obj):
             ))
         conn.commit()
 
+
+def proximoCodigo(id_proyecto):
+    """Devuelve el próximo código que se generaría para ese proyecto (para mostrar en formulario)."""
+    return _generarCodigo(id_proyecto)
 
 def actualizarEstadoActividad(id_actividad, nuevo_estado):
     """Cambia el estado de una actividad. Si se bloquea, guarda el estado anterior."""
@@ -246,11 +250,6 @@ def actualizarActividad(id_actividad, id_proyecto, id_sprint, id_asignado,
                   id_actividad))
         conn.commit()
     return True
-
-
-def proximoCodigo():
-    """Devuelve el proximo codigo que se generaria (para mostrar en formulario)."""
-    return _generarCodigo()
 
 
 def obtenerSprint(id_sprint):

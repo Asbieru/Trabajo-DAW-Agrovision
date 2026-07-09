@@ -5,15 +5,15 @@
 <div class="page-header">
     <div>
         <h1>Panel de Control</h1>
-        <p>Bienvenido al sistema de gestión · AgroVisión Corp.</p>
+        <p>Bienvenido al sistema de gestión · AGROVISION</p>
     </div>
 </div>
 
 <!-- STATS -->
 <div class="stats-grid">
     <div class="stat-card" data-permiso="dashboard">
-        <div class="stat-num azul">40</div>
-        <div class="stat-label">Sistemas en producción</div>
+        <div class="stat-num azul">{{ total_aplicaciones or 0 }}</div>
+        <div class="stat-label">Aplicaciones activas</div>
     </div>
     <div class="stat-card" data-permiso="dashboard">
         <div class="stat-num acento" id="stat-tickets-abiertos">—</div>

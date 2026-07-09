@@ -51,6 +51,8 @@
                                 <span class="badge badge-acento">🧪 QA</span>
                             {% elif p.estado == 'pausado' %}
                                 <span class="badge badge-gris">⏸️ Pausado</span>
+                            {% elif p.estado == 'cancelado' %}
+                                <span class="badge badge-gris" style="background:#f5c6cb;color:#721c24;">🚫 Cancelado</span>
                             {% else %}
                                 <span class="badge badge-gris">📝 Planificado</span>
                             {% endif %}
@@ -69,12 +71,14 @@
                                    class="btn btn-sm btn-outline">📊 Historial</a>
                                 <a href="{{ url_for('form_editar_proyecto', id_proyecto=p.id_proyecto) }}"
                                    class="btn btn-sm btn-outline">✏️ Editar</a>
+                                {% if p.estado not in ['cancelado', 'completado'] %}
                                 <button type="button"
-                                        onclick="confirmarEliminarProyecto({{ p.id_proyecto }}, '{{ p.nombre | e }}')"
+                                        onclick="confirmarCancelarProyecto({{ p.id_proyecto }}, '{{ p.nombre | e }}')"
                                         class="btn btn-sm"
                                         style="background:var(--rojo);color:#fff;border:none;border-radius:6px;cursor:pointer;padding:4px 10px;font-size:0.78rem;">
-                                    🗑 Eliminar
+                                    🚫 Cancelar
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -92,22 +96,25 @@
     </div>
 </div>
 
-<!-- ══ MODAL CONFIRMAR ELIMINAR PROYECTO ══ -->
-<div id="modal-eliminar-proyecto" class="av-modal-overlay" style="display:none;">
+<!-- ══ MODAL CONFIRMAR CANCELAR PROYECTO ══ -->
+<div id="modal-cancelar-proyecto" class="av-modal-overlay" style="display:none;">
     <div class="av-modal-box">
-        <div style="font-size:2rem;margin-bottom:10px;">🗑️</div>
-        <h3 style="margin:0 0 8px 0;font-size:1.05rem;">¿Desea eliminar el proyecto?</h3>
-        <p id="modal-elim-nombre-proy" style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 20px 0;"></p>
+        <div style="font-size:2rem;margin-bottom:10px;">🚫</div>
+        <h3 style="margin:0 0 8px 0;font-size:1.05rem;">¿Desea cancelar el proyecto?</h3>
+        <p id="modal-cancel-nombre-proy" style="font-size:0.88rem;color:var(--gris-texto);margin:0 0 8px 0;"></p>
+        <p style="font-size:0.8rem;color:var(--gris-texto);margin:0 0 20px 0;">
+            Todas las actividades activas de este proyecto también se cancelarán automáticamente.
+        </p>
         <div style="display:flex;gap:10px;justify-content:center;">
-            <button id="modal-elim-si"
+            <button id="modal-cancel-si"
                     class="btn btn-sm"
                     style="background:var(--rojo);color:#fff;border:none;border-radius:6px;cursor:pointer;padding:8px 24px;font-size:0.88rem;font-weight:600;">
-                Sí, eliminar
+                Sí, cancelar proyecto
             </button>
-            <button onclick="cerrarModalEliminarProyecto()"
+            <button onclick="cerrarModalCancelarProyecto()"
                     class="btn btn-sm btn-outline"
                     style="padding:8px 24px;font-size:0.88rem;">
-                No, cancelar
+                No, volver
             </button>
         </div>
     </div>
@@ -140,6 +147,51 @@ function obtenerUsuario() {
         }
     } catch(e) {}
 })();
+
+let idProyectoACancelar = null;
+
+function confirmarCancelarProyecto(idProyecto, nombreProyecto) {
+    idProyectoACancelar = idProyecto;
+    document.getElementById('modal-cancel-nombre-proy').textContent = nombreProyecto;
+    document.getElementById('modal-cancelar-proyecto').style.display = 'flex';
+}
+
+function cerrarModalCancelarProyecto() {
+    document.getElementById('modal-cancelar-proyecto').style.display = 'none';
+    idProyectoACancelar = null;
+}
+
+function mostrarAvisoGlobal(mensaje) {
+    document.getElementById('modal-aviso-mensaje').textContent = mensaje;
+    document.getElementById('modal-aviso-global').style.display = 'flex';
+}
+
+function cerrarModalAviso() {
+    document.getElementById('modal-aviso-global').style.display = 'none';
+}
+
+document.getElementById('modal-cancel-si').addEventListener('click', function() {
+    if (!idProyectoACancelar) return;
+    const token = (typeof TOKEN !== 'undefined') ? TOKEN : null;
+
+    fetch(`/api/proyecto/${idProyectoACancelar}/cancelar`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': 'JWT ' + token } : {}
+    })
+    .then(res => res.json())
+    .then(data => {
+        cerrarModalCancelarProyecto();
+        if (data.ok) {
+            window.location.reload();
+        } else {
+            mostrarAvisoGlobal(data.mensaje || 'No se pudo cancelar el proyecto.');
+        }
+    })
+    .catch(() => {
+        cerrarModalCancelarProyecto();
+        mostrarAvisoGlobal('Error de conexión con el servidor.');
+    });
+});
 </script>
 
 {% endblock %}

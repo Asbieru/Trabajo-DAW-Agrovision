@@ -21,7 +21,7 @@ def reporteResumen():
                        (SELECT COUNT(*) FROM sprints s
                         JOIN proyectos p ON s.id_proyecto = p.id_proyecto
                         WHERE s.estado = 'activo')                  AS sprints_activos,
-                         (SELECT COUNT(*) FROM usuarios u JOIN rol r ON r.id_rol = u.id_rol WHERE r.nombre = 'Soporte') AS total_soporte
+                         (SELECT COUNT(*) FROM usuarios u JOIN rol r ON r.id_rol = u.id_rol WHERE r.nombre = 'Programador') AS total_soporte
                 FROM tickets
             """)
             return cursor.fetchone()
@@ -167,7 +167,7 @@ def reporteTicketsFiltrados(fecha_inicio=None, fecha_fin=None,
 
             if condiciones:
                 sql += " WHERE " + " AND ".join(condiciones)
-            sql += " ORDER BY t.f_registro DESC"
+            sql += " ORDER BY t.id_ticket DESC"
             cursor.execute(sql, tuple(params) if params else None)
             return [dict(r) for r in cursor.fetchall()]
 
@@ -255,9 +255,14 @@ def reporteProyectosFiltrados(estado=None, id_responsable=None):
                            WHEN p.fecha_fin_plan < CURDATE()        THEN 'vencido'
                            WHEN DATEDIFF(p.fecha_fin_plan, CURDATE()) <= 7 THEN 'por_vencer'
                            ELSE 'ok'
-                       END AS salud
+                       END AS salud,
+                       COALESCE(ROUND(
+                           SUM(CASE WHEN a.estado = 'completada' THEN a.story_points ELSE 0 END)
+                           / NULLIF(SUM(a.story_points), 0) * 100, 0
+                       ), 0) AS pct_avance
                 FROM proyectos p
                 JOIN usuarios u ON p.id_Stakeholder = u.id_usuario
+                LEFT JOIN actividades a  ON a.id_proyecto = p.id_proyecto AND a.estado2 = 1
             """
             condiciones, params = [], []
             if estado:
@@ -268,10 +273,9 @@ def reporteProyectosFiltrados(estado=None, id_responsable=None):
                 params.append(id_responsable)
             if condiciones:
                 sql += " WHERE " + " AND ".join(condiciones)
-            sql += " ORDER BY p.fecha_fin_plan ASC"
+            sql += " GROUP BY p.id_proyecto ORDER BY p.id_proyecto DESC"
             cursor.execute(sql, tuple(params) if params else None)
             return cursor.fetchall()
-
 
 def reporteActividadesPorProyecto(id_proyecto):
     conn = obtenerconexion()

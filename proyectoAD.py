@@ -21,12 +21,7 @@ class Proyecto:
 
 
 def _calcularEstado(estado_bd, total_acts, completadas, en_progreso, bloqueadas):
-    """
-    Calcula el estado real de un proyecto basandose en sus actividades.
-    Si no hay actividades, respeta el estado guardado en la BD.
-    """
-    # Estados que no se sobreescriben con logica de actividades
-    if estado_bd in ('en_revision', 'rechazado', 'eliminado', 'pausado'):
+    if estado_bd in ('en_revision', 'rechazado', 'eliminado', 'pausado', 'cancelado'):
         return estado_bd
     if total_acts == 0:
         return estado_bd
@@ -119,6 +114,21 @@ def listarProyectosEnRevision():
             """)
             return cursor.fetchall()
 
+def listarProyectosRechazados():
+    """Retorna todos los proyectos rechazados con datos de quién y cuándo rechazó."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT p.id_proyecto, p.nombre, p.created_at,
+                       p.fecha_rechazo,
+                       u.nombre_completo AS nombre_rechazador
+                FROM proyectos p
+                LEFT JOIN usuarios u ON p.id_rechazado_por = u.id_usuario
+                WHERE p.estado = 'rechazado'
+                ORDER BY p.fecha_rechazo DESC
+            """)
+            return cursor.fetchall()
 
 def aprobarProyecto(id_proyecto):
     """Cambia el estado de en_revision a planificado."""
@@ -133,18 +143,20 @@ def aprobarProyecto(id_proyecto):
     return True
 
 
-def rechazarProyecto(id_proyecto):
-    """Cambia el estado de en_revision a rechazado."""
+def rechazarProyecto(id_proyecto, id_usuario_rechaza):
+    """Cambia el estado de en_revision a rechazado, guardando quién y cuándo."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                UPDATE proyectos SET estado = 'rechazado'
+                UPDATE proyectos
+                SET estado = 'rechazado',
+                    fecha_rechazo = NOW(),
+                    id_rechazado_por = %s
                 WHERE id_proyecto = %s AND estado = 'en_revision'
-            """, (id_proyecto,))
+            """, (id_usuario_rechaza, id_proyecto))
         conn.commit()
     return True
-
 
 def insertarProyecto(obj):
     """Inserta un proyecto de software y sus Stakeholders en la tabla intermedia."""
@@ -273,14 +285,16 @@ def actualizarProyectoCompleto(id_proyecto, nombre, ids_responsables, estado,
 
 
 def tieneActividadesPendientes(id_proyecto):
-    """Retorna True si el proyecto tiene actividades no eliminadas."""
+    """Retorna True si el proyecto tiene actividades en estados no terminales
+    (no completadas, canceladas ni eliminadas)."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT COUNT(*) AS total
                 FROM actividades
-                WHERE id_proyecto = %s AND estado != 'eliminado'
+                WHERE id_proyecto = %s
+                  AND estado NOT IN ('completada', 'cancelada', 'eliminado')
             """, (id_proyecto,))
             row = cursor.fetchone()
     return int(row['total'] or 0) > 0
@@ -299,6 +313,22 @@ def eliminarProyecto(id_proyecto):
         conn.commit()
     return True
 
+def cancelarProyecto(id_proyecto):
+    """Cancela un proyecto y cancela en cascada todas sus actividades activas."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE proyectos SET estado = 'cancelado' WHERE id_proyecto = %s
+            """, (id_proyecto,))
+            cursor.execute("""
+                UPDATE actividades
+                SET estado = 'cancelada'
+                WHERE id_proyecto = %s
+                  AND estado NOT IN ('completada', 'cancelada', 'eliminado')
+            """, (id_proyecto,))
+        conn.commit()
+    return True
 
 def listarAvances(id_proyecto):
     """Retorna el historial de avances de un proyecto con nombre del autor."""

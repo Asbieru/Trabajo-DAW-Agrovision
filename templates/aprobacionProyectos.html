@@ -7,13 +7,16 @@
         <h1>✅ Aprobación de proyectos</h1>
         <p>Proyectos pendientes de revisión y aprobación</p>
     </div>
-    <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Ver proyectos</a>
+    <div style="display:flex;gap:10px;align-items:center;">
+        <a class="btn btn-outline" href="{{ url_for('proyectos_rechazados') }}">❌ Ver rechazados</a>
+        <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Ver proyectos</a>
+    </div>
 </div>
 
 {% if proyectos %}
 <div class="aprobacion-contador">
     <span class="aprobacion-badge-count">{{ proyectos|length }}</span>
-    proyecto{{ 's' if proyectos|length != 1 else '' }} pendiente{{ 's' if proyectos|length != 1 else '' }} de revisión
+    Proyecto{{ 's' if proyectos|length != 1 else '' }} pendiente{{ 's' if proyectos|length != 1 else '' }} de revisión
 </div>
 
 <div class="aprobacion-grid">

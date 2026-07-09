@@ -19,19 +19,62 @@
 
 <!-- FILTRO POR PROYECTO -->
 <div class="card" style="margin-bottom:18px;">
-    <div class="card-body" style="padding:14px 22px;">
-        <label style="font-weight:600;font-size:0.88rem;margin-right:12px;">Proyecto:</label>
-        <select onchange="window.location='/proyecto/'+this.value+'/gestion'" style="min-width:220px;">
-            {% for p in todos_proyectos %}
-            <option value="{{ p.id_proyecto }}"
-                {% if p.id_proyecto == proyecto.id_proyecto %}selected{% endif %}>
-                {{ p.nombre }}
-            </option>
-            {% endfor %}
-        </select>
+    <div class="card-body proyecto-filtro">
+        <label class="filtro-label">Proyecto</label>
+        <div class="select-wrapper">
+            <select class="select-moderno" onchange="window.location='/proyecto/'+this.value+'/gestion'">
+                {% for p in todos_proyectos %}
+                <option value="{{ p.id_proyecto }}"
+                    {% if p.id_proyecto == proyecto.id_proyecto %}selected{% endif %}>
+                    {{ p.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
 </div>
+<!-- ══════════════════════════════════════════════════════
+     FECHAS Y PLAZO
+     ══════════════════════════════════════════════════════ -->
+<div class="card gp-card" style="margin-top:18px;">
+    <div class="card-header">📅 Fechas y plazo</div>
+    <div class="card-body">
 
+        {% if en_riesgo %}
+        <div class="msg-error gp-alerta-riesgo">
+            🚨 <strong>Proyecto en riesgo:</strong> la fecha de fin planificada ya venció
+            y el proyecto aún no está completado.
+        </div>
+        {% endif %}
+
+        <div class="form-grid">
+
+            <div class="stat-card gp-stat-inicio">
+                <div class="gp-stat-label">📅 Fecha de inicio</div>
+                <div class="gp-stat-value">
+                    {{ proyecto.fecha_inicio.strftime('%d/%m/%Y') if proyecto.fecha_inicio else '—' }}
+                </div>
+            </div>
+
+            <div class="stat-card gp-stat-fin">
+                <div class="gp-stat-label">🏁 Fin planificado</div>
+                <div class="gp-stat-value">
+                    {{ proyecto.fecha_fin_plan.strftime('%d/%m/%Y') if proyecto.fecha_fin_plan else '—' }}
+                </div>
+            </div>
+
+            <div class="stat-card {{ 'gp-stat-dias--riesgo' if en_riesgo else 'gp-stat-dias--ok' }}">
+                <div class="gp-stat-label">⏳ Días restantes</div>
+                <div id="dias-restantes"
+                     data-fecha-fin="{{ proyecto.fecha_fin_plan.strftime('%Y-%m-%d') if proyecto.fecha_fin_plan else '' }}"
+                     class="gp-stat-value {{ 'gp-dias-valor--riesgo' if en_riesgo else 'gp-dias-valor--ok' }}">
+                    —
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
 <!-- RESUMEN TOTALES (arriba del kanban) -->
 <div style="margin-bottom:18px;display:flex;gap:10px;flex-wrap:wrap;">
     <div class="stat-card" style="flex:1;min-width:120px;">
@@ -105,6 +148,7 @@
                 <div style="margin-top:10px;border-top:1px solid var(--gris-borde);padding-top:8px;">
                     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                         {% if a.estado == 'cancelada' %}
+
                             <button type="button"
                                     onclick="confirmarEliminarActividad({{ a.id_actividad }}, this)"
                                     class="btn btn-sm"
@@ -118,15 +162,19 @@
                                     style="padding:3px 8px;font-size:0.7rem;flex:1;">
                                 🔓 Desbloquear
                             </button>
+                        {% elif a.estado == 'completada' %}
+                            <span style="font-size:0.7rem;color:var(--verde);font-weight:600;text-align:center;flex:1;">
+                                ✅ Completada
+                            </span>
                         {% else %}
-                            {% if a.estado != 'completada' %}
+
                             <button type="button"
                                     onclick="avanzarEstadoActividad({{ a.id_actividad }}, '{{ a.estado }}', this)"
                                     class="btn btn-verde btn-sm"
                                     style="padding:3px 8px;font-size:0.7rem;flex:1;">
                                 →
                             </button>
-                            {% endif %}
+
                             <a href="{{ url_for('form_editar_actividad', id_actividad=a.id_actividad) }}"
                                class="btn btn-sm btn-outline"
                                style="padding:3px 8px;font-size:0.7rem;flex:1;text-align:center;">
@@ -160,49 +208,6 @@
 </div>
 {% endfor %}
 
-</div>
-
-<!-- ══════════════════════════════════════════════════════
-     FECHAS Y PLAZO
-     ══════════════════════════════════════════════════════ -->
-<div class="card gp-card" style="margin-top:18px;">
-    <div class="card-header">📅 Fechas y plazo</div>
-    <div class="card-body">
-
-        {% if en_riesgo %}
-        <div class="msg-error gp-alerta-riesgo">
-            🚨 <strong>Proyecto en riesgo:</strong> la fecha de fin planificada ya venció
-            y el proyecto aún no está completado.
-        </div>
-        {% endif %}
-
-        <div class="form-grid">
-
-            <div class="stat-card gp-stat-inicio">
-                <div class="gp-stat-label">📅 Fecha de inicio</div>
-                <div class="gp-stat-value">
-                    {{ proyecto.fecha_inicio.strftime('%d/%m/%Y') if proyecto.fecha_inicio else '—' }}
-                </div>
-            </div>
-
-            <div class="stat-card gp-stat-fin">
-                <div class="gp-stat-label">🏁 Fin planificado</div>
-                <div class="gp-stat-value">
-                    {{ proyecto.fecha_fin_plan.strftime('%d/%m/%Y') if proyecto.fecha_fin_plan else '—' }}
-                </div>
-            </div>
-
-            <div class="stat-card {{ 'gp-stat-dias--riesgo' if en_riesgo else 'gp-stat-dias--ok' }}">
-                <div class="gp-stat-label">⏳ Días restantes</div>
-                <div id="dias-restantes"
-                     data-fecha-fin="{{ proyecto.fecha_fin_plan.strftime('%Y-%m-%d') if proyecto.fecha_fin_plan else '' }}"
-                     class="gp-stat-value {{ 'gp-dias-valor--riesgo' if en_riesgo else 'gp-dias-valor--ok' }}">
-                    —
-                </div>
-            </div>
-
-        </div>
-    </div>
 </div>
 
 <!-- ══ MODAL CONFIRMAR ELIMINAR ACTIVIDAD ══ -->

@@ -22,7 +22,7 @@
     <div class="ind-hero-texto">
         <div class="ind-hero-badge">PANEL EN VIVO</div>
         <h1 class="ind-hero-titulo" id="ind-hero-titulo">Indicadores<br><span>de Soporte</span></h1>
-        <p class="ind-hero-sub" id="ind-hero-sub">KPIs · Área de Sistemas · AgroVisión</p>
+        <p class="ind-hero-sub" id="ind-hero-sub">KPIs · Área de Sistemas · AGROVISION</p>
     </div>
     <div class="ind-hero-acciones">
         <a id="ind-hero-btn" class="ind-btn-secundario"
@@ -481,7 +481,7 @@
             <div class="ind-chart-panel">
                 <div class="ind-chart-titulo"><span class="ind-chart-dot ind-dot-azul"></span>Velocity por sprint</div>
                 <div class="ind-chart-cuerpo">
-                    {% if velocity_sprints %}<canvas id="grafico-velocity"></canvas>
+                    {% if velocity_sprints %}<canvas id="grafico-velocity" style="min-height:250px;"></canvas>
                     {% else %}<div class="ind-sin-datos">Sin sprints registrados aún.</div>{% endif %}
                 </div>
             </div>

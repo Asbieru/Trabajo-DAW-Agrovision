@@ -39,8 +39,9 @@ from actividadAD import (Actividad, listarActividades, insertarActividad,
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
                         listarAvances, insertarAvance, eliminarAvance,
-                        eliminarProyecto, tieneActividadesPendientes,
+                        cancelarProyecto,
                         listarProyectosEnRevision, aprobarProyecto, rechazarProyecto,
+                        listarProyectosRechazados,
                         generarSprintsProyecto, listarSprintsPorProyecto,
                         listarAvancesAll, obtenerAvance,
                         listarAsignados, obtenerAsignado, insertarAsignado, eliminarAsignado)
@@ -419,17 +420,19 @@ def listar_proyectos():
         abort(500)
     return render_template('listaProyectos.html', proyectos=proyectos)
 
-@app.route('/api/proyecto/<int:id_proyecto>/eliminar', methods=['POST'])
+@app.route('/api/proyecto/<int:id_proyecto>/cancelar', methods=['POST'])
 @jwt_required()
 @login_required
-def api_eliminar_proyecto(id_proyecto):
-    if tieneActividadesPendientes(id_proyecto):
-        return jsonify({'ok': False, 'mensaje': 'No se puede eliminar: el proyecto tiene actividades pendientes.'})
-    ok = eliminarProyecto(id_proyecto)
+def api_cancelar_proyecto(id_proyecto):
+    proyecto = obtenerProyecto(id_proyecto)
+    if not proyecto:
+        return jsonify({'ok': False, 'mensaje': 'Proyecto no encontrado'}), 404
+    if proyecto.get('estado') in ('cancelado', 'completado', 'eliminado'):
+        return jsonify({'ok': False, 'mensaje': 'Este proyecto no puede cancelarse.'})
+    ok = cancelarProyecto(id_proyecto)
     if ok:
         return jsonify({'ok': True})
-    return jsonify({'ok': False, 'mensaje': 'No se pudo eliminar el proyecto.'})
-
+    return jsonify({'ok': False, 'mensaje': 'No se pudo cancelar el proyecto.'})
 
 @app.route('/api/reporte/proyecto/<int:id_proyecto>/actividades')
 @jwt_required()
@@ -952,29 +955,31 @@ def exportar_excel_proyectos():
 # ──────────────────────────────────────────────────────────────
 
 @app.route('/actividad/nueva')
-@login_required
 def form_actividad():
     id_proyecto_pre = request.args.get('id_proyecto', type=int)
-    proyectos       = listarProyectos()
-    sprints         = listarTodosSprints()
-    proximo_codigo  = proximoCodigo()
+    proyectos = listarProyectos()
+    sprints = listarTodosSprints()
+    proximo_codigo = proximoCodigo(id_proyecto_pre) if id_proyecto_pre else None
 
-    # Dict {id_proyecto: [lista de asignados]} — se pasa como dict Python normal
     asignados_json = {}
     for p in proyectos:
-        pid   = p['id_proyecto']
+        pid = p['id_proyecto']
         lista = listarAsignadosPorProyecto(pid)
         asignados_json[pid] = [{'id_usuario': u['id_usuario'],
-                                'nombre_completo': u['nombre_completo']}
-                               for u in lista]
+                                 'nombre_completo': u['nombre_completo']}
+                                for u in lista]
 
     return render_template('nuevaActividad.html',
-                           proyectos=proyectos,
-                           sprints=sprints,
-                           proximo_codigo=proximo_codigo,
-                           asignados_json=asignados_json,
-                           id_proyecto_pre=id_proyecto_pre)
+                            proyectos=proyectos,
+                            sprints=sprints,
+                            proximo_codigo=proximo_codigo,
+                            asignados_json=asignados_json,
+                            id_proyecto_pre=id_proyecto_pre)
 
+
+@app.route('/api/actividad/proximo-codigo/<int:id_proyecto>')
+def api_proximo_codigo(id_proyecto):
+    return jsonify({'codigo': proximoCodigo(id_proyecto)})
 
 @app.route('/actividad/<int:id_actividad>/editar')
 @login_required
@@ -1946,12 +1951,12 @@ def api_sprints_por_proyecto(id_proyecto):
 @login_required
 def api_rechazar_proyecto(id_proyecto):
     try:
-        rechazarProyecto(id_proyecto)
+        id_usuario = session['usuario']['id_usuario']
+        rechazarProyecto(id_proyecto, id_usuario)
         return jsonify({'ok': True})
     except Exception as e:
         print(f'Error al rechazar proyecto: {e}')
         return jsonify({'ok': False, 'mensaje': 'Error al rechazar el proyecto.'})
-
 
 @app.route('/api/usuario/nuevo', methods=['POST'])
 @jwt_required()
@@ -1982,6 +1987,15 @@ def api_nuevo_usuario():
         return jsonify({'ok': True, 'id_usuario': result})
     return jsonify({'ok': False, 'mensaje': result}), 400
 
+@app.route('/admin/proyectos-rechazados')
+@login_required
+def proyectos_rechazados():
+    try:
+        proyectos = listarProyectosRechazados()
+    except Exception as e:
+        print(f'Error al listar proyectos rechazados: {e}')
+        abort(500)
+    return render_template('proyectosRechazados.html', proyectos=proyectos)
 
 # ──────────────────────────────────────────────────────────────
 #  API USUARIOS CRUD
@@ -2387,6 +2401,12 @@ def api_chatbot_contexto():
         ],
     })
 
+@app.route('/api/dashboard/stats')
+@login_required
+def api_dashboard_stats():
+    tickets = listarTickets()
+    abiertos = len([t for t in tickets if t['estado'] in ('solicitado', 'en_progreso')])
+    return jsonify({'tickets_abiertos': abiertos})
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE

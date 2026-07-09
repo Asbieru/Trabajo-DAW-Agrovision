@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Proyectos Rechazados{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>❌ Proyectos Rechazados</h1>
+        <p>Historial de proyectos que no fueron aprobados</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+        <a class="btn btn-outline" href="{{ url_for('listar_proyectos') }}">← Ver proyectos</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="tabla-wrap">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Fecha y hora solicitada</th>
+                    <th>Fecha y hora de rechazo</th>
+                    <th>Rechazado por</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if proyectos %}
+                    {% for p in proyectos %}
+                    <tr>
+                        <td class="proyecto-id">PR-{{ p.id_proyecto }}</td>
+                        <td><strong>{{ p.nombre }}</strong></td>
+                        <td class="proyecto-fecha">
+                            {{ p.created_at.strftime('%d/%m/%Y %H:%M') if p.created_at else '—' }}
+                        </td>
+                        <td class="proyecto-fecha">
+                            {{ p.fecha_rechazo.strftime('%d/%m/%Y %H:%M') if p.fecha_rechazo else '—' }}
+                        </td>
+                        <td>{{ p.nombre_rechazador or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="tabla-empty">
+                            No hay proyectos rechazados.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

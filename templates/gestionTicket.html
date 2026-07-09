@@ -33,7 +33,7 @@
         <table class="tabla tabla-tickets" id="tabla-tickets">
             <thead>
                 <tr>
-                    <th class="sortable" data-sort-key="id_ticket" data-sort-type="number">ID <span class="sort-indicator"></span></th>
+                    <th class="sortable sort-active sort-desc" data-sort-key="id_ticket" data-sort-type="number">ID <span class="sort-indicator"></span></th>
                     <th class="sortable" data-sort-key="titulo">Título <span class="sort-indicator"></span></th>
                     <th class="sortable" data-sort-key="tipo">Tipo <span class="sort-indicator"></span></th>
                     <th class="sortable" data-sort-key="prioridad" data-sort-type="priority">Prioridad <span class="sort-indicator"></span></th>
@@ -42,7 +42,7 @@
                     <th class="col-calificacion sortable" data-sort-key="calificacion_estrellas" data-sort-type="number">Calificación <span class="sort-indicator"></span></th>
                     <th class="sortable" data-sort-key="nombre_solicitante">Solicitante <span class="sort-indicator"></span></th>
                     <th class="sortable col-agente" data-sort-key="nombre_agente">Agente <span class="sort-indicator"></span></th>
-                    <th class="sortable col-apertura sort-active sort-desc" data-sort-key="f_registro" data-sort-type="date">Registro <span class="sort-indicator"></span></th>
+                    <th class="sortable col-apertura" data-sort-key="f_registro" data-sort-type="date">Registro <span class="sort-indicator"></span></th>
                     <th></th>
                 </tr>
             </thead>
@@ -52,7 +52,12 @@
                         <tr data-texto="{{ (t.titulo ~ ' ' ~ t.nombre_solicitante ~ ' ' ~ t.nombre_aplicacion ~ ' SD-' ~ t.id_ticket)|lower }}"
                             data-estado="{{ t.estado }}"
                             data-id-solicitante="{{ t.id_solicitante }}"
-                            data-id-agente="{{ t.id_agente or '' }}">
+                            data-id-agente="{{ t.id_agente or '' }}"
+                            data-sort-id_ticket="{{ t.id_ticket }}"
+                            data-sort-prioridad="{{ t.prioridad or 'baja' }}"
+                            data-sort-estado="{{ t.estado }}"
+                            data-sort-f_registro="{{ t.f_registro.isoformat() if t.f_registro else '' }}"
+                            data-sort-calificacion_estrellas="{{ t.calificacion_estrellas or 0 }}">
 
                             <td class="td-id ticket-id" data-label="ID">
                                 <a href="{{ url_for('ver_ticket', id_ticket=t.id_ticket) }}" class="ticket-link">SD-{{ t.id_ticket }}</a>

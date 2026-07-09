@@ -308,9 +308,7 @@ def listarTickets():
                     GROUP BY d.id_ticket
                 ) c ON c.id_ticket = t.id_ticket
                 WHERE t.estado NOT IN ('cancelado')
-                ORDER BY
-                    FIELD(IFNULL(d.prioridad, 'media'),'critica','alta','media','baja'),
-                    t.f_registro DESC
+                ORDER BY t.id_ticket DESC
             """)
             return cursor.fetchall()
 

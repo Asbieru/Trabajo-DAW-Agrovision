@@ -23,7 +23,7 @@
 
 <!-- Cabecera solo visible al exportar PDF -->
 <div class="solo-pdf" style="display:none; text-align:center; margin-bottom:24px;">
-    <h2 style="font-size:1.4rem; font-weight:800; color:#1a1e24;">Gestión de Reportes · AgroVisión</h2>
+    <h2 style="font-size:1.4rem; font-weight:800; color:#1a1e24;">Gestión de Reportes · AGROVISION</h2>
     <p style="color:#6c757d; font-size:0.88rem;">Generado el: <span id="rep-fecha-hoy"></span></p>
     <hr style="border:0; border-top:1px solid #e2e6ea; margin:14px 0;">
 </div>
@@ -31,16 +31,14 @@
 <div id="documento-pdf">
 
 <!-- HEADER REPORTES: estilo documento/panel de gestión -->
-<div class="rep-header reporte-no-print">
-    <div class="rep-header-izq">
-        <div class="rep-header-linea"></div>
-        <div>
-            <h1 class="rep-titulo">Gestión de Reportes</h1>
-            <p class="rep-subtitulo">Reportes de soporte y proyectos para toma de decisiones · Jefe TI</p>
-        </div>
+<div class="ind-hero reporte-no-print" style="margin-bottom:24px;">
+    <div class="ind-hero-texto">
+        <div class="ind-hero-badge">REPORTES</div>
+        <h1 class="ind-hero-titulo">Gestión de<br><span>Reportes</span></h1>
+        <p class="ind-hero-sub">Soporte y proyectos · Toma de decisiones · AGROVISION</p>
     </div>
-    <div class="rep-header-der">
-        <button onclick="exportarResumen()" class="rep-btn-pdf">Exportar Resumen PDF</button>
+    <div class="ind-hero-acciones">
+        <button onclick="exportarResumen()" class="ind-btn-secundario">📄 Exportar Resumen PDF</button>
     </div>
 </div>
 
@@ -80,7 +78,7 @@
         <div class="rep-resumen-card rep-rc-info">
             <div class="rep-rc-icono">👥</div>
             <div class="rep-rc-info">
-                <div class="rep-rc-num">{{ resumen.total_programadores or 0 }}</div>
+                <div class="rep-rc-num">{{ resumen.total_soporte or 0 }}</div>
                 <div class="rep-rc-label">Programadores</div>
             </div>
         </div>
@@ -181,7 +179,7 @@
                         <td>{{ a.sla_ok or 0 }}</td>
                         <td>
                             <span class="rep-chip {{ 'rep-chip-verde' if (a.pct_sla or 0) >= 80 else 'rep-chip-rojo' if (a.pct_sla or 0) < 50 else 'rep-chip-naranja' }}">
-                                {{ a.pct_sla or '—' }}{% if a.pct_sla %}%{% endif %}
+                                {{ a.pct_sla if a.pct_sla is not none else 0 }}%
                             </span>
                         </td>
                         <td>{{ a.promedio_horas or '—' }}{% if a.promedio_horas %}h{% endif %}</td>
@@ -249,7 +247,7 @@
                     <button type="button" class="rep-btn-filtrar" onclick="filtrarReportes()">Filtrar</button>
                     <button type="button" class="rep-btn-limpiar" onclick="limpiarFiltros()">Limpiar</button>
                     <button type="button" class="rep-btn-pdf reporte-no-print" onclick="exportarTabla()">Exportar PDF</button>
-                    <button type="button" class="rep-btn-excel reporte-no-print" onclick="exportarExcel()">⬇ Exportar Excel</button>
+                    <button type="button" class="btn btn-verde reporte-no-print" onclick="exportarExcel()">⬇ Exportar Excel</button>
                 </div>
             </form>
         </div>
@@ -419,11 +417,13 @@
                     <label>Estado</label>
                     <select id="filtro-estado-proy">
                         <option value="">Todos</option>
+                        <option value="en_revision">En revisión</option>
                         <option value="planificado">Planificado</option>
                         <option value="en_desarrollo">En desarrollo</option>
                         <option value="qa">QA</option>
                         <option value="pausado">Pausado</option>
                         <option value="completado">Completado</option>
+                        <option value="rechazado">Rechazado</option>
                     </select>
                 </div>
                 <div class="rep-filtro-grupo">
@@ -441,7 +441,7 @@
                 <button type="button" class="rep-btn-limpiar" onclick="limpiarFiltrosProyecto()">Limpiar</button>
                 <button type="button" class="rep-btn-pdf reporte-no-print" onclick="exportarTabla()">Exportar Tabla PDF</button>
                 <button type="button" class="rep-btn-pdf-act reporte-no-print" onclick="exportarConActividades()">Exportar con Actividades PDF</button>
-                <button type="button" class="rep-btn-excel reporte-no-print" onclick="exportarExcelProyectos()">⬇ Exportar Excel</button>
+                <button type="button" class="btn btn-verde reporte-no-print" onclick="exportarExcelProyectos()">⬇ Exportar Excel</button>
             </div>
         </div>
     </div>
@@ -473,7 +473,12 @@
                         </td>
                         <td>{{ p.responsable }}</td>
                         <td>
-                            <span class="rep-chip {{ 'rep-chip-verde' if p.estado == 'completado' else 'rep-chip-rojo' if p.estado == 'pausado' else 'rep-chip-azul' }}">
+                            <span class="rep-chip {{
+                                'rep-chip-verde' if p.estado == 'completado'
+                                else 'rep-chip-rojo' if p.estado in ('pausado', 'rechazado', 'cancelado')
+                                else 'rep-chip-acento' if p.estado == 'en_revision'
+                                else 'rep-chip-gris' if p.estado == 'eliminado'
+                                else 'rep-chip-azul' }}">
                                 {{ p.estado | replace('_',' ') | capitalize }}
                             </span>
                         </td>

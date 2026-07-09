@@ -124,14 +124,19 @@ body {
     height: calc(100vh - 60px);
     overflow-y: auto;
 }
+.sidebar-group {
+    position: relative;
+}
+
 .sidebar-section {
-    padding: 8px 18px 3px;
-    font-size: 0.67rem;
-    font-weight: 700;
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-    color: var(--gris-texto);
-    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
 }
 .sidebar a {
     display: flex;
@@ -236,10 +241,10 @@ body {
 .card-body { padding: 22px; }
 
 /* ── FORMULARIO ─────────────────────── */
-.form-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-    gap: 16px; 
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
     align-items: start; /* CORRECCIÓN: Evita el estiramiento vertical de los inputs */
 }
 .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 0; }
@@ -1263,22 +1268,22 @@ a.ticket-link:hover strong { text-decoration: underline; }
     gap: 14px;
     align-items: start; /* CORRECCIÓN */
 }
- 
+
 .reporte-filtros-form { display: flex; flex-direction: column; gap: 16px; }
- 
+
 .reporte-filtros-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
     align-items: start; /* CORRECCIÓN */
 }
- 
+
 .reporte-filtro-grupo {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
- 
+
 .reporte-filtro-grupo label {
     font-size: 0.78rem;
     font-weight: 700;
@@ -1286,7 +1291,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
     text-transform: uppercase;
     letter-spacing: 0.6px;
 }
- 
+
 .reporte-filtro-grupo input,
 .reporte-filtro-grupo select {
     padding: 8px 10px;
@@ -1297,20 +1302,20 @@ a.ticket-link:hover strong { text-decoration: underline; }
     color: var(--negro);
     background: var(--blanco);
 }
- 
+
 .reporte-filtro-grupo input:focus,
 .reporte-filtro-grupo select:focus {
     outline: none;
     border-color: var(--verde);
     box-shadow: 0 0 0 3px rgba(26,122,74,0.12);
 }
- 
+
 .reporte-filtros-botones {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
 }
- 
+
 .btn-exportar-csv {
     background: var(--azul);
     color: var(--blanco);
@@ -1328,7 +1333,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
     transition: all 0.15s;
 }
 .btn-exportar-csv:hover { background: var(--verde-oscuro); }
- 
+
 .btn-exportar-pdf {
     background: var(--rojo);
     color: var(--blanco);
@@ -1345,7 +1350,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
     transition: all 0.15s;
 }
 .btn-exportar-pdf:hover { opacity: 0.88; }
- 
+
 .reporte-total-badge {
     float: right;
     font-size: 0.75rem;
@@ -1355,7 +1360,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
     padding: 2px 10px;
     border-radius: 20px;
 }
- 
+
 /* ── PRINT: oculta lo que no debe aparecer en PDF ── */
 @media print {
     .topbar, .sidebar, .reporte-no-print,
@@ -1572,77 +1577,77 @@ a.ticket-link:hover strong { text-decoration: underline; }
 /* ════════════════════════════════════════════════════
    GESTIÓN PROYECTO · clases propias de gestionProyecto.html
    ════════════════════════════════════════════════════ */
- 
+
 /* Separación inferior de cada card de sección */
 .gp-card {
     margin-bottom: 1.5rem;
 }
- 
+
 /* Mensaje de éxito/error al inicio de la página */
 .gp-mensaje {
     margin-bottom: 1.2rem;
 }
- 
+
 /* Fila de botones del formulario de datos */
 .gp-form-actions {
     display: flex;
     gap: 12px;
     margin-top: 8px;
 }
- 
+
 /* Alerta de riesgo en la sección de fechas */
 .gp-alerta-riesgo {
     margin-bottom: 1rem;
 }
- 
+
 /* Stat-card: fecha de inicio (borde verde) */
 .gp-stat-inicio {
     border-left: 4px solid var(--verde);
 }
- 
+
 /* Stat-card: fin planificado (borde acento) */
 .gp-stat-fin {
     border-left: 4px solid var(--acento);
 }
- 
+
 /* Stat-card: días restantes sin riesgo (borde azul) */
 .gp-stat-dias--ok {
     border-left: 4px solid var(--azul);
 }
- 
+
 /* Stat-card: días restantes en riesgo (borde rojo) */
 .gp-stat-dias--riesgo {
     border-left: 4px solid var(--rojo);
 }
- 
+
 /* Etiqueta pequeña dentro de cada stat-card de fechas */
 .gp-stat-label {
     font-size: 0.78rem;
     color: var(--gris-texto);
     margin-bottom: 4px;
 }
- 
+
 /* Valor principal de cada stat-card de fechas */
 .gp-stat-value {
     font-size: 1.1rem;
     font-weight: 700;
 }
- 
+
 /* Color del valor de días restantes: sin riesgo */
 .gp-dias-valor--ok {
     color: var(--verde);
 }
- 
+
 /* Color del valor de días restantes: en riesgo */
 .gp-dias-valor--riesgo {
     color: var(--rojo);
 }
- 
+
 /* Contenedor de la barra de progreso de historias */
 .gp-progreso-wrap {
     margin-bottom: 1.5rem;
 }
- 
+
 /* Fila de etiquetas sobre la barra de progreso */
 .gp-progreso-label {
     display: flex;
@@ -1650,7 +1655,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
     font-size: 0.85rem;
     margin-bottom: 6px;
 }
- 
+
 /* Fondo gris de la barra de progreso */
 .gp-progreso-bg {
     background: var(--gris-borde);
@@ -1658,21 +1663,21 @@ a.ticket-link:hover strong { text-decoration: underline; }
     height: 14px;
     overflow: hidden;
 }
- 
+
 /* Relleno verde de la barra de progreso (width se pone inline con Jinja) */
 .gp-progreso-fill {
     height: 100%;
     border-radius: 20px;
     background: var(--verde);
 }
- 
+
 /* Nota de texto bajo la barra, sobre el gráfico */
 .gp-chart-nota {
     font-size: 0.83rem;
     color: var(--gris-texto);
     margin-bottom: 8px;
 }
- 
+
 /* Tamaño máximo del canvas del gráfico Chart.js */
 .gp-canvas {
     max-height: 220px;
@@ -1873,7 +1878,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
     border-color: rgba(255,255,255,0.35) !important;
     font-size: 0.8rem !important;
 }
- 
+
 /* ── SEPARACIÓN TABLA PROYECTOS ── */
 #seccion-proyectos .seccion + .seccion {
     margin-top: 24px;
@@ -2129,7 +2134,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 120px;
+    min-height: 360px;
 }
 .ind-chart-lista {
     flex-direction: column;
@@ -2465,11 +2470,81 @@ a.ticket-link:hover strong { text-decoration: underline; }
     font-weight: 700;
     white-space: nowrap;
 }
+.proyecto-filtro {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 22px;
+}
+
+.filtro-label {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.select-wrapper {
+    position: relative;
+    min-width: 260px;
+}
+
+.select-moderno {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    padding: 10px 40px 10px 16px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: #1f2937;
+    background-color: #f9fafb;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 8 10 12 14 8'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+}
+
+.select-moderno:hover {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.select-moderno:focus {
+    outline: none;
+    border-color: #2e7d32;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
+.select-moderno option {
+    color: #1f2937;
+    background-color: #ffffff;
+    padding: 8px;
+}
+
+@media (max-width: 480px) {
+    .proyecto-filtro {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .select-wrapper {
+        width: 100%;
+    }
+}
 .rep-chip-verde   { background: var(--verde-claro); color: var(--verde-oscuro); }
 .rep-chip-rojo    { background: var(--rojo-claro);  color: var(--rojo); }
 .rep-chip-azul    { background: var(--azul-claro);  color: var(--azul); }
 .rep-chip-naranja { background: var(--acento-claro); color: #8a5c00; }
 .rep-chip-gris    { background: var(--gris-borde);  color: var(--gris-texto); }
+.rep-chip-acento  { background: var(--acento-claro); color: var(--acento); }
 
 /* Filtros de reportes */
 .rep-filtros-panel .rep-panel-cuerpo { flex-direction: column; align-items: stretch; padding: 16px 20px; }
@@ -2899,13 +2974,13 @@ a.ticket-link:hover strong { text-decoration: underline; }
    ════════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
-    
+
     /* 1. TOPBAR Y BOTÓN DE MENÚ (HAMBURGUESA) */
     .topbar {
         padding: 0 16px;
         justify-content: space-between;
     }
-    
+
     /* Mostrar el botón de menú en móviles (necesitas agregarlo al base.html) */
     .menu-toggle-btn {
         display: flex !important;
@@ -2981,7 +3056,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
     }
 
     /* 4. TARJETAS Y GRID (KPIs) */
-    .stats-grid, 
+    .stats-grid,
     .accesos-grid-container,
     .ind-kpi-grid,
     .rep-resumen-fila,
@@ -3020,11 +3095,11 @@ a.ticket-link:hover strong { text-decoration: underline; }
         margin: 0;
         border-radius: 12px;
     }
-    
+
     .form-actions {
         flex-direction: column;
     }
-    
+
     .form-actions .btn {
         width: 100%;
         justify-content: center;
@@ -3036,7 +3111,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .ind-hero-titulo {
         font-size: 1.6rem;
     }
@@ -3046,7 +3121,7 @@ a.ticket-link:hover strong { text-decoration: underline; }
         white-space: nowrap;
         padding-bottom: 2px;
     }
-    
+
     .ind-tab {
         padding: 10px 15px;
         font-size: 0.8rem;
