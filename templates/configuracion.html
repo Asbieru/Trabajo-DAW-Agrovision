@@ -264,8 +264,14 @@ function toggleApp(id) {
 function eliminarApp(id) {
     showConfirm('¿Eliminar esta aplicación? Los tickets asociados perderán la referencia.', 'Confirmar', function() {
         apiPost('/api/aplicacion/' + id + '/eliminar', {}).then(function(r) { return r.json(); }).then(function(data) {
-            if (data.ok) location.reload();
-            else { showAlert(data.mensaje || 'Error', 'error'); }
+            if (data.ok) {
+                if (data.cerrada) {
+                    showAlert(data.mensaje, 'info');
+                    setTimeout(function() { location.reload(); }, 2000);
+                } else {
+                    location.reload();
+                }
+            } else { showAlert(data.mensaje || 'Error', 'error'); }
         });
     });
 }

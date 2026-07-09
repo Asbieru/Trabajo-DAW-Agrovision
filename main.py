@@ -6,6 +6,7 @@ main.py  -  Servidor Flask  (AgroVision · bd_proyectofinal)
 from flask import Flask, render_template, request, redirect, url_for, abort, jsonify, make_response, session
 from functools import wraps
 import jwt
+import pymysql
 import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -27,7 +28,7 @@ from ticketAD import (Ticket, listarTickets, insertarTicket, obtenerTicket,
                       obtenerDetallesTicket,
                       obtenerCalificacionTicket,
                       insertarAplicacion, editarAplicacion, eliminarAplicacion,
-                      toggleEstadoAplicacion,
+                      toggleEstadoAplicacion, cerrarAplicacion,
                       listarCalificaciones, listarDetallesTicketAll, obtenerDetalleTicket)
 from actividadAD import (Actividad, listarActividades, insertarActividad,
                          actualizarEstadoActividad, eliminarActividad,
@@ -1687,8 +1688,16 @@ def api_editar_aplicacion(id_aplicacion):
 @jwt_required()
 @login_required
 def api_eliminar_aplicacion(id_aplicacion):
-    eliminarAplicacion(id_aplicacion)
-    return jsonify({'ok': True})
+    try:
+        eliminarAplicacion(id_aplicacion)
+        return jsonify({'ok': True})
+    except pymysql.err.IntegrityError:
+        cerrarAplicacion(id_aplicacion)
+        return jsonify({
+            'ok': True,
+            'cerrada': True,
+            'mensaje': 'No se puede eliminar esta aplicación porque tiene tickets asociados. Se cerró en su lugar.'
+        })
 
 
 @app.route('/api/aplicacion/<int:id_aplicacion>/toggle-estado', methods=['POST'])

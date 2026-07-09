@@ -402,6 +402,17 @@ def toggleEstadoAplicacion(id_aplicacion):
         conn.commit()
 
 
+def cerrarAplicacion(id_aplicacion):
+    """Fuerza el estado de una aplicación a 'cerrado' (sin eliminarla)."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE aplicaciones SET estado = 'cerrado' WHERE id_aplicacion = %s
+            """, (id_aplicacion,))
+        conn.commit()
+
+
 def calcularSLA(prioridad, intensidad, peso, participantes_promedio):
     """Calcula SLA en horas según prioridad, intensidad, peso y participantes."""
     base = {'critica': 4, 'alta': 8, 'media': 16, 'baja': 32}
