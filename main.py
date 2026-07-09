@@ -1233,7 +1233,7 @@ def api_guardar_sprint():
     return jsonify({'ok': True, 'id_sprint': id_creado})
 
 
-@app.route('/api/sprint/<int:id_sprint>', methods=['PUT'])
+@app.route('/api/sprint/<int:id_sprint>/editar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_actualizar_sprint(id_sprint):
@@ -1251,7 +1251,7 @@ def api_actualizar_sprint(id_sprint):
     return jsonify({'ok': True})
 
 
-@app.route('/api/sprint/<int:id_sprint>', methods=['DELETE'])
+@app.route('/api/sprint/<int:id_sprint>/eliminar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_eliminar_sprint(id_sprint):
@@ -1416,7 +1416,7 @@ def api_guardar_calificacion():
     return jsonify({'ok': True})
 
 
-@app.route('/api/calificacion/<int:id_detalle>', methods=['DELETE'])
+@app.route('/api/calificacion/<int:id_detalle>/eliminar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_eliminar_calificacion(id_detalle):
@@ -2018,7 +2018,7 @@ def api_obtener_usuario(id_usuario):
     return jsonify({'ok': True, 'usuario': u})
 
 
-@app.route('/api/usuario/<int:id_usuario>', methods=['PUT'])
+@app.route('/api/usuario/<int:id_usuario>/editar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_actualizar_usuario(id_usuario):
@@ -2036,7 +2036,7 @@ def api_actualizar_usuario(id_usuario):
     return jsonify({'ok': True})
 
 
-@app.route('/api/usuario/<int:id_usuario>', methods=['DELETE'])
+@app.route('/api/usuario/<int:id_usuario>/eliminar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_eliminar_usuario(id_usuario):
@@ -2112,7 +2112,7 @@ def api_crear_rol():
     return jsonify({'ok': True, 'id_rol': id_rol})
 
 
-@app.route('/api/rol/<int:id_rol>', methods=['PUT'])
+@app.route('/api/rol/<int:id_rol>/editar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_actualizar_rol(id_rol):
@@ -2127,7 +2127,7 @@ def api_actualizar_rol(id_rol):
     return jsonify({'ok': True})
 
 
-@app.route('/api/rol/<int:id_rol>', methods=['DELETE'])
+@app.route('/api/rol/<int:id_rol>/eliminar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_eliminar_rol(id_rol):
@@ -2192,7 +2192,7 @@ def api_crear_permiso():
     return jsonify({'ok': True, 'id_rol_permiso': id_rol_permiso})
 
 
-@app.route('/api/permiso/<int:id_rol_permiso>', methods=['PUT'])
+@app.route('/api/permiso/<int:id_rol_permiso>/editar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_actualizar_permiso(id_rol_permiso):
@@ -2208,7 +2208,7 @@ def api_actualizar_permiso(id_rol_permiso):
     return jsonify({'ok': True})
 
 
-@app.route('/api/permiso/<int:id_rol_permiso>', methods=['DELETE'])
+@app.route('/api/permiso/<int:id_rol_permiso>/eliminar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_eliminar_permiso(id_rol_permiso):
@@ -2262,7 +2262,7 @@ def api_guardar_asignado():
     return jsonify({'ok': True})
 
 
-@app.route('/api/asignado/proyecto/<int:id_proyecto>/usuario/<int:id_usuario>', methods=['DELETE'])
+@app.route('/api/asignado/proyecto/<int:id_proyecto>/usuario/<int:id_usuario>/eliminar', methods=['POST'])
 @jwt_required()
 @login_required
 def api_eliminar_asignado(id_proyecto, id_usuario):

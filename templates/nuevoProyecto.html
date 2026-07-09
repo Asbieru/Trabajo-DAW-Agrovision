@@ -54,6 +54,7 @@
                 <label for="fecha_fin_plan">Fecha de fin planificada *</label>
                 <input type="date" id="fecha_fin_plan" name="fecha_fin_plan" required>
                 <span class="form-hint">Fecha objetivo de entrega en producción. La fecha de inicio se asigna automáticamente al día de hoy.</span>
+                <span id="fecha_fin_plan-error" class="form-hint" style="display:none;color:var(--rojo, #d64545);"></span>
             </div>
 
             <!-- Problemática -->
@@ -114,8 +115,33 @@
 </div>
 
 <script>
+function validarFechaFinPlan() {
+    var input = document.getElementById('fecha_fin_plan');
+    var errorSpan = document.getElementById('fecha_fin_plan-error');
+    var hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    var fechaIngresada = new Date(input.value + 'T00:00:00');
+
+    if (!input.value || fechaIngresada <= hoy) {
+        errorSpan.textContent = 'La fecha no es válida, ya que ese día ya pasó o es hoy. Debe ser una fecha superior a la actual.';
+        errorSpan.style.display = 'block';
+        input.classList.add('input-error');
+        return false;
+    }
+
+    errorSpan.style.display = 'none';
+    input.classList.remove('input-error');
+    return true;
+}
+
 function guardarProyecto(event) {
     event.preventDefault();
+
+    if (!validarFechaFinPlan()) {
+        document.getElementById('fecha_fin_plan').focus();
+        return false;
+    }
+
     var responsables = [];
     var checks = document.querySelectorAll('input[name="responsables"]:checked');
     for (var i = 0; i < checks.length; i++) {
@@ -147,6 +173,13 @@ function guardarProyecto(event) {
     if (params.get('creado') === '1') {
         document.getElementById('modal-proyecto-creado').style.display = 'flex';
     }
+
+    var hoy = new Date();
+    var minFecha = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
+    var minStr = minFecha.toISOString().split('T')[0];
+    var inputFecha = document.getElementById('fecha_fin_plan');
+    inputFecha.setAttribute('min', minStr);
+    inputFecha.addEventListener('change', validarFechaFinPlan);
 })();
 function cerrarModalProyectoCreado() {
     document.getElementById('modal-proyecto-creado').style.display = 'none';

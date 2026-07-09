@@ -1391,7 +1391,7 @@
         {
           "name": "Actualizar usuario",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -1400,7 +1400,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/{{id_usuario}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/{{id_usuario}}/editar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -1410,7 +1410,8 @@
               "path": [
                 "api",
                 "usuario",
-                "{{id_usuario}}"
+                "{{id_usuario}}",
+                "editar"
               ]
             },
             "body": {
@@ -1428,7 +1429,7 @@
         {
           "name": "Eliminar usuario",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -1437,7 +1438,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/{{id_usuario}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/usuario/{{id_usuario}}/eliminar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -1447,7 +1448,8 @@
               "path": [
                 "api",
                 "usuario",
-                "{{id_usuario}}"
+                "{{id_usuario}}",
+                "eliminar"
               ]
             }
           },
@@ -1617,7 +1619,7 @@
         {
           "name": "Actualizar rol",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -1626,7 +1628,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol/{{id_rol}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol/{{id_rol}}/editar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -1636,7 +1638,8 @@
               "path": [
                 "api",
                 "rol",
-                "{{id_rol}}"
+                "{{id_rol}}",
+                "editar"
               ]
             },
             "body": {
@@ -1654,7 +1657,7 @@
         {
           "name": "Eliminar rol",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -1663,7 +1666,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol/{{id_rol}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/rol/{{id_rol}}/eliminar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -1673,7 +1676,8 @@
               "path": [
                 "api",
                 "rol",
-                "{{id_rol}}"
+                "{{id_rol}}",
+                "eliminar"
               ]
             }
           },
@@ -1813,7 +1817,7 @@
         {
           "name": "Actualizar permiso",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -1822,7 +1826,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/permiso/{{id_rol_permiso}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/permiso/{{id_rol_permiso}}/editar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -1832,7 +1836,8 @@
               "path": [
                 "api",
                 "permiso",
-                "{{id_rol_permiso}}"
+                "{{id_rol_permiso}}",
+                "editar"
               ]
             },
             "body": {
@@ -1850,7 +1855,7 @@
         {
           "name": "Eliminar permiso",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -1859,7 +1864,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/permiso/{{id_rol_permiso}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/permiso/{{id_rol_permiso}}/eliminar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -1869,7 +1874,8 @@
               "path": [
                 "api",
                 "permiso",
-                "{{id_rol_permiso}}"
+                "{{id_rol_permiso}}",
+                "eliminar"
               ]
             }
           },
@@ -2043,7 +2049,7 @@
         {
           "name": "Eliminar asignado",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -2052,7 +2058,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/asignado/proyecto/{{id_proyecto}}/usuario/{{id_usuario}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/asignado/proyecto/{{id_proyecto}}/usuario/{{id_usuario}}/eliminar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -2065,7 +2071,8 @@
                 "proyecto",
                 "{{id_proyecto}}",
                 "usuario",
-                "{{id_usuario}}"
+                "{{id_usuario}}",
+                "eliminar"
               ]
             }
           },
@@ -2231,7 +2238,7 @@
         {
           "name": "Eliminar calificacion",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -2240,7 +2247,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/calificacion/{{id_detalle}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/calificacion/{{id_detalle}}/eliminar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -2250,7 +2257,8 @@
               "path": [
                 "api",
                 "calificacion",
-                "{{id_detalle}}"
+                "{{id_detalle}}",
+                "eliminar"
               ]
             }
           },
@@ -2422,7 +2430,7 @@
         {
           "name": "Actualizar sprint",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -2431,7 +2439,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprint/{{id_sprint}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprint/{{id_sprint}}/editar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -2441,7 +2449,8 @@
               "path": [
                 "api",
                 "sprint",
-                "{{id_sprint}}"
+                "{{id_sprint}}",
+                "editar"
               ]
             },
             "body": {
@@ -2459,7 +2468,7 @@
         {
           "name": "Eliminar sprint",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -2468,7 +2477,7 @@
               }
             ],
             "url": {
-              "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprint/{{id_sprint}}",
+              "raw": "https://agrovisiondaw.pythonanywhere.com/api/sprint/{{id_sprint}}/eliminar",
               "protocol": "https",
               "host": [
                 "agrovisiondaw",
@@ -2478,7 +2487,8 @@
               "path": [
                 "api",
                 "sprint",
-                "{{id_sprint}}"
+                "{{id_sprint}}",
+                "eliminar"
               ]
             }
           },
