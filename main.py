@@ -40,7 +40,7 @@ from actividadAD import (Actividad, listarActividades, insertarActividad,
 from proyectoAD import (Proyecto, listarProyectos, insertarProyecto,
                         obtenerProyecto, actualizarProyecto,
                         listarAvances, insertarAvance, eliminarAvance,
-                        cancelarProyecto,
+                        cancelarProyecto, eliminarProyecto,
                         listarProyectosEnRevision, aprobarProyecto, rechazarProyecto,
                         listarProyectosRechazados,
                         generarSprintsProyecto, listarSprintsPorProyecto,
@@ -434,6 +434,19 @@ def api_cancelar_proyecto(id_proyecto):
     if ok:
         return jsonify({'ok': True})
     return jsonify({'ok': False, 'mensaje': 'No se pudo cancelar el proyecto.'})
+
+
+@app.route('/api/proyecto/<int:id_proyecto>/eliminar', methods=['POST'])
+@jwt_required()
+@login_required
+def api_eliminar_proyecto(id_proyecto):
+    proyecto = obtenerProyecto(id_proyecto)
+    if not proyecto:
+        return jsonify({'ok': False, 'mensaje': 'Proyecto no encontrado'}), 404
+    ok = eliminarProyecto(id_proyecto)
+    if ok:
+        return jsonify({'ok': True})
+    return jsonify({'ok': False, 'mensaje': 'No se puede eliminar: el proyecto tiene actividades pendientes.'})
 
 @app.route('/api/reporte/proyecto/<int:id_proyecto>/actividades')
 @jwt_required()
