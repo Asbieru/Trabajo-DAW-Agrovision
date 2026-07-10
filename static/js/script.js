@@ -2386,6 +2386,14 @@ function inicializarOrdenamiento() {
     });
 }
 
+if (document.getElementById('stat-tickets-abiertos')) {
+    fetch('/api/dashboard/stats')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            document.getElementById('stat-tickets-abiertos').textContent = d.tickets_abiertos;
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     if (!document.getElementById('tabla-tickets')) return;
     inicializarOrdenamiento();

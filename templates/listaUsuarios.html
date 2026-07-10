@@ -25,9 +25,13 @@
                 class="buscador-input"
                 style="flex:1;min-width:260px;max-width:500px;"
             >
+            <input type="hidden" name="id_rol" value="{{ id_rol_actual }}">
+            <input type="hidden" name="orden" value="{{ orden_actual }}">
+            <input type="hidden" name="direccion" value="{{ direccion_actual }}">
             <button type="submit" class="btn btn-verde btn-sm">🔍 Buscar</button>
             {% if nombre_busqueda %}
-            <a href="{{ url_for('lista_usuarios') }}" class="btn btn-outline btn-sm">✕ Limpiar</a>
+            <a href="{{ url_for('lista_usuarios', id_rol=id_rol_actual, orden=orden_actual, direccion=direccion_actual) }}"
+               class="btn btn-outline btn-sm">✕ Limpiar</a>
             {% endif %}
         </form>
     </div>
@@ -35,11 +39,48 @@
 
 <!-- TABLA DE USUARIOS -->
 <div class="card">
-    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
         <span>Resultados</span>
-        <span class="badge badge-verde" style="font-size:0.78rem;">
-            {{ usuarios|length }} usuario{{ 's' if usuarios|length != 1 else '' }}
-        </span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+
+            <!-- Combo de rol: auto-actualiza al cambiar -->
+            <form method="GET" action="{{ url_for('lista_usuarios') }}" id="form-filtro-rol" style="margin:0;">
+                <input type="hidden" name="nombre" value="{{ nombre_busqueda }}">
+                <input type="hidden" name="orden" value="{{ orden_actual }}">
+                <input type="hidden" name="direccion" value="{{ direccion_actual }}">
+                <select name="id_rol" class="buscador-input" style="min-width:150px;font-size:0.85rem;"
+                        onchange="document.getElementById('form-filtro-rol').submit();">
+                    <option value="">Todos los roles</option>
+                    {% for r in roles %}
+                    <option value="{{ r.id_rol }}" {% if id_rol_actual == r.id_rol|string %}selected{% endif %}>
+                        {{ r.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+
+            <!-- Orden A-Z / ID -->
+            <div style="display:flex;gap:6px;">
+                <a href="{{ url_for('lista_usuarios', nombre=nombre_busqueda, id_rol=id_rol_actual, orden='nombre', direccion=direccion_actual) }}"
+                   class="btn btn-sm {{ 'btn-verde' if orden_actual == 'nombre' else 'btn-outline' }}">
+                    🔤 A-Z
+                </a>
+                <a href="{{ url_for('lista_usuarios', nombre=nombre_busqueda, id_rol=id_rol_actual, orden='id', direccion=direccion_actual) }}"
+                   class="btn btn-sm {{ 'btn-verde' if orden_actual == 'id' else 'btn-outline' }}">
+                    # ID
+                </a>
+            </div>
+
+            <!-- Ascendente / Descendente -->
+            <a href="{{ url_for('lista_usuarios', nombre=nombre_busqueda, id_rol=id_rol_actual, orden=orden_actual, direccion=('desc' if direccion_actual == 'asc' else 'asc')) }}"
+               class="btn btn-sm btn-outline" title="Cambiar orden">
+                {{ '⬆️ Ascendente' if direccion_actual == 'asc' else '⬇️ Descendente' }}
+            </a>
+
+            <span class="badge badge-verde" style="font-size:0.78rem;">
+                {{ usuarios|length }} usuario{{ 's' if usuarios|length != 1 else '' }}
+            </span>
+        </div>
     </div>
 
     {% if usuarios %}
@@ -47,7 +88,8 @@
         <table class="tabla">
             <thead>
                 <tr>
-                    <th style="width:52px;"></th>
+                    <th style="width:70px;">ID</th>
+                    <th style="width:52px;">Iniciales</th>
                     <th>Nombre Completo</th>
                     <th>Cargo / Rol</th>
                     <th>Correo</th>
@@ -59,6 +101,9 @@
                 <tr style="transition:background 0.12s;">
 
                     <!-- Avatar con foto o iniciales -->
+                    <td style="color:var(--gris-texto);font-size:0.85rem;font-weight:600;">
+                        #{{ u.id_usuario }}
+                    </td>
                     <td style="padding:10px 14px;">
                         {% if u.foto_url %}
                         <img src="{{ u.foto_url }}" alt="Foto de {{ u.nombre_completo }}"
@@ -115,8 +160,8 @@
             No se encontraron usuarios
         </p>
         <p style="font-size:0.84rem;">
-            {% if nombre_busqueda %}
-            No hay coincidencias para "<strong>{{ nombre_busqueda }}</strong>".
+           {% if nombre_busqueda or id_rol_actual %}
+            No hay coincidencias{% if nombre_busqueda %} para "<strong>{{ nombre_busqueda }}</strong>"{% endif %}.
             <a href="{{ url_for('lista_usuarios') }}" style="color:var(--verde);">Ver todos</a>
             {% else %}
             No hay usuarios registrados en el sistema.

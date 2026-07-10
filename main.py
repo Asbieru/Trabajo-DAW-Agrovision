@@ -260,7 +260,9 @@ def api_logout():
 @app.route('/dashboard')
 @login_required
 def index():
-    return render_template('panelDeControl.html')
+    from ticketAD import listarAplicaciones
+    aplicaciones_activas = len([a for a in listarAplicaciones() if a.get('estado') == 'activo'])
+    return render_template('panelDeControl.html', total_aplicaciones=aplicaciones_activas)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1025,19 +1027,38 @@ def form_editar_actividad(id_actividad):
 @app.route('/usuarios')
 @login_required
 def lista_usuarios():
-    nombre   = request.args.get('nombre', '').strip()
+    nombre    = request.args.get('nombre', '').strip()
+    id_rol    = request.args.get('id_rol', '').strip()
+    orden     = request.args.get('orden', 'nombre')
+    direccion = request.args.get('direccion', 'asc')
     try:
         usuarios = listarUsuariosCompleto()
+        roles    = [r for r in listarRoles() if r['nombre'] != 'Usuario Final']
     except Exception as e:
         print(f'Error al listar usuarios: {e}')
         abort(500)
+
     if nombre:
         nombre_lower = nombre.lower()
         usuarios = [u for u in usuarios
                     if nombre_lower in u['nombre_completo'].lower()
                     or (u['apellido'] and nombre_lower in u['apellido'].lower())]
-    return render_template('listaUsuarios.html', usuarios=usuarios, nombre_busqueda=nombre)
 
+    if id_rol:
+        usuarios = [u for u in usuarios if str(u.get('id_rol')) == id_rol]
+
+    reverse = (direccion == 'desc')
+    if orden == 'id':
+        usuarios = sorted(usuarios, key=lambda u: u['id_usuario'], reverse=reverse)
+    else:
+        usuarios = sorted(usuarios, key=lambda u: u['nombre_completo'].lower(), reverse=reverse)
+
+    return render_template('listaUsuarios.html', usuarios=usuarios,
+                           roles=roles,
+                           nombre_busqueda=nombre,
+                           id_rol_actual=id_rol,
+                           orden_actual=orden,
+                           direccion_actual=direccion)
 
 @app.route('/usuario/<int:id_usuario>/perfil')
 @login_required
@@ -2424,11 +2445,111 @@ def api_chatbot_contexto():
     })
 
 @app.route('/api/dashboard/stats')
+@jwt_required()
 @login_required
 def api_dashboard_stats():
     tickets = listarTickets()
     abiertos = len([t for t in tickets if t['estado'] in ('solicitado', 'en_progreso')])
     return jsonify({'tickets_abiertos': abiertos})
+
+
+# ── DETALLE TICKET ─────────────────────────────────────────────
+
+@app.route('/api/detalle_ticket/guardar', methods=['POST'])
+@jwt_required()
+def api_guardar_detalle_ticket():
+    data = request.get_json()
+    from conexion import obtenerconexion
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO detalle_ticket (id_ticket, id_agente, prioridad, intensidad, sla_horas, descripcion)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (data['id_ticket'], data['id_agente'], data['prioridad'],
+                  data['intensidad'], data['sla_horas'], data.get('descripcion')))
+        conn.commit()
+    return jsonify({'ok': True, 'mensaje': 'Detalle guardado correctamente.'})
+
+@app.route('/api/detalle_ticket/<int:id_detalle>/actualizar', methods=['POST'])
+@jwt_required()
+def api_actualizar_detalle_ticket(id_detalle):
+    data = request.get_json()
+    from conexion import obtenerconexion
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE detalle_ticket SET prioridad=%s, intensidad=%s, sla_horas=%s, descripcion=%s
+                WHERE id_detalle=%s
+            """, (data['prioridad'], data['intensidad'], data['sla_horas'],
+                  data.get('descripcion'), id_detalle))
+        conn.commit()
+    return jsonify({'ok': True, 'mensaje': 'Detalle actualizado correctamente.'})
+
+@app.route('/api/detalle_ticket/<int:id_detalle>/eliminar', methods=['POST'])
+@jwt_required()
+def api_eliminar_detalle_ticket(id_detalle):
+    from conexion import obtenerconexion
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE detalle_ticket SET activo=0 WHERE id_detalle=%s", (id_detalle,))
+        conn.commit()
+    return jsonify({'ok': True, 'mensaje': 'Detalle eliminado correctamente.'})
+
+# ── CALIFICACIONES ─────────────────────────────────────────────
+
+@app.route('/api/calificacion/<int:id_detalle>/actualizar', methods=['POST'])
+@jwt_required()
+def api_actualizar_calificacion(id_detalle):
+    data = request.get_json()
+    from conexion import obtenerconexion
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE calificaciones_ticket SET estrellas=%s, observacion=%s
+                WHERE id_detalle=%s
+            """, (data['estrellas'], data.get('observacion'), id_detalle))
+        conn.commit()
+    return jsonify({'ok': True, 'mensaje': 'Calificación actualizada correctamente.'})
+
+# ── AVANCES PROYECTO ───────────────────────────────────────────
+
+@app.route('/api/avance/<int:id_avance>/actualizar', methods=['POST'])
+@jwt_required()
+def api_actualizar_avance(id_avance):
+    data = request.get_json()
+    from conexion import obtenerconexion
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE avances_proyecto SET porcentaje_avance=%s, estado_salud=%s, logros_periodo=%s, pendientes_next=%s
+                WHERE id_avance=%s
+            """, (data['porcentaje_avance'], data['estado_salud'],
+                  data.get('logros_periodo'), data.get('pendientes_next'), id_avance))
+        conn.commit()
+    return jsonify({'ok': True, 'mensaje': 'Avance actualizado correctamente.'})
+
+# ── ASIGNADOS ──────────────────────────────────────────────────
+
+@app.route('/api/asignado/proyecto/<int:id_proyecto>/usuario/<int:id_usuario>/actualizar', methods=['POST'])
+@jwt_required()
+def api_actualizar_asignado(id_proyecto, id_usuario):
+    data = request.get_json()
+    nuevo_usuario = data.get('nuevo_id_usuario')
+    from conexion import obtenerconexion
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE asignado SET id_usuario=%s
+                WHERE id_proyecto=%s AND id_usuario=%s
+            """, (nuevo_usuario, id_proyecto, id_usuario))
+        conn.commit()
+    return jsonify({'ok': True, 'mensaje': 'Asignado actualizado correctamente.'})
 
 # ──────────────────────────────────────────────────────────────
 #  ARRANQUE
