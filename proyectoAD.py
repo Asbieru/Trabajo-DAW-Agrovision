@@ -423,6 +423,18 @@ def eliminarAsignado(id_proyecto, id_usuario):
             conn.commit()
 
 
+def actualizarAsignado(id_proyecto, id_usuario_actual, id_usuario_nuevo):
+    """Reasigna un proyecto de un usuario a otro (la tabla 'asignado' no tiene mas columnas editables)."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE asignado SET id_usuario = %s
+                 WHERE id_proyecto = %s AND id_usuario = %s
+            """, (id_usuario_nuevo, id_proyecto, id_usuario_actual))
+            conn.commit()
+
+
 def insertarAvance(id_proyecto, id_autor, fecha_reporte, porcentaje_avance,
                    estado_salud, logros_periodo, pendientes_next):
     """Guarda un nuevo reporte de avance en la bitacora."""
@@ -448,6 +460,23 @@ def eliminarAvance(id_avance):
                 "DELETE FROM avances_proyecto WHERE id_avance = %s",
                 (id_avance,)
             )
+        conn.commit()
+
+
+def editarAvance(id_avance, porcentaje_avance=None, estado_salud=None,
+                 logros_periodo=None, pendientes_next=None):
+    """Edita campos de un reporte de avance existente (uso CRUD/Postman)."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE avances_proyecto
+                   SET porcentaje_avance = COALESCE(%s, porcentaje_avance),
+                       estado_salud      = COALESCE(%s, estado_salud),
+                       logros_periodo    = COALESCE(%s, logros_periodo),
+                       pendientes_next   = COALESCE(%s, pendientes_next)
+                 WHERE id_avance = %s
+            """, (porcentaje_avance, estado_salud, logros_periodo, pendientes_next, id_avance))
         conn.commit()
 
 # ──────────────────────────────────────────────────────────────

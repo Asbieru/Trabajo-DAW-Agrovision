@@ -272,6 +272,49 @@ def guardarCalificacionTicket(id_detalle, estrellas, observacion):
         conn.commit()
 
 
+def guardarDetalleTicket(id_ticket, descripcion, prioridad='media', intensidad='media',
+                         sla_horas=24, id_agente=None, link_img_descripcion=None):
+    """Inserta un registro de detalle_ticket directamente (uso CRUD/Postman)."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO detalle_ticket
+                    (id_ticket, id_agente, prioridad, intensidad, sla_horas,
+                     descripcion, link_img_descripcion, activo)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 1)
+            """, (id_ticket, id_agente, prioridad, intensidad, sla_horas,
+                  descripcion, link_img_descripcion))
+            conn.commit()
+            return cursor.lastrowid
+
+
+def editarDetalleTicket(id_detalle, descripcion=None, prioridad=None,
+                        intensidad=None, sla_horas=None):
+    """Edita campos de un detalle_ticket existente (uso CRUD/Postman)."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE detalle_ticket
+                   SET descripcion = COALESCE(%s, descripcion),
+                       prioridad   = COALESCE(%s, prioridad),
+                       intensidad  = COALESCE(%s, intensidad),
+                       sla_horas   = COALESCE(%s, sla_horas)
+                 WHERE id_detalle = %s
+            """, (descripcion, prioridad, intensidad, sla_horas, id_detalle))
+        conn.commit()
+
+
+def eliminarDetalleTicket(id_detalle):
+    """Desactiva (borrado logico) un detalle_ticket (uso CRUD/Postman)."""
+    conn = obtenerconexion()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE detalle_ticket SET activo = 0 WHERE id_detalle = %s", (id_detalle,))
+        conn.commit()
+
+
 def listarTickets():
     """Retorna tickets activos con datos relacionados."""
     asegurarTablas()
