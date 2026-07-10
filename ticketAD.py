@@ -424,7 +424,7 @@ def calcularSLA(prioridad, intensidad, peso, participantes_promedio):
 
 
 def listarPosiblesAgentes():
-    """Retorna usuarios con rol soporte o programador (posibles agentes)."""
+    """Retorna usuarios con rol soporte, programador o admin (posibles agentes)."""
     conn = obtenerconexion()
     with conn:
         with conn.cursor() as cursor:
@@ -432,7 +432,7 @@ def listarPosiblesAgentes():
                 SELECT u.id_usuario, u.nombre_completo, r.nombre AS rol_nombre
                 FROM usuarios u
                 JOIN rol r ON r.id_rol = u.id_rol
-                WHERE r.nombre IN ('Soporte','Programador')
+                WHERE r.nombre IN ('Soporte','Programador','Admin')
                   AND u.activo = 1
                 ORDER BY u.nombre_completo
             """)
